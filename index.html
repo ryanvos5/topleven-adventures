@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>Zombie Dash — Wereld 1</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="game-root">
+    <!-- ===== Canvas (de spelwereld) ===== -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- ===== HUD tijdens het spelen ===== -->
+    <div id="hud" class="hidden">
+      <div class="hud-top">
+        <div class="progress-wrap">
+          <div class="progress-label">START <span id="level-name">LEVEL 1</span> FINISH</div>
+          <div class="progress-bar">
+            <div id="progress-fill"></div>
+            <div id="progress-player">🏃</div>
+            <div class="progress-flag">🏁</div>
+          </div>
+        </div>
+      </div>
+      <div class="hud-bottom">
+        <div class="hud-left">
+          <div class="health-wrap">
+            <span class="heart">❤</span>
+            <div class="health-bar"><div id="health-fill"></div></div>
+          </div>
+          <div class="coin-counter"><span class="coin-icon">●</span> <span id="coin-count">0</span></div>
+        </div>
+        <div class="hud-right">
+          <div id="ammo-count" class="ammo-count hidden"><span class="ammo-icon">▮</span> <span id="ammo-num">100</span></div>
+          <div id="weapon-name" class="weapon-name">Knuppel</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Touch controls (telefoon) ===== -->
+    <div id="touch-controls" class="hidden">
+      <div class="touch-left">
+        <button class="tbtn" data-key="left">◀</button>
+        <button class="tbtn" data-key="right">▶</button>
+      </div>
+      <div class="touch-right">
+        <button class="tbtn" data-key="duck">⤓</button>
+        <button class="tbtn" data-key="jump">⤒</button>
+        <button class="tbtn tbtn-melee" data-key="melee">🏏</button>
+        <button class="tbtn tbtn-fire" data-key="attack">🔫</button>
+      </div>
+    </div>
+
+    <!-- ===== Hoofdmenu ===== -->
+    <div id="menu-screen" class="screen">
+      <div class="screen-inner">
+        <h1 class="game-title">ZOMBIE<span>DASH</span></h1>
+        <p class="subtitle">Wereld 1 — Verlaten Stad</p>
+        <div class="menu-buttons">
+          <button id="btn-play" class="big-btn">SPELEN</button>
+          <button id="btn-shop" class="big-btn secondary">SHOP</button>
+        </div>
+        <div class="menu-coins">Munten: <span id="menu-coin-count">0</span> ●</div>
+      </div>
+    </div>
+
+    <!-- ===== Level select ===== -->
+    <div id="level-screen" class="screen hidden">
+      <div class="screen-inner">
+        <h2 class="screen-title">KIES LEVEL</h2>
+        <p class="screen-sub">Wereld 1 — Verlaten Stad</p>
+        <div id="level-grid" class="level-grid"></div>
+        <button class="back-btn" data-back="menu">◀ TERUG</button>
+      </div>
+    </div>
+
+    <!-- ===== Shop ===== -->
+    <div id="shop-screen" class="screen hidden">
+      <div class="screen-inner">
+        <h2 class="screen-title">WAPENSHOP</h2>
+        <div class="shop-coins">Munten: <span id="shop-coin-count">0</span> ●</div>
+        <div id="shop-grid" class="shop-grid"></div>
+        <button class="back-btn" data-back="menu">◀ TERUG</button>
+      </div>
+    </div>
+
+    <!-- ===== Level voltooid ===== -->
+    <div id="win-screen" class="screen hidden">
+      <div class="screen-inner">
+        <h2 class="screen-title win">LEVEL VOLTOOID!</h2>
+        <div class="result-stats">
+          <div>Zombies gedood: <span id="win-kills">0</span></div>
+          <div>Munten verdiend: <span id="win-coins">0</span> ●</div>
+        </div>
+        <div class="menu-buttons">
+          <button id="btn-next" class="big-btn">VOLGENDE LEVEL</button>
+          <button id="btn-win-shop" class="big-btn secondary">SHOP</button>
+          <button class="back-btn" data-back="level">◀ LEVELS</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Game over ===== -->
+    <div id="lose-screen" class="screen hidden">
+      <div class="screen-inner">
+        <h2 class="screen-title lose">JE BENT GEPAKT!</h2>
+        <div class="result-stats">
+          <div>Zombies gedood: <span id="lose-kills">0</span></div>
+          <div class="lost-coins">Munten misgelopen: <span id="lose-coins">0</span> ●</div>
+          <div class="lose-note">Haal de finish om munten te verdienen!</div>
+        </div>
+        <div class="menu-buttons">
+          <button id="btn-retry" class="big-btn">OPNIEUW</button>
+          <button class="back-btn" data-back="level">◀ LEVELS</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Pauze + fullscreen knoppen ===== -->
+    <button id="pause-btn" class="hidden">II</button>
+    <button id="fs-btn" title="Volledig scherm">⛶</button>
+
+    <!-- ===== Draai-je-telefoon hint (portrait op touch) ===== -->
+    <div id="rotate-hint">
+      <div class="rotate-icon">📱↻</div>
+      <div>Draai je telefoon<br><span>landscape speelt het lekkerst</span></div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/sprites.js"></script>
+  <script src="js/entities.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
