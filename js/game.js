@@ -239,9 +239,13 @@ const Game = {
 
   // ---------- spawnen ----------
   updateSpawns(dt) {
-    // horde-modus spawnt oneindig (tot de tijd om is); anders stoppen bij zombieCount
-    if (this.level.mode !== 'horde' && this.spawned >= this.level.zombieCount) return;
+    if (this.level.mode === 'boss') return;         // de baas regelt zijn eigen adds
     if (!this.spawnArmed) { this.spawnTimer = 0; return; }
+
+    // zombies blijven het HELE level door komen (tot je de finish haalt),
+    // begrensd door hoeveel er tegelijk levend mogen zijn
+    const aliveCount = this.zombies.reduce((n, z) => n + (z.alive ? 1 : 0), 0);
+    if (aliveCount >= (this.level.maxAlive || 12)) { return; }
 
     this.spawnTimer += dt;
     // in horde-modus iets sneller spawnen voor de druk

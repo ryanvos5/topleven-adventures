@@ -213,6 +213,7 @@ function buildWorld1() {
       doorChance: 0.40,
       obstacleDensity: 0.5 + t * 0.6,                   // hoe vol met obstakels (0.5 -> 1.1)
       healMult: 1,
+      maxAlive: Math.round(7 + i * 1.1),                // max zombies tegelijk levend (7 -> 16)
       reward: 30 + i * 12,
     };
     // melee-only levels apart en eerlijker afstemmen (geen vuurwapen-vangnet)
@@ -227,6 +228,7 @@ function buildWorld1() {
       lvl.bruteChance = 0;        // GEEN brutes (oneerlijk zonder gun)
       lvl.obstacleDensity = 0.4;  // minder obstakels in de weg
       lvl.healMult = 2.6;         // veel meer EHBO-doosjes
+      lvl.maxAlive = 5;           // weinig tegelijk (geen vuurwapen)
       lvl.reward = 120;           // mooie beloning voor de uitdaging
     }
     levels.push(lvl);
@@ -237,7 +239,7 @@ function buildWorld1() {
     length: 1500, zombieCount: 0, spawnEvery: 999999,
     zombieHp: 55, zombieSpeed: 1.0,
     runnerChance: 0.45, crawlerChance: 0, bruteChance: 0,
-    doorChance: 0, obstacleDensity: 0.4, reward: 300,
+    doorChance: 0, obstacleDensity: 0.4, maxAlive: 8, reward: 300,
   });
   return levels;
 }
