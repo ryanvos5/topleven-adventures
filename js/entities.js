@@ -284,8 +284,19 @@ class Zombie {
     if (this.hitFlash > 0) this.hitFlash -= dt;
   }
 
+  // kan deze zombie de speler op deze hoogte raken?
+  // normale zombies missen als je over ze heen springt; brutes/baas (groot) en
+  // zelf-springende zombies (crawler-leap) raken je ook in de lucht.
+  reachesVertically(player) {
+    if (this.type.id === 'brute' || this.type.id === 'boss') return true;
+    if (!this.onGround) return true;               // deze zombie springt zelf
+    const airHeight = CONFIG.GROUND_Y - player.y;  // 0 = op de grond
+    return airHeight < 22;                          // hoger = je sprong eroverheen
+  }
+
   bite(game, player) {
     this.lastBite = game.time;
+    if (!this.reachesVertically(player)) return;   // speler sprong eroverheen -> mis
     player.takeDamage(this.type.dmg);
     // brutes slaan altijd terug, andere zombies met een kans
     const always = this.type.knockback;
