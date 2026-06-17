@@ -8,7 +8,7 @@ const Game = {
   worldId: 1, level: null,
   player: null, zombies: [], bullets: [], particles: [], coinFx: [], ammoFx: [], ammoDrops: [], healthDrops: [], corpses: [], pendingZombies: [],
   obstacles: [], powerUps: [], enemyShots: [],
-  boss: null, shake: 0, hordeLeft: 0, lastHazard: -9999,
+  boss: null, shake: 0, hordeLeft: 0, lastHazard: -9999, bossAmmoTimer: 0,
   cam: { x: 0 },
   time: 0, dtScale: 1, lastTs: 0,
   spawnTimer: 0, spawned: 0, spawnArmed: false,
@@ -43,7 +43,7 @@ const Game = {
     this.player = new Player(Storage.data.equippedMelee, Storage.data.equippedRanged, Storage.data.equippedCharacter);
     this.zombies = []; this.bullets = []; this.particles = []; this.coinFx = []; this.ammoFx = []; this.ammoDrops = []; this.healthDrops = []; this.corpses = []; this.pendingZombies = [];
     this.powerUps = []; this.enemyShots = [];
-    this.boss = null; this.shake = 0; this.lastHazard = -9999;
+    this.boss = null; this.shake = 0; this.lastHazard = -9999; this.bossAmmoTimer = 0;
     this.cam.x = 0;
     this.spawnTimer = 0; this.spawned = 0; this.spawnArmed = false;
     this.runCoins = 0; this.runKills = 0;
@@ -310,6 +310,17 @@ const Game = {
     // spawnen "wapenen" zodra de speler begint te lopen (rustige start, ook op boss-level)
     if (!this.spawnArmed && (this.player.x > 76 || Input.state.left || Input.state.right)) this.spawnArmed = true;
     this.updateSpawns(dt);
+
+    // in de boss fight valt er regelmatig munitie uit de lucht boven de speler
+    if (this.level.isBoss && this.spawnArmed && this.boss && this.boss.alive) {
+      this.bossAmmoTimer += dt;
+      if (this.bossAmmoTimer >= 3800) {
+        this.bossAmmoTimer = 0;
+        const drop = new AmmoPickup(this.player.x + (Math.random() - 0.5) * 30, 30);
+        drop.y = 6; drop.vy = 0; drop.vx = 0; drop.onGround = false; // valt recht naar beneden
+        this.ammoDrops.push(drop);
+      }
+    }
 
     for (const z of this.zombies) z.update(dt, this);
     // door de baas opgeroepen zombies veilig na de lus toevoegen
