@@ -237,7 +237,9 @@ body.fs #fs-btn { color: var(--accent); border-color: var(--accent); }
   user-select: none;
   -webkit-touch-callout: none;
 }
-.tbtn:active { background: rgba(106,190,48,0.5); transform: scale(0.94); }
+.tbtn.pressed { background: rgba(106,190,48,0.5); transform: scale(0.94); }
+/* links/rechts (loopknoppen) groter */
+.touch-left .tbtn { width: 90px; height: 90px; font-size: 40px; }
 .tbtn-fire {
   width: 96px;
   height: 96px;
@@ -254,10 +256,11 @@ body.fs #fs-btn { color: var(--accent); border-color: var(--accent); }
 }
 /* iets kleiner op echt lage schermen zodat alles past */
 @media (max-height: 380px) {
-  #touch-controls { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
-  .tbtn { width: 64px; height: 64px; font-size: 28px; }
-  .tbtn-melee { width: 72px; height: 72px; }
-  .tbtn-fire { width: 82px; height: 82px; font-size: 34px; }
+  #touch-controls { padding-bottom: calc(60px + env(safe-area-inset-bottom)); }
+  .tbtn { width: 62px; height: 62px; font-size: 26px; }
+  .touch-left .tbtn { width: 76px; height: 76px; font-size: 34px; }
+  .tbtn-melee { width: 70px; height: 70px; }
+  .tbtn-fire { width: 80px; height: 80px; font-size: 32px; }
 }
 
 /* ====== Schermen (menu/shop/etc.) ====== */

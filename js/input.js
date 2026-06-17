@@ -31,32 +31,58 @@ const Input = {
       if (action) this.state[action] = false;
     });
 
-    // ---- touch/pointer knoppen ----
-    // Pointer Events + pointer-capture = direct reagerend, en de knop blijft
-    // ingedrukt ook als je duim een beetje verschuift (geen "release" bij drift).
-    document.querySelectorAll('.tbtn').forEach((btn) => {
-      const key = btn.dataset.key;
-      const press = (e) => {
-        e.preventDefault();
-        try { btn.setPointerCapture(e.pointerId); } catch (_) {}
-        if (key === 'jump' && !this.state.jump) this.jumpPressed = true;
-        this.state[key] = true;
-      };
-      const release = (e) => { e.preventDefault(); this.state[key] = false; };
-      if (window.PointerEvent) {
-        btn.addEventListener('pointerdown', press);
-        btn.addEventListener('pointerup', release);
-        btn.addEventListener('pointercancel', release);
-      } else {
-        // fallback voor heel oude browsers
-        btn.addEventListener('touchstart', press, { passive: false });
-        btn.addEventListener('touchend', release, { passive: false });
-        btn.addEventListener('touchcancel', release, { passive: false });
-        btn.addEventListener('mousedown', press);
-        btn.addEventListener('mouseup', release);
+    // ---- touch/pointer knoppen (virtuele gamepad) ----
+    // Elke vinger wordt los gevolgd en hit-getest tegen de knoppen, zodat je
+    // soepel van knop naar knop kunt VEGEN (bv. links -> rechts) en multitouch werkt.
+    const buttons = Array.prototype.slice.call(document.querySelectorAll('.tbtn'));
+    const ACTKEYS = ['left', 'right', 'jump', 'duck', 'attack', 'melee'];
+    this._pointerKey = {};   // pointerId -> key (of null)
+
+    const keyAt = (x, y) => {
+      for (const b of buttons) {
+        const r = b.getBoundingClientRect();
+        // iets ruimere raakzone (8px) voor een soepel gevoel
+        if (x >= r.left - 8 && x <= r.right + 8 && y >= r.top - 8 && y <= r.bottom + 8) return b.dataset.key;
       }
-      btn.addEventListener('contextmenu', (e) => e.preventDefault());
-    });
+      return null;
+    };
+    const recompute = () => {
+      const held = {};
+      for (const id in this._pointerKey) { const k = this._pointerKey[id]; if (k) held[k] = true; }
+      for (const k of ACTKEYS) {
+        const now = !!held[k];
+        if (k === 'jump' && now && !this.state.jump) this.jumpPressed = true; // edge-trigger
+        this.state[k] = now;
+      }
+      // 'pressed'-klasse voor visuele feedback
+      for (const b of buttons) b.classList.toggle('pressed', held[b.dataset.key]);
+    };
+
+    const onDown = (e) => {
+      const k = keyAt(e.clientX, e.clientY);
+      if (k == null) return;
+      e.preventDefault();
+      this._pointerKey[e.pointerId] = k;
+      recompute();
+    };
+    const onMove = (e) => {
+      if (!(e.pointerId in this._pointerKey)) return; // alleen vingers die op een knop begonnen
+      e.preventDefault();
+      const k = keyAt(e.clientX, e.clientY);
+      if (k !== this._pointerKey[e.pointerId]) { this._pointerKey[e.pointerId] = k; recompute(); }
+    };
+    const onUp = (e) => {
+      if (!(e.pointerId in this._pointerKey)) return;
+      delete this._pointerKey[e.pointerId];
+      recompute();
+    };
+
+    const tc = document.getElementById('touch-controls');
+    tc.addEventListener('pointerdown', onDown);
+    window.addEventListener('pointermove', onMove, { passive: false });
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+    tc.addEventListener('contextmenu', (e) => e.preventDefault());
   },
 
   // reset 'pressed' flags aan einde van frame
@@ -65,6 +91,8 @@ const Input = {
   clear() {
     this.state.left = this.state.right = this.state.jump = this.state.duck = this.state.attack = this.state.melee = false;
     this.jumpPressed = false;
+    this._pointerKey = {};
+    document.querySelectorAll('.tbtn.pressed').forEach((b) => b.classList.remove('pressed'));
   },
 
   // is dit waarschijnlijk een touch-apparaat?
