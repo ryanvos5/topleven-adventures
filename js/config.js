@@ -269,6 +269,8 @@ function buildWorld1() {
       lvl.maxAlive = 5;           // weinig tegelijk (geen vuurwapen)
       lvl.reward = 120;           // mooie beloning voor de uitdaging
     }
+    // checkpoint halverwege: haal 'm binnen de tijd, anders game over (dwingt doorlopen)
+    if (lvl.killAll) lvl.midTime = Math.round(lvl.length * 9 + 3000);
     levels.push(lvl);
   }
   // level 10: BOSS-arena (geen normale spawns; baas roept zelf adds op)

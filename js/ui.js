@@ -20,7 +20,7 @@ const UI = {
       levelGrid: $('level-grid'), shopGrid: $('shop-grid'), charGrid: $('character-grid'),
       character: $('character-screen'),
       winKills: $('win-kills'), winCoins: $('win-coins'),
-      loseKills: $('lose-kills'), loseCoins: $('lose-coins'),
+      loseKills: $('lose-kills'), loseCoins: $('lose-coins'), loseTitle: $('lose-title'),
     };
 
     // menu knoppen
@@ -306,6 +306,7 @@ const UI = {
   showLose(stats) {
     this.el.loseKills.textContent = stats.kills;
     this.el.loseCoins.textContent = stats.coins;
+    this.el.loseTitle.textContent = stats.reason === 'time' ? 'NIET BINNEN DE TIJD' : 'DOOD';
     this.show('lose');
   },
 };

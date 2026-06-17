@@ -55,6 +55,9 @@ const Game = {
     this.time = 0;
     this.theme = THEMES[level.theme] || THEMES.city;
     this.hordeLeft = level.mode === 'horde' ? level.hordeTime : 0;
+    this.midLeft = level.midTime || 0;   // tijd om de checkpoint-vlag te halen
+    this.midReached = false;
+    this.loseReason = 'dead';             // 'dead' | 'time'
 
     this.buildBackdrop(level);
     this.buildObstacles(level);
@@ -456,6 +459,16 @@ const Game = {
     // horde-timer (alleen actief zodra je begint te lopen)
     if (this.level.mode === 'horde' && this.spawnArmed) this.hordeLeft = Math.max(0, this.hordeLeft - dt);
 
+    // checkpoint-vlag halverwege: haal 'm binnen de tijd
+    if (this.level.midTime && !this.midReached) {
+      if (this.player.x >= this.level.length * 0.5) {
+        this.midReached = true;
+      } else if (this.spawnArmed) {
+        this.midLeft = Math.max(0, this.midLeft - dt);
+        if (this.midLeft <= 0 && this.state === 'playing') { this.loseReason = 'time'; this.player.hp = 0; }
+      }
+    }
+
     // camera
     let target = this.player.x - CONFIG.VIEW_W * 0.35;
     this.cam.x = Math.max(0, Math.min(this.level.length - CONFIG.VIEW_W + 60, target));
@@ -494,7 +507,7 @@ const Game = {
     this.state = 'lose';
     // GEEN munten en GEEN kogel-verlies bij een mislukte poging
     // (voorraad blijft zoals aan het begin van dit level)
-    UI.showLose({ kills: this.runKills, coins: this.runCoins });
+    UI.showLose({ kills: this.runKills, coins: this.runCoins, reason: this.loseReason });
   },
 
   // aantal nog te doden zombies (kill-all-levels)
@@ -643,6 +656,9 @@ const Game = {
     const flagY = (this.level.parkour && this.platforms.length) ? this.platforms[this.platforms.length - 1].y : CONFIG.GROUND_Y;
     if (!this.level.isBoss) Sprites.drawFlag(ctx, fx, flagY, this.time, isLast);
 
+    // checkpoint-vlag halverwege
+    if (this.level.midTime) Sprites.drawCheckpoint(ctx, Math.round(this.level.length * 0.5), CONFIG.GROUND_Y, this.time, this.midReached);
+
     // partikels (achter entiteiten)
     for (const p of this.particles) {
       ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
@@ -769,6 +785,18 @@ const Game = {
       ctx.textAlign = 'left';
     }
 
+    // checkpoint-timer (tot je de halverwege-vlag haalt)
+    if (this.level.midTime && !this.midReached) {
+      const sec = Math.ceil(this.midLeft / 1000);
+      ctx.font = 'bold 10px "Courier New", monospace';
+      ctx.textAlign = 'center';
+      const t2 = '⚑ CHECKPOINT: ' + sec + 's';
+      ctx.fillStyle = '#000'; ctx.fillText(t2, W / 2 + 1, 63);
+      ctx.fillStyle = sec <= 4 ? '#ff5a5a' : '#3ad0ff';
+      ctx.fillText(t2, W / 2, 62);
+      ctx.textAlign = 'left';
+    }
+
     // horde-timer
     if (this.level.mode === 'horde') {
       const sec = Math.ceil(this.hordeLeft / 1000);
@@ -784,7 +812,7 @@ const Game = {
     if (this.level.mode === 'melee') {
       ctx.font = 'bold 8px "Courier New", monospace';
       ctx.textAlign = 'center';
-      ctx.fillStyle = '#ff8a8a'; ctx.fillText('⚠ WAPENS GEBLOKKEERD — ALLEEN MELEE', W / 2, 60);
+      ctx.fillStyle = '#ff8a8a'; ctx.fillText('⚠ WAPENS GEBLOKKEERD — ALLEEN MELEE', W / 2, 76);
       ctx.textAlign = 'left';
     }
 

@@ -545,6 +545,24 @@ const Sprites = {
     }
   },
 
+  /* ---------- CHECKPOINT-VLAG (kleiner, halverwege) ---------- */
+  drawCheckpoint(ctx, x, groundY, time, reached) {
+    const poleH = 40, top = groundY - poleH;
+    this.px(ctx, '#2a313e', x - 3, groundY - 2, 8, 3);          // voet
+    this.px(ctx, '#9aa3ad', x, top, 2, poleH);                   // paal
+    // klein driehoekig vlaggetje (blauw -> groen als gehaald)
+    const cloth = reached ? '#6abe30' : '#3a9ad9';
+    const clothDk = reached ? '#4a8c1f' : '#2a72a8';
+    const len = 16, tall = 11;
+    for (let i = 0; i < len; i++) {
+      const wave = Math.round(Math.sin(time / 150 + i / 3.5) * 1.5);
+      const hh = Math.round(tall * (1 - i / len));
+      if (hh <= 0) continue;
+      this.px(ctx, (i % 6 < 3) ? cloth : clothDk, x + 2 + i, top + 2 + wave, 1, hh);
+    }
+    if (reached) this.px(ctx, '#fff', x + 4, top + 4, 3, 3);     // vinkje-achtig stipje
+  },
+
   /* ---------- SCHADUW onder personage ---------- */
   shadow(ctx, cx, footY, w) {
     ctx.globalAlpha = 0.28;
