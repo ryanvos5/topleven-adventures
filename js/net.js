@@ -147,6 +147,7 @@ const Net = {
         .update({
           save_data: Storage.data,
           mp_wins: Storage.data.mpWins || 0,
+          mp_losses: Storage.data.mpLosses || 0,
           xp: Storage.data.xp || 0,
           arena_best: Storage.data.arenaBest || 0,
           updated_at: new Date().toISOString(),
@@ -227,6 +228,7 @@ const Net = {
     ch.on('broadcast', { event: 'shot' }, (m) => { if (v.cbs.onShot) v.cbs.onShot(m.payload); });
     ch.on('broadcast', { event: 'lobby' }, (m) => { if (v.cbs.onLobby) v.cbs.onLobby(m.payload); });
     ch.on('broadcast', { event: 'begin' }, (m) => { if (v.cbs.onBegin) v.cbs.onBegin(m.payload); });
+    ch.on('broadcast', { event: 'rematch' }, (m) => { if (v.cbs.onRematch) v.cbs.onRematch(m.payload); });
     ch.on('broadcast', { event: 'bye' }, () => { if (v.cbs.onPeerLeft) v.cbs.onPeerLeft(); });
     await new Promise((resolve, reject) => {
       let done = false;

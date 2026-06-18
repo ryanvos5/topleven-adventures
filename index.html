@@ -11,7 +11,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#0d0f14" />
   <title>Topleven Adventures — Wereld 1</title>
-  <link rel="stylesheet" href="css/style.css?v=hpfix2" />
+  <link rel="stylesheet" href="css/style.css?v=rematch1" />
 </head>
 <body>
   <div id="game-root">
@@ -155,7 +155,7 @@
         <div id="lb-tabs" class="world-tabs">
           <button class="world-tab active" data-lb="xp">Level</button>
           <button class="world-tab" data-lb="arena">Knock-out</button>
-          <button class="world-tab" data-lb="wins">1v1 Wins</button>
+          <button class="world-tab" data-lb="wins">1v1 W/L</button>
         </div>
         <div id="lb-list" class="lb-list"></div>
         <p id="lb-msg" class="screen-sub"></p>
@@ -205,7 +205,9 @@
           <div id="vs-result-xp" class="hidden"></div>
         </div>
         <div class="menu-buttons">
-          <button id="btn-vs-again" class="big-btn">TERUG NAAR LOBBY</button>
+          <button id="btn-vs-rematch" class="big-btn">🔁 REMATCH</button>
+          <p id="vs-rematch-status" class="vs-wait-sub"></p>
+          <button id="btn-vs-again" class="big-btn secondary">TERUG NAAR LOBBY</button>
           <button id="btn-vs-menu" class="big-btn secondary">MENU</button>
         </div>
       </div>
@@ -305,14 +307,14 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-  <script src="js/config.js?v=hpfix2"></script>
-  <script src="js/storage.js?v=hpfix2"></script>
-  <script src="js/net.js?v=hpfix2"></script>
-  <script src="js/input.js?v=hpfix2"></script>
-  <script src="js/sprites.js?v=hpfix2"></script>
-  <script src="js/entities.js?v=hpfix2"></script>
-  <script src="js/ui.js?v=hpfix2"></script>
-  <script src="js/game.js?v=hpfix2"></script>
-  <script src="js/main.js?v=hpfix2"></script>
+  <script src="js/config.js?v=rematch1"></script>
+  <script src="js/storage.js?v=rematch1"></script>
+  <script src="js/net.js?v=rematch1"></script>
+  <script src="js/input.js?v=rematch1"></script>
+  <script src="js/sprites.js?v=rematch1"></script>
+  <script src="js/entities.js?v=rematch1"></script>
+  <script src="js/ui.js?v=rematch1"></script>
+  <script src="js/game.js?v=rematch1"></script>
+  <script src="js/main.js?v=rematch1"></script>
 </body>
 </html>

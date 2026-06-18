@@ -87,7 +87,8 @@ const UI = {
     $('btn-vs-bot').onclick = () => this.openBotSetup();
     $('btn-vs-quit').onclick = () => Game.quitVersus();
     $('btn-vs-again').onclick = () => { document.getElementById('versus-result').classList.add('hidden'); this.openVersusLobby(); };
-    $('btn-vs-menu').onclick = () => { document.getElementById('versus-result').classList.add('hidden'); this.show('menu'); };
+    $('btn-vs-menu').onclick = () => { document.getElementById('versus-result').classList.add('hidden'); this.leaveLobby(); this.show('menu'); };
+    $('btn-vs-rematch').onclick = () => this.doRematch();
     $('btn-vs-back').onclick = () => { this.leaveLobby(); this.show('menu'); };
     $('btn-vs-ready').onclick = () => this.toggleReady();
     document.querySelectorAll('.vs-mode-btn').forEach((b) => {
@@ -337,8 +338,11 @@ const UI = {
     if (!rows.length) { msg.textContent = 'Nog geen spelers met een account. Log in en speel!'; return; }
     msg.textContent = '';
     const myNick = (window.Net && Net.isLoggedIn()) ? Net.nickname() : null;
-    const statLabel = sortBy === 'arena' ? 'ronde' : sortBy === 'wins' ? 'wins' : 'XP';
-    const statOf = (r) => sortBy === 'arena' ? (r.arena_best || 0) : sortBy === 'wins' ? (r.mp_wins || 0) : (r.xp || 0);
+    const statText = (r) => {
+      if (sortBy === 'arena') return (r.arena_best || 0) + ' ronde';
+      if (sortBy === 'wins') return (r.mp_wins || 0) + 'W ' + (r.mp_losses || 0) + 'L';
+      return (r.xp || 0) + ' XP';
+    };
     const makeRow = (r, rankText, me) => {
       const row = document.createElement('div');
       row.className = 'lb-row' + (me ? ' me' : '');
@@ -346,7 +350,7 @@ const UI = {
         '<span class="lb-rank">' + rankText + '</span>' +
         '<span class="lb-name">' + this._esc(r.nickname) + '</span>' +
         '<span class="lb-lvl">Lvl ' + playerLevel(r.xp || 0) + '</span>' +
-        '<span class="lb-stat">' + statOf(r) + ' ' + statLabel + '</span>';
+        '<span class="lb-stat">' + statText(r) + '</span>';
       return row;
     };
     let meShown = false;
@@ -388,14 +392,19 @@ const UI = {
       onMatch: (role) => this._onVersusMatch(role),
       onLobby: (p) => this.onLobbyUpdate(p),
       onBegin: (p) => this.onLobbyBegin(p),
+      onRematch: () => this.onRematch(),
       onState: (s) => Game.onVersusState(s),
       onHit: (p) => Game.onVersusHit(p),
       onFell: () => Game.onVersusFell(),
       onBurn: () => Game.onVersusBurn(),
       onShot: (p) => Game.onVersusShot(p),
       onPeerLeft: () => {
-        if (Game.state === 'versus' || Game.state === 'versusOver') Game.endVersus(true);
-        else { const ps = document.getElementById('vs-peer-status'); if (ps) ps.textContent = 'Tegenstander is weg…'; this._peer = null; document.getElementById('vs-lobby-opts').classList.add('hidden'); this.cancelCountdown(); }
+        if (Game.state === 'versus') { Game.endVersus(true); }   // tegenstander quit mid-game = jij wint
+        else if (Game.state === 'versusOver') {                   // op het uitslagscherm: rematch onmogelijk
+          const rb = document.getElementById('btn-vs-rematch'); if (rb) { rb.disabled = true; rb.textContent = '🔁 REMATCH'; }
+          const rs = document.getElementById('vs-rematch-status'); if (rs) rs.textContent = 'Tegenstander is weg — geen rematch mogelijk.';
+          if (window.Net) Net.leaveVersus();
+        } else { const ps = document.getElementById('vs-peer-status'); if (ps) ps.textContent = 'Tegenstander is weg…'; this._peer = null; document.getElementById('vs-lobby-opts').classList.add('hidden'); this.cancelCountdown(); }
       },
     };
   },
@@ -448,7 +457,8 @@ const UI = {
     this._botSetup = false;
     this._vsStarted = true;
     document.querySelector('.vs-wait-label').classList.remove('hidden');
-    Game.startVersus('host', { mapId: this._myVote.map, mode: this._myVote.mode, bot: true });
+    const v = this._myVote || { map: (Game.vsMap && Game.vsMap.id) || VERSUS_MAPS[0].id, mode: Game.vsMode || 'melee' };
+    Game.startVersus('host', { mapId: v.map, mode: v.mode, bot: true });
   },
 
   // in een kamer: toon code, wacht op tegenstander
@@ -568,6 +578,7 @@ const UI = {
     if (this._vsStarted) return;
     this._vsStarted = true;
     this.cancelCountdown();
+    document.getElementById('versus-result').classList.add('hidden');   // uitslag weg bij (re)start
     Game.startVersus(this._vsRole || 'host', { mapId: map, mode: mode });
   },
 
@@ -634,9 +645,55 @@ const UI = {
       xpEl.textContent = '+' + xpGained + ' XP  ·  Level ' + playerLevel(Storage.data.xp || 0) +
         (window.Net && Net.isLoggedIn() ? '' : '  (log in om mee te tellen)');
     } else { xpEl.classList.add('hidden'); }
+    // rematch-knop voorbereiden
+    this._rematchMine = false; this._rematchPeer = false; this._vsStarted = false; this._isBotResult = !!isBot;
+    const rbtn = document.getElementById('btn-vs-rematch');
+    const rs = document.getElementById('vs-rematch-status');
+    rbtn.disabled = false; rbtn.textContent = '🔁 REMATCH'; rbtn.classList.remove('hidden');
+    rs.textContent = isBot ? '' : 'Beiden moeten op rematch drukken.';
+
     document.getElementById('versus-result').classList.remove('hidden');
     this.refreshAuthUI();
     document.getElementById('versus-screen').classList.add('hidden');
+  },
+
+  // ---- REMATCH ----
+  doRematch() {
+    if (this._isBotResult) {                 // bot: meteen opnieuw, zelfde map/modus
+      document.getElementById('versus-result').classList.add('hidden');
+      this.startBotMatch();
+      return;
+    }
+    // online: handshake (beiden ready)
+    if (!window.Net || !Net.versus) {        // tegenstander al weg / geen kanaal
+      document.getElementById('vs-rematch-status').textContent = 'Geen verbinding meer — terug naar lobby.';
+      return;
+    }
+    this._rematchMine = true;
+    Net.versusSend('rematch', {});
+    const rb = document.getElementById('btn-vs-rematch');
+    rb.disabled = true; rb.textContent = '✔ Wacht op tegenstander…';
+    this.checkRematch();
+  },
+
+  onRematch() {
+    this._rematchPeer = true;
+    const rs = document.getElementById('vs-rematch-status');
+    if (rs && !this._rematchMine) rs.textContent = '🔁 Tegenstander wil een rematch! Druk ook op rematch.';
+    this.checkRematch();
+  },
+
+  checkRematch() {
+    if (!this._rematchMine || !this._rematchPeer) return;
+    // de host bepaalt en stuurt 'begin' (zelfde map + modus); beiden starten
+    if (this._vsRole === 'host') {
+      const map = (Game.vsMap && Game.vsMap.id) || VERSUS_MAPS[0].id;
+      const mode = Game.vsMode || 'melee';
+      if (window.Net) Net.versusSend('begin', { map, mode });
+      this._beginMatch(map, mode);
+    } else {
+      const rs = document.getElementById('vs-rematch-status'); if (rs) rs.textContent = 'Starten…';
+    }
   },
 
   show(name) {

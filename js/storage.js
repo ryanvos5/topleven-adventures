@@ -19,6 +19,7 @@ const DEFAULT_SAVE = {
   arenaPlays: { date: '', count: 0 }, // dagelijkse speel-limiet
   xp: 0,                        // ervaring uit multiplayer-duels (level = playerLevel(xp))
   mpWins: 0,                    // gewonnen 1v1-duels
+  mpLosses: 0,                  // verloren 1v1-duels
 };
 
 const Storage = {
@@ -37,6 +38,7 @@ const Storage = {
       if (typeof this.data.arenaBest !== 'number') this.data.arenaBest = 0;
       if (typeof this.data.xp !== 'number') this.data.xp = 0;
       if (typeof this.data.mpWins !== 'number') this.data.mpWins = 0;
+      if (typeof this.data.mpLosses !== 'number') this.data.mpLosses = 0;
       if (!this.data.arenaPlays) this.data.arenaPlays = { date: '', count: 0 };
       // migratie van oude opslag (één slot -> twee slots)
       if (this.data.equippedMelee === undefined) this.data.equippedMelee = 'bat';
@@ -69,6 +71,7 @@ const Storage = {
     d.arenaBest = Math.max(d.arenaBest || 0, cloud.arenaBest || 0);
     d.xp = Math.max(d.xp || 0, cloud.xp || 0);
     d.mpWins = Math.max(d.mpWins || 0, cloud.mpWins || 0);
+    d.mpLosses = Math.max(d.mpLosses || 0, cloud.mpLosses || 0);
     for (const w of (cloud.ownedWeapons || [])) if (!d.ownedWeapons.includes(w)) d.ownedWeapons.push(w);
     for (const c of (cloud.ownedCharacters || [])) if (!d.ownedCharacters.includes(c)) d.ownedCharacters.push(c);
     const cp = cloud.progress || {};

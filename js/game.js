@@ -1173,6 +1173,7 @@ const Game = {
         onFell: () => this.onVersusFell(),
         onBurn: () => this.onVersusBurn(),
         onShot: (p) => this.onVersusShot(p),
+        onRematch: () => UI.onRematch(),
       });
     }
     this.state = 'versus';
@@ -1511,13 +1512,14 @@ const Game = {
     if (this.vs) this.vs.over = true;
     this.state = 'versusOver';
     const isBot = this.vsBot;
-    if (!isBot && window.Net) Net.leaveVersus();
+    // online: kanaal OPEN houden zodat een rematch mogelijk is (kanaal sluit pas bij menu/lobby)
     // tegen de bot: GEEN XP/wins. Echt duel: XP + wins (sync't naar de leaderboard).
     let gained = 0;
     if (!isBot) {
       gained = won ? XP_WIN : XP_LOSS;
       Storage.data.xp = (Storage.data.xp || 0) + gained;
       if (won) Storage.data.mpWins = (Storage.data.mpWins || 0) + 1;
+      else Storage.data.mpLosses = (Storage.data.mpLosses || 0) + 1;
       Storage.save();
     }
     UI.showVersusResult(won, this.vs ? this.vs.myScore : 0, this.vs ? this.vs.oppScore : 0, gained, isBot);
