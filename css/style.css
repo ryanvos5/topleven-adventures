@@ -445,6 +445,46 @@ body.is-touch #hud { justify-content: flex-start; gap: 8px; }
 .auth-box .menu-buttons { margin-top: 14px; gap: 8px; }
 .auth-box .big-btn:disabled { opacity: 0.6; }
 
+/* ====== 1 vs 1 versus ====== */
+.big-btn.versus {
+  background: linear-gradient(180deg, #b33a8a, #7a2160);
+  border-color: #5a1646;
+  box-shadow: 0 4px 0 #5a1646;
+}
+.vs-join-row { display: flex; gap: 8px; align-items: stretch; margin-top: 12px; width: min(280px, 80%); }
+.vs-join-row .auth-input { text-transform: uppercase; text-align: center; letter-spacing: 4px; font-size: 20px; width: 110px; }
+.vs-join-row .big-btn { flex: 1; width: auto; padding: 10px; font-size: 15px; }
+.vs-wait-label { color: var(--text-dim); font-size: 13px; margin-top: 10px; }
+.vs-room-code {
+  font-family: var(--pixel-font); font-size: 52px; font-weight: bold;
+  letter-spacing: 10px; color: var(--gold); margin: 6px 0 8px; text-shadow: 0 3px 0 #000;
+}
+.vs-wait-sub { color: var(--text-dim); font-size: 13px; line-height: 1.5; max-width: 280px; margin: 0 auto; }
+#versus-lobby { display: flex; flex-direction: column; align-items: center; }
+
+#versus-hud {
+  position: absolute; top: env(safe-area-inset-top, 8px); left: 0; right: 0; z-index: 40;
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  pointer-events: none; padding-top: 6px;
+}
+#vs-score-me, #vs-score-them {
+  font-family: var(--pixel-font); font-size: 30px; font-weight: bold; color: #fff;
+  text-shadow: 0 2px 0 #000; min-width: 34px; text-align: center;
+}
+#vs-score-me { color: #6fd06a; }
+#vs-score-them { color: #ff6a6a; }
+.vs-score-vs { font-size: 12px; color: var(--text-dim); letter-spacing: 1px; }
+#btn-vs-quit {
+  position: absolute; right: max(10px, env(safe-area-inset-right)); top: 4px;
+  pointer-events: auto; width: 34px; height: 34px; border-radius: 8px;
+  background: rgba(0,0,0,0.45); color: #fff; border: 2px solid #555; font-size: 16px; cursor: pointer;
+}
+.vs-countdown {
+  position: fixed; left: 0; right: 0; top: 38%; text-align: center;
+  font-family: var(--pixel-font); font-size: 72px; font-weight: bold;
+  color: var(--gold); text-shadow: 0 4px 0 #000; pointer-events: none;
+}
+
 .screen-title {
   font-size: clamp(28px, 6vw, 48px);
   font-weight: 900;

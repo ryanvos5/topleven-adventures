@@ -96,8 +96,14 @@ class Player {
     let moving = false;
     if (inp.left) { this.x -= spd * s; moving = true; }
     if (inp.right) { this.x += spd * s; moving = true; }
-    // binnen het level houden
-    this.x = Math.max(20, Math.min(game.level.length + 40, this.x));
+    // weggeslagen worden (versus: grote melee-knockback) — momentum dat uitdooft
+    if (this.knockVx) {
+      this.x += this.knockVx * s;
+      this.knockVx *= 0.90;
+      if (Math.abs(this.knockVx) < 0.3) this.knockVx = 0;
+    }
+    // binnen het level houden (in versus mag je eraf vallen -> geen klem)
+    if (!game.level.versus) this.x = Math.max(20, Math.min(game.level.length + 40, this.x));
     // botsing met obstakels (auto's blokkeren staand, lage balken blokkeren tenzij je duikt)
     if (game.obstacles) this.resolveObstacles(game, prevX);
 

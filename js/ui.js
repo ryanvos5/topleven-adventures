@@ -20,7 +20,7 @@ const UI = {
       menuCoins: $('menu-coin-count'), shopCoins: $('shop-coin-count'),
       charCoins: $('char-coin-count'),
       levelGrid: $('level-grid'), shopGrid: $('shop-grid'), charGrid: $('character-grid'),
-      character: $('character-screen'), arena: $('arena-screen'),
+      character: $('character-screen'), arena: $('arena-screen'), versus: $('versus-screen'),
       arenaRound: $('arena-round'), arenaCoins: $('arena-coins'), arenaBest: $('arena-best'),
       arenaLeft: $('arena-left'), arenaRecord: $('arena-record'),
       winKills: $('win-kills'), winCoins: $('win-coins'), winReplayNote: $('win-replay-note'),
@@ -68,6 +68,15 @@ const UI = {
     $('btn-auth-toggle').onclick = () => this.openAuth(this.authMode === 'login' ? 'register' : 'login');
     $('btn-auth-submit').onclick = () => this.submitAuth();
     this.refreshAuthUI();
+
+    // ---- 1 vs 1 online ----
+    $('btn-versus').onclick = () => this.openVersusLobby();
+    $('btn-vs-host').onclick = () => this.versusHost();
+    $('btn-vs-join').onclick = () => this.versusJoin();
+    $('btn-vs-quit').onclick = () => Game.quitVersus();
+    $('btn-vs-again').onclick = () => { document.getElementById('versus-result').classList.add('hidden'); this.openVersusLobby(); };
+    $('btn-vs-menu').onclick = () => { document.getElementById('versus-result').classList.add('hidden'); this.show('menu'); };
+    $('btn-vs-back').onclick = () => { if (window.Net) Net.leaveVersus(); this._vsStarted = false; this.show('menu'); };
 
     // fullscreen
     const fsBtn = document.getElementById('fs-btn');
@@ -197,8 +206,98 @@ const UI = {
     }
   },
 
+  // ---- 1 VS 1 LOBBY / SPEL ----
+  openVersusLobby() {
+    if (window.Net) Net.leaveVersus();
+    this._vsStarted = false;
+    document.getElementById('versus-lobby').classList.remove('hidden');
+    document.getElementById('versus-wait').classList.add('hidden');
+    document.getElementById('versus-result').classList.add('hidden');
+    document.getElementById('versus-msg').textContent = '';
+    document.getElementById('vs-code-input').value = '';
+    this.show('versus');
+  },
+
+  _versusCbs() {
+    return {
+      onMatch: (role) => this._onVersusMatch(role),
+      onState: (s) => Game.onVersusState(s),
+      onHit: (p) => Game.onVersusHit(p),
+      onFell: () => Game.onVersusFell(),
+      onPeerLeft: () => { if (Game.state === 'versus') Game.endVersus(true); },
+    };
+  },
+
+  async versusHost() {
+    const msg = document.getElementById('versus-msg');
+    if (!window.Net || !Net.ready) { msg.textContent = 'Geen verbinding met de server.'; return; }
+    msg.style.color = ''; msg.textContent = 'Kamer aanmaken…';
+    try {
+      this._vsRole = 'host';
+      const code = await Net.versusHost(this._versusCbs());
+      document.getElementById('vs-room-code').textContent = code;
+      document.getElementById('versus-lobby').classList.add('hidden');
+      document.getElementById('versus-wait').classList.remove('hidden');
+      msg.textContent = '';
+    } catch (e) { msg.style.color = '#ff6a6a'; msg.textContent = '⚠ ' + (e.message || e); }
+  },
+
+  async versusJoin() {
+    const msg = document.getElementById('versus-msg');
+    const code = document.getElementById('vs-code-input').value;
+    if (!code) { msg.textContent = 'Vul de kamercode in.'; return; }
+    if (!window.Net || !Net.ready) { msg.textContent = 'Geen verbinding met de server.'; return; }
+    msg.style.color = ''; msg.textContent = 'Verbinden…';
+    try {
+      this._vsRole = 'guest';
+      await Net.versusJoin(code, this._versusCbs());
+      msg.style.color = '#7ad06a'; msg.textContent = 'Verbonden! Wachten op de start…';
+    } catch (e) { msg.style.color = '#ff6a6a'; msg.textContent = '⚠ ' + (e.message || e); }
+  },
+
+  _onVersusMatch(role) {
+    // start zodra de host-handshake rond is
+    if (this._vsStarted) return;
+    this._vsStarted = true;
+    Game.startVersus(role || this._vsRole || 'host');
+  },
+
+  showVersus() {
+    ['menu', 'level', 'shop', 'character', 'arena', 'win', 'lose', 'versus'].forEach((s) =>
+      this.el[s].classList.add('hidden'));
+    document.body.classList.add('in-game');
+    this.el.hud.classList.add('hidden');
+    this.el.pause.classList.add('hidden');
+    this.el.banner.classList.add('hidden');
+    this.el.touch.classList.toggle('hidden', !Input.isTouch());
+    document.getElementById('versus-hud').classList.remove('hidden');
+  },
+
+  updateVersusHUD(v) {
+    const me = document.getElementById('vs-score-me');
+    const them = document.getElementById('vs-score-them');
+    if (me) me.textContent = v.myScore;
+    if (them) them.textContent = v.oppScore;
+    const cd = document.getElementById('vs-countdown');
+    if (cd) {
+      if (v.countdown > 0) { cd.classList.remove('hidden'); cd.textContent = Math.ceil(v.countdown / 1000); }
+      else cd.classList.add('hidden');
+    }
+  },
+
+  showVersusResult(won, myScore, oppScore) {
+    document.getElementById('versus-hud').classList.add('hidden');
+    document.body.classList.remove('in-game');
+    this.el.touch.classList.add('hidden');
+    const t = document.getElementById('vs-result-title');
+    t.textContent = won ? 'GEWONNEN! 🏆' : 'VERLOREN';
+    t.className = 'screen-title ' + (won ? 'win' : 'lose');
+    document.getElementById('vs-result-score').textContent = myScore + ' – ' + oppScore;
+    document.getElementById('versus-result').classList.remove('hidden');
+  },
+
   show(name) {
-    ['menu', 'level', 'shop', 'character', 'arena', 'win', 'lose'].forEach((s) => {
+    ['menu', 'level', 'shop', 'character', 'arena', 'win', 'lose', 'versus'].forEach((s) => {
       this.el[s].classList.toggle('hidden', s !== name);
     });
     const inGame = (name === 'game');

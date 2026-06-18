@@ -1116,6 +1116,213 @@ const Game = {
     // (pauze wordt nu als DOM-menu getoond, zie #pause-screen)
   },
 
+  // ============ 1 vs 1 VERSUS ============
+  startVersus(role) {
+    this.worldId = -1;
+    this.level = { versus: true, parkour: true, mode: 'versus', length: CONFIG.VIEW_W, isBoss: false };
+    this.player = new Player(Storage.data.equippedMelee, null, Storage.data.equippedCharacter);
+    this.player.maxJumps = 2; this.player.jumps = 2;
+    this.player.knockVx = 0; this.player.dead = false; this.player.respawnInvuln = 0;
+    this.zombies = []; this.bullets = []; this.particles = []; this.coinFx = []; this.ammoFx = [];
+    this.ammoDrops = []; this.healthDrops = []; this.corpses = []; this.pendingZombies = [];
+    this.powerUps = []; this.enemyShots = []; this.obstacles = []; this.rocketShots = []; this.platforms = [];
+    this.boss = null; this.shake = 0; this.cam.x = 0; this.time = 0; this.dtScale = 1;
+    this.buildVersusPlatforms();
+    const sp = role === 'host' ? { x: 78, y: 140, dir: 1 } : { x: 282, y: 140, dir: -1 };
+    this.player.x = sp.x; this.player.y = sp.y; this.player.dir = sp.dir; this.player.onGround = true;
+    this.vs = {
+      role, spawn: sp, myScore: 0, oppScore: 0, target: 5,
+      countdown: 3000, lastSwing: 0, netTimer: 0, over: false,
+      remote: {
+        x: role === 'host' ? 282 : 78, y: 140, tx: role === 'host' ? 282 : 78, ty: 140,
+        dir: role === 'host' ? -1 : 1, walkPhase: 0, attacking: false, swingWeapon: null,
+        alive: true, charId: 'ryan', lastSeen: 0,
+      },
+    };
+    if (window.Net) Net.setVersusCallbacks({
+      onState: (s) => this.onVersusState(s),
+      onHit: (p) => this.onVersusHit(p),
+      onFell: () => this.onVersusFell(),
+    });
+    this.state = 'versus';
+    Input.clear();
+    UI.showVersus();
+  },
+
+  buildVersusPlatforms() {
+    this.platforms = [
+      { x: 78, y: 140, w: 74 },    // links (spawn host)
+      { x: 282, y: 140, w: 74 },   // rechts (spawn guest)
+      { x: 180, y: 104, w: 64 },   // midden, hoog (dubbel-jump nodig)
+      { x: 130, y: 169, w: 44 },   // laag links
+      { x: 230, y: 169, w: 44 },   // laag rechts
+    ];
+  },
+
+  updateVersus(dt) {
+    if (!this.vs) return;
+    this.time += dt;
+    this.dtScale = Math.min(3, dt / 16.6667);
+    const v = this.vs;
+
+    if (v.countdown > 0) { v.countdown -= dt; }      // korte aftelling vóór de start
+    else {
+      if (this.player.respawnInvuln > 0) this.player.respawnInvuln -= dt;
+      this.player.update(dt, this);                  // eigen speler: volledige besturing/fysica
+      this.checkVersusHit();
+      // eraf gevallen -> punt voor de tegenstander
+      if (this.player.y > FALL_DEATH_Y && !this.player.dead) this.localFell();
+    }
+
+    // partikels
+    for (const p of this.particles) p.update(dt, this);
+    this.particles = this.particles.filter((p) => p.life > 0);
+    if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 0.04);
+
+    // mijn stand uitzenden (~20x/sec)
+    v.netTimer += dt;
+    if (v.netTimer >= 50) { v.netTimer = 0; this.sendVersusState(); }
+
+    // tegenstander vloeiend interpoleren
+    const r = v.remote;
+    r.x += (r.tx - r.x) * 0.35;
+    r.y += (r.ty - r.y) * 0.35;
+
+    if (window.UI && UI.updateVersusHUD) UI.updateVersusHUD(v);
+  },
+
+  checkVersusHit() {
+    const p = this.player, r = this.vs.remote;
+    if (!r.alive) return;
+    // alleen op het moment dat een NIEUWE mep begint (1 mep = 1 treffer)
+    const sw = p.swingUntil || 0;
+    if (sw && sw !== this.vs.lastSwing && this.time < sw) {
+      this.vs.lastSwing = sw;
+      const reach = 36;                              // ruime melee-reach in versus
+      const dx = (r.x - p.x) * p.dir;
+      if (dx > -10 && dx < reach && Math.abs(r.y - p.y) < 30) {
+        Net.versusSend('hit', { dir: p.dir, power: 15, vy: -5.5 });   // GROTE knockback
+        this.spawnBlood(r.x, r.y - 16);
+        this.shake = Math.max(this.shake, 6);
+      }
+    }
+  },
+
+  onVersusHit(payload) {
+    const p = this.player;
+    if (p.respawnInvuln > 0 || p.dead) return;       // net gespawnd = even onkwetsbaar
+    p.knockVx = (payload.dir || 1) * (payload.power || 15);
+    p.vy = payload.vy || -5.5;
+    p.onGround = false;
+    this.shake = Math.max(this.shake, 7);
+  },
+
+  localFell() {
+    this.player.dead = true;
+    this.vs.oppScore++;
+    if (window.Net) Net.versusSend('fell', {});
+    if (this.vs.oppScore >= this.vs.target) { this.endVersus(false); return; }
+    this.respawnLocal();
+  },
+  respawnLocal() {
+    const sp = this.vs.spawn;
+    this.player.x = sp.x; this.player.y = sp.y; this.player.dir = sp.dir;
+    this.player.vy = 0; this.player.knockVx = 0; this.player.onGround = true;
+    this.player.dead = false; this.player.respawnInvuln = 1300;
+  },
+
+  onVersusFell() {
+    this.vs.myScore++;
+    if (this.vs.myScore >= this.vs.target) this.endVersus(true);
+  },
+
+  onVersusState(s) {
+    if (!this.vs) return;
+    const r = this.vs.remote;
+    r.tx = s.x; r.ty = s.y; r.vy = s.vy || 0; r.dir = s.d || 1;
+    r.onGround = s.g !== 0; r.attacking = s.a === 1;
+    r.swingWeapon = s.sw || null; r.walkPhase = s.wp || 0;
+    r.alive = s.al !== 0; r.charId = s.ch || 'ryan';
+    r.lastSeen = this.time;
+  },
+
+  sendVersusState() {
+    if (!window.Net) return;
+    const p = this.player;
+    Net.versusSend('state', {
+      x: Math.round(p.x), y: Math.round(p.y), vy: +(p.vy || 0).toFixed(1), d: p.dir,
+      g: p.onGround ? 1 : 0, a: this.time < p.attackAnimUntil ? 1 : 0,
+      sw: (this.time < (p.swingUntil || 0)) ? (p.swingWeapon || 0) : 0,
+      wp: p.walkPhase || 0, al: p.dead ? 0 : 1, ch: Storage.data.equippedCharacter || 'ryan',
+    });
+  },
+
+  endVersus(won) {
+    if (this.vs && this.vs.over) return;
+    if (this.vs) this.vs.over = true;
+    this.state = 'versusOver';
+    if (window.Net) Net.leaveVersus();
+    UI.showVersusResult(won, this.vs ? this.vs.myScore : 0, this.vs ? this.vs.oppScore : 0);
+  },
+
+  quitVersus() {
+    if (window.Net) Net.leaveVersus();
+    this.state = 'menu';
+    UI.show('menu');
+  },
+
+  renderVersus() {
+    if (!this.vs) return;
+    const ctx = this.ctx, W = CONFIG.VIEW_W, H = CONFIG.VIEW_H;
+    // lucht (jungle-arena)
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, '#16331f'); sky.addColorStop(0.6, '#1f472a'); sky.addColorStop(1, '#0c1a12');
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+
+    const shx = this.shake > 0 ? Math.round((Math.random() - 0.5) * this.shake) : 0;
+    const shy = this.shake > 0 ? Math.round((Math.random() - 0.5) * this.shake) : 0;
+    ctx.save(); ctx.translate(shx, shy);
+
+    // afgrond onderin
+    ctx.fillStyle = '#06090d'; ctx.fillRect(0, CONFIG.GROUND_Y - 2, W, H);
+    ctx.globalAlpha = 0.5; ctx.fillStyle = '#04060a'; ctx.fillRect(0, CONFIG.GROUND_Y + 18, W, H); ctx.globalAlpha = 1;
+
+    // platforms
+    for (const pf of this.platforms) Sprites.drawPlatform(ctx, pf.x, pf.y, pf.w);
+
+    // partikels
+    for (const p of this.particles) {
+      ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+      Sprites.px(ctx, p.color, p.x, p.y, p.size, p.size);
+    }
+    ctx.globalAlpha = 1;
+
+    // tegenstander (ghost)
+    const r = this.vs.remote;
+    if (r.alive) {
+      const rc = (CHARACTERS[r.charId] || CHARACTERS.ryan);
+      Sprites.shadow(ctx, r.x, r.onGround ? r.y + 1 : CONFIG.GROUND_Y, 7);
+      Sprites.drawCharacter(ctx, Math.round(r.x), Math.round(r.y), r.dir, rc.palette, {
+        walkPhase: r.walkPhase, airborne: !r.onGround, attacking: r.attacking,
+        weapon: r.swingWeapon || 'bat', build: rc.build, hair: rc.hair,
+      });
+    }
+
+    // eigen speler (knippert tijdens respawn-onkwetsbaarheid)
+    const p = this.player;
+    const blink = p.respawnInvuln > 0 && Math.floor(this.time / 90) % 2 === 0;
+    if (!p.dead && !blink) {
+      Sprites.shadow(ctx, p.x, p.onGround ? p.y + 1 : CONFIG.GROUND_Y, 7);
+      const swinging = this.time < (p.swingUntil || 0) && p.swingWeapon;
+      Sprites.drawCharacter(ctx, Math.round(p.x), Math.round(p.y), p.dir, p.pal, {
+        walkPhase: p.walkPhase, airborne: !p.onGround, ducking: p.ducking,
+        attacking: this.time < p.attackAnimUntil,
+        weapon: swinging ? p.swingWeapon : p.weaponId, build: p.build, hair: p.hairStyle,
+      });
+    }
+    ctx.restore();
+  },
+
   // ---------- hoofdloop ----------
   loop(ts) {
     let dt = ts - this.lastTs;
@@ -1124,6 +1331,7 @@ const Game = {
 
     if (this.state === 'playing') this.update(dt);
     if (['playing', 'paused'].includes(this.state)) this.render();
+    if (this.state === 'versus') { this.updateVersus(dt); this.renderVersus(); }
 
     Input.endFrame();
     requestAnimationFrame((t) => this.loop(t));

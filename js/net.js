@@ -134,5 +134,89 @@ const Net = {
   },
 
   _refreshUI() { if (window.UI && UI.refreshAuthUI) UI.refreshAuthUI(); },
+
+  // ============ 1 vs 1 MULTIPLAYER (Supabase Realtime) ============
+  versus: null,
+
+  makeRoomCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // zonder verwarrende tekens
+    let s = '';
+    for (let i = 0; i < 4; i++) s += chars[Math.floor(Math.random() * chars.length)];
+    return s;
+  },
+
+  // host maakt een kamer, guest doet mee. cbs = { onPresence, onState, onHit, onFell }
+  async versusHost(cbs) { return this._versusJoin(this.makeRoomCode(), 'host', cbs); },
+  async versusJoin(code, cbs) {
+    if (!code || code.length < 3) throw new Error('Vul een geldige kamercode in.');
+    return this._versusJoin(code.toUpperCase().trim(), 'guest', cbs);
+  },
+
+  async _versusJoin(code, role, cbs) {
+    if (!this.ready) throw new Error('Geen verbinding met de server.');
+    this.leaveVersus();
+    const myId = (this.user && this.user.id) || ('gast-' + Math.floor(Math.random() * 1e7));
+    const ch = this.sb.channel('versus-' + code, { config: { broadcast: { self: false } } });
+    const v = { channel: ch, code, role, myId, cbs: cbs || {}, matched: false, joinTimer: null };
+    this.versus = v;
+    // start-handshake via broadcast (betrouwbaarder dan presence)
+    ch.on('broadcast', { event: 'join' }, () => {
+      if (role === 'host') { this.versusSend('start', {}); this._versusMatch(v, 'host'); }
+    });
+    ch.on('broadcast', { event: 'start' }, () => {
+      if (role === 'guest') this._versusMatch(v, 'guest');
+    });
+    ch.on('broadcast', { event: 'state' }, (m) => { if (v.cbs.onState) v.cbs.onState(m.payload); });
+    ch.on('broadcast', { event: 'hit' }, (m) => { if (v.cbs.onHit) v.cbs.onHit(m.payload); });
+    ch.on('broadcast', { event: 'fell' }, (m) => { if (v.cbs.onFell) v.cbs.onFell(m.payload); });
+    ch.on('broadcast', { event: 'bye' }, () => { if (v.cbs.onPeerLeft) v.cbs.onPeerLeft(); });
+    await new Promise((resolve, reject) => {
+      let done = false;
+      ch.subscribe((status) => {
+        if (status === 'SUBSCRIBED' && !done) { done = true; resolve(); }
+        else if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && !done) {
+          done = true; reject(new Error('Kon niet verbinden met de kamer.'));
+        }
+      });
+      setTimeout(() => { if (!done) { done = true; reject(new Error('Time-out bij verbinden.')); } }, 8000);
+    });
+    // guest klopt herhaaldelijk aan tot de host 'start' terugstuurt
+    if (role === 'guest') {
+      let tries = 0;
+      const ping = () => {
+        if (v.matched || tries++ > 20) { if (v.joinTimer) clearInterval(v.joinTimer); v.joinTimer = null; return; }
+        this.versusSend('join', { id: myId });
+      };
+      ping();
+      v.joinTimer = setInterval(ping, 600);
+    }
+    return code;
+  },
+
+  _versusMatch(v, role) {
+    if (!v || v.matched) return;
+    v.matched = true;
+    if (v.joinTimer) { clearInterval(v.joinTimer); v.joinTimer = null; }
+    if (v.cbs.onMatch) v.cbs.onMatch(role);
+  },
+
+  setVersusCallbacks(cbs) { if (this.versus) this.versus.cbs = Object.assign(this.versus.cbs || {}, cbs); },
+
+  versusSend(event, payload) {
+    if (this.versus && this.versus.channel) {
+      this.versus.channel.send({ type: 'broadcast', event, payload });
+    }
+  },
+
+  leaveVersus() {
+    if (this.versus) {
+      if (this.versus.joinTimer) { clearInterval(this.versus.joinTimer); }
+      if (this.versus.channel) {
+        try { this.versus.channel.send({ type: 'broadcast', event: 'bye', payload: {} }); } catch (e) {}
+        try { this.sb.removeChannel(this.versus.channel); } catch (e) {}
+      }
+    }
+    this.versus = null;
+  },
 };
 window.Net = Net;   // zodat de window.Net-checks in storage.js/ui.js werken

@@ -11,7 +11,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#0d0f14" />
   <title>Topleven Adventures — Wereld 1</title>
-  <link rel="stylesheet" href="css/style.css?v=accounts1" />
+  <link rel="stylesheet" href="css/style.css?v=versus1" />
 </head>
 <body>
   <div id="game-root">
@@ -77,6 +77,7 @@
         <p class="subtitle">Wereld 1 — Verlaten Stad</p>
         <div class="menu-buttons">
           <button id="btn-play" class="big-btn">SPELEN</button>
+          <button id="btn-versus" class="big-btn versus">⚔ 1 VS 1 ONLINE</button>
           <button id="btn-arena" class="big-btn arena">ZOMBIE KNOCK-OUT</button>
           <button id="btn-shop" class="big-btn secondary">WAPENSHOP</button>
           <button id="btn-characters" class="big-btn secondary">CHARACTERS</button>
@@ -139,6 +140,49 @@
         <div id="character-grid" class="shop-grid"></div>
         <button class="back-btn" data-back="menu">◀ TERUG</button>
       </div>
+    </div>
+
+    <!-- ===== 1 vs 1 lobby ===== -->
+    <div id="versus-screen" class="screen hidden">
+      <div class="screen-inner">
+        <h2 class="screen-title">1 VS 1 ONLINE</h2>
+        <p class="screen-sub">Sla je tegenstander van het platform! Eerst bij 5 punten wint.</p>
+        <div id="versus-lobby">
+          <button id="btn-vs-host" class="big-btn">KAMER MAKEN</button>
+          <div class="vs-join-row">
+            <input id="vs-code-input" class="auth-input" type="text" placeholder="CODE" maxlength="4" autocomplete="off" />
+            <button id="btn-vs-join" class="big-btn secondary">MEEDOEN</button>
+          </div>
+          <div id="versus-msg" class="auth-msg"></div>
+        </div>
+        <div id="versus-wait" class="hidden">
+          <p class="vs-wait-label">Jouw kamercode:</p>
+          <div id="vs-room-code" class="vs-room-code">----</div>
+          <p class="vs-wait-sub">Geef deze code aan je tegenstander en wacht tot die meedoet…</p>
+        </div>
+        <button class="back-btn" id="btn-vs-back" data-back="menu">◀ TERUG</button>
+      </div>
+    </div>
+
+    <!-- ===== 1 vs 1 uitslag ===== -->
+    <div id="versus-result" class="overlay hidden">
+      <div class="overlay-box">
+        <h2 class="screen-title" id="vs-result-title">GEWONNEN!</h2>
+        <div class="result-stats"><div>Eindstand: <span id="vs-result-score">0 – 0</span></div></div>
+        <div class="menu-buttons">
+          <button id="btn-vs-again" class="big-btn">TERUG NAAR LOBBY</button>
+          <button id="btn-vs-menu" class="big-btn secondary">MENU</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 1 vs 1 score (tijdens het spel) ===== -->
+    <div id="versus-hud" class="hidden">
+      <span id="vs-score-me">0</span>
+      <span class="vs-score-vs">JIJ — TEGEN</span>
+      <span id="vs-score-them">0</span>
+      <button id="btn-vs-quit" title="Stoppen">✕</button>
+      <div id="vs-countdown" class="vs-countdown hidden"></div>
     </div>
 
     <!-- ===== Level voltooid ===== -->
@@ -216,14 +260,14 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-  <script src="js/config.js?v=accounts1"></script>
-  <script src="js/storage.js?v=accounts1"></script>
-  <script src="js/net.js?v=accounts1"></script>
-  <script src="js/input.js?v=accounts1"></script>
-  <script src="js/sprites.js?v=accounts1"></script>
-  <script src="js/entities.js?v=accounts1"></script>
-  <script src="js/ui.js?v=accounts1"></script>
-  <script src="js/game.js?v=accounts1"></script>
-  <script src="js/main.js?v=accounts1"></script>
+  <script src="js/config.js?v=versus1"></script>
+  <script src="js/storage.js?v=versus1"></script>
+  <script src="js/net.js?v=versus1"></script>
+  <script src="js/input.js?v=versus1"></script>
+  <script src="js/sprites.js?v=versus1"></script>
+  <script src="js/entities.js?v=versus1"></script>
+  <script src="js/ui.js?v=versus1"></script>
+  <script src="js/game.js?v=versus1"></script>
+  <script src="js/main.js?v=versus1"></script>
 </body>
 </html>
