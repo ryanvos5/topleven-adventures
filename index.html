@@ -11,7 +11,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#0d0f14" />
   <title>Topleven Adventures — Wereld 1</title>
-  <link rel="stylesheet" href="css/style.css?v=apehard1" />
+  <link rel="stylesheet" href="css/style.css?v=lb1" />
 </head>
 <body>
   <div id="game-root">
@@ -81,6 +81,7 @@
           <button id="btn-arena" class="big-btn arena">ZOMBIE KNOCK-OUT</button>
           <button id="btn-shop" class="big-btn secondary">WAPENSHOP</button>
           <button id="btn-characters" class="big-btn secondary">CHARACTERS</button>
+          <button id="btn-leaderboard" class="big-btn secondary">🏆 LEADERBOARD</button>
         </div>
         <div class="menu-coins">Munten: <span id="menu-coin-count">0</span> ●</div>
         <div id="account-bar" class="account-bar">
@@ -142,6 +143,21 @@
       </div>
     </div>
 
+    <!-- ===== Leaderboard ===== -->
+    <div id="leaderboard-screen" class="screen hidden">
+      <div class="screen-inner">
+        <h2 class="screen-title">🏆 LEADERBOARD</h2>
+        <div id="lb-tabs" class="world-tabs">
+          <button class="world-tab active" data-lb="xp">Level</button>
+          <button class="world-tab" data-lb="arena">Knock-out</button>
+          <button class="world-tab" data-lb="wins">1v1 Wins</button>
+        </div>
+        <div id="lb-list" class="lb-list"></div>
+        <p id="lb-msg" class="screen-sub"></p>
+        <button class="back-btn" data-back="menu">◀ TERUG</button>
+      </div>
+    </div>
+
     <!-- ===== 1 vs 1 lobby ===== -->
     <div id="versus-screen" class="screen hidden">
       <div class="screen-inner">
@@ -168,7 +184,10 @@
     <div id="versus-result" class="overlay hidden">
       <div class="overlay-box">
         <h2 class="screen-title" id="vs-result-title">GEWONNEN!</h2>
-        <div class="result-stats"><div>Eindstand: <span id="vs-result-score">0 – 0</span></div></div>
+        <div class="result-stats">
+          <div>Eindstand: <span id="vs-result-score">0 – 0</span></div>
+          <div id="vs-result-xp" class="hidden"></div>
+        </div>
         <div class="menu-buttons">
           <button id="btn-vs-again" class="big-btn">TERUG NAAR LOBBY</button>
           <button id="btn-vs-menu" class="big-btn secondary">MENU</button>
@@ -260,14 +279,14 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-  <script src="js/config.js?v=apehard1"></script>
-  <script src="js/storage.js?v=apehard1"></script>
-  <script src="js/net.js?v=apehard1"></script>
-  <script src="js/input.js?v=apehard1"></script>
-  <script src="js/sprites.js?v=apehard1"></script>
-  <script src="js/entities.js?v=apehard1"></script>
-  <script src="js/ui.js?v=apehard1"></script>
-  <script src="js/game.js?v=apehard1"></script>
-  <script src="js/main.js?v=apehard1"></script>
+  <script src="js/config.js?v=lb1"></script>
+  <script src="js/storage.js?v=lb1"></script>
+  <script src="js/net.js?v=lb1"></script>
+  <script src="js/input.js?v=lb1"></script>
+  <script src="js/sprites.js?v=lb1"></script>
+  <script src="js/entities.js?v=lb1"></script>
+  <script src="js/ui.js?v=lb1"></script>
+  <script src="js/game.js?v=lb1"></script>
+  <script src="js/main.js?v=lb1"></script>
 </body>
 </html>

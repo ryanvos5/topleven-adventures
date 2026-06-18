@@ -21,6 +21,7 @@ const UI = {
       charCoins: $('char-coin-count'),
       levelGrid: $('level-grid'), shopGrid: $('shop-grid'), charGrid: $('character-grid'),
       character: $('character-screen'), arena: $('arena-screen'), versus: $('versus-screen'),
+      leaderboard: $('leaderboard-screen'),
       arenaRound: $('arena-round'), arenaCoins: $('arena-coins'), arenaBest: $('arena-best'),
       arenaLeft: $('arena-left'), arenaRecord: $('arena-record'),
       winKills: $('win-kills'), winCoins: $('win-coins'), winReplayNote: $('win-replay-note'),
@@ -68,6 +69,15 @@ const UI = {
     $('btn-auth-toggle').onclick = () => this.openAuth(this.authMode === 'login' ? 'register' : 'login');
     $('btn-auth-submit').onclick = () => this.submitAuth();
     this.refreshAuthUI();
+
+    // ---- leaderboard ----
+    $('btn-leaderboard').onclick = () => this.openLeaderboard();
+    document.querySelectorAll('#lb-tabs [data-lb]').forEach((t) => {
+      t.onclick = () => {
+        document.querySelectorAll('#lb-tabs [data-lb]').forEach((b) => b.classList.toggle('active', b === t));
+        this.renderLeaderboard(t.dataset.lb);
+      };
+    });
 
     // ---- 1 vs 1 online ----
     $('btn-versus').onclick = () => this.openVersusLobby();
@@ -150,7 +160,7 @@ const UI = {
     if (!status || !btnAcc || !btnOut) return;
     const inLogged = window.Net && Net.isLoggedIn && Net.isLoggedIn();
     if (inLogged) {
-      status.textContent = '👤 ' + Net.nickname();
+      status.textContent = '👤 ' + Net.nickname() + ' · Lvl ' + playerLevel(Storage.data.xp || 0);
       status.classList.remove('hidden');
       btnOut.classList.remove('hidden');
       btnAcc.classList.add('hidden');
@@ -205,6 +215,42 @@ const UI = {
       submitBtn.disabled = false;
     }
   },
+
+  // ---- LEADERBOARD ----
+  openLeaderboard() {
+    document.querySelectorAll('#lb-tabs [data-lb]').forEach((b, i) => b.classList.toggle('active', i === 0));
+    this.show('leaderboard');
+    this.renderLeaderboard('xp');
+  },
+
+  async renderLeaderboard(sortBy) {
+    const list = document.getElementById('lb-list');
+    const msg = document.getElementById('lb-msg');
+    list.innerHTML = ''; msg.textContent = 'Laden…';
+    if (!window.Net || !Net.ready) { msg.textContent = 'Geen verbinding met de server.'; return; }
+    let rows;
+    try { rows = await Net.getLeaderboard(sortBy, 50); }
+    catch (e) { msg.textContent = '⚠ ' + (e.message || e); return; }
+    if (!rows.length) { msg.textContent = 'Nog geen spelers met een account. Log in en speel!'; return; }
+    msg.textContent = '';
+    const myNick = (window.Net && Net.isLoggedIn()) ? Net.nickname() : null;
+    const statLabel = sortBy === 'arena' ? 'ronde' : sortBy === 'wins' ? 'wins' : 'XP';
+    rows.forEach((r, i) => {
+      const lvl = playerLevel(r.xp || 0);
+      const stat = sortBy === 'arena' ? (r.arena_best || 0) : sortBy === 'wins' ? (r.mp_wins || 0) : (r.xp || 0);
+      const row = document.createElement('div');
+      row.className = 'lb-row' + (myNick && r.nickname === myNick ? ' me' : '');
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '.';
+      row.innerHTML =
+        '<span class="lb-rank">' + medal + '</span>' +
+        '<span class="lb-name">' + this._esc(r.nickname) + '</span>' +
+        '<span class="lb-lvl">Lvl ' + lvl + '</span>' +
+        '<span class="lb-stat">' + stat + ' ' + statLabel + '</span>';
+      list.appendChild(row);
+    });
+  },
+
+  _esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; },
 
   // ---- 1 VS 1 LOBBY / SPEL ----
   openVersusLobby() {
@@ -263,7 +309,7 @@ const UI = {
   },
 
   showVersus() {
-    ['menu', 'level', 'shop', 'character', 'arena', 'win', 'lose', 'versus'].forEach((s) =>
+    ['menu', 'level', 'shop', 'character', 'arena', 'win', 'lose', 'versus', 'leaderboard'].forEach((s) =>
       this.el[s].classList.add('hidden'));
     document.body.classList.add('in-game');
     this.el.hud.classList.add('hidden');
@@ -285,7 +331,7 @@ const UI = {
     }
   },
 
-  showVersusResult(won, myScore, oppScore) {
+  showVersusResult(won, myScore, oppScore, xpGained) {
     document.getElementById('versus-hud').classList.add('hidden');
     document.body.classList.remove('in-game');
     this.el.touch.classList.add('hidden');
@@ -293,11 +339,19 @@ const UI = {
     t.textContent = won ? 'GEWONNEN! 🏆' : 'VERLOREN';
     t.className = 'screen-title ' + (won ? 'win' : 'lose');
     document.getElementById('vs-result-score').textContent = myScore + ' – ' + oppScore;
+    const xpEl = document.getElementById('vs-result-xp');
+    if (xpGained) {
+      xpEl.classList.remove('hidden');
+      xpEl.textContent = '+' + xpGained + ' XP  ·  Level ' + playerLevel(Storage.data.xp || 0) +
+        (window.Net && Net.isLoggedIn() ? '' : '  (log in om mee te tellen)');
+    } else { xpEl.classList.add('hidden'); }
     document.getElementById('versus-result').classList.remove('hidden');
+    this.refreshAuthUI();
+    document.getElementById('versus-screen').classList.add('hidden');
   },
 
   show(name) {
-    ['menu', 'level', 'shop', 'character', 'arena', 'win', 'lose', 'versus'].forEach((s) => {
+    ['menu', 'level', 'shop', 'character', 'arena', 'win', 'lose', 'versus', 'leaderboard'].forEach((s) => {
       this.el[s].classList.toggle('hidden', s !== name);
     });
     const inGame = (name === 'game');

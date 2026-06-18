@@ -128,9 +128,25 @@ const Net = {
     if (!this.user) return;
     try {
       await this.sb.from('game_profiles')
-        .update({ save_data: Storage.data, updated_at: new Date().toISOString() })
+        .update({
+          save_data: Storage.data,
+          mp_wins: Storage.data.mpWins || 0,
+          xp: Storage.data.xp || 0,
+          arena_best: Storage.data.arenaBest || 0,
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', this.user.id);
     } catch (e) { console.warn('[Net] pushCloudSave', e); }
+  },
+
+  // leaderboard ophalen (sort_by: 'xp' | 'arena' | 'wins')
+  async getLeaderboard(sortBy, limit) {
+    if (!this.ready) throw new Error('Geen verbinding met de server.');
+    const { data, error } = await this.sb.rpc('get_leaderboard', {
+      sort_by: sortBy || 'xp', limit_n: limit || 50,
+    });
+    if (error) throw error;
+    return data || [];
   },
 
   _refreshUI() { if (window.UI && UI.refreshAuthUI) UI.refreshAuthUI(); },

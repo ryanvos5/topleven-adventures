@@ -1262,7 +1262,12 @@ const Game = {
     if (this.vs) this.vs.over = true;
     this.state = 'versusOver';
     if (window.Net) Net.leaveVersus();
-    UI.showVersusResult(won, this.vs ? this.vs.myScore : 0, this.vs ? this.vs.oppScore : 0);
+    // XP + wins voor het duel (sync't naar de cloud/leaderboard als je ingelogd bent)
+    const gained = won ? XP_WIN : XP_LOSS;
+    Storage.data.xp = (Storage.data.xp || 0) + gained;
+    if (won) Storage.data.mpWins = (Storage.data.mpWins || 0) + 1;
+    Storage.save();
+    UI.showVersusResult(won, this.vs ? this.vs.myScore : 0, this.vs ? this.vs.oppScore : 0, gained);
   },
 
   quitVersus() {

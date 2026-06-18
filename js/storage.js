@@ -17,6 +17,8 @@ const DEFAULT_SAVE = {
   progress: { '1': 0 },
   arenaBest: 0,                 // hoogste ronde in Zombie Knock-out
   arenaPlays: { date: '', count: 0 }, // dagelijkse speel-limiet
+  xp: 0,                        // ervaring uit multiplayer-duels (level = playerLevel(xp))
+  mpWins: 0,                    // gewonnen 1v1-duels
 };
 
 const Storage = {
@@ -33,6 +35,8 @@ const Storage = {
       if (typeof this.data.ammo !== 'number') this.data.ammo = STARTING_AMMO;
       if (typeof this.data.rockets !== 'number') this.data.rockets = 0;
       if (typeof this.data.arenaBest !== 'number') this.data.arenaBest = 0;
+      if (typeof this.data.xp !== 'number') this.data.xp = 0;
+      if (typeof this.data.mpWins !== 'number') this.data.mpWins = 0;
       if (!this.data.arenaPlays) this.data.arenaPlays = { date: '', count: 0 };
       // migratie van oude opslag (één slot -> twee slots)
       if (this.data.equippedMelee === undefined) this.data.equippedMelee = 'bat';
@@ -63,6 +67,8 @@ const Storage = {
     d.ammo = Math.max(d.ammo || 0, cloud.ammo || 0);
     d.rockets = Math.max(d.rockets || 0, cloud.rockets || 0);
     d.arenaBest = Math.max(d.arenaBest || 0, cloud.arenaBest || 0);
+    d.xp = Math.max(d.xp || 0, cloud.xp || 0);
+    d.mpWins = Math.max(d.mpWins || 0, cloud.mpWins || 0);
     for (const w of (cloud.ownedWeapons || [])) if (!d.ownedWeapons.includes(w)) d.ownedWeapons.push(w);
     for (const c of (cloud.ownedCharacters || [])) if (!d.ownedCharacters.includes(c)) d.ownedCharacters.push(c);
     const cp = cloud.progress || {};

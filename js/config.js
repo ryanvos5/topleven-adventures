@@ -285,6 +285,17 @@ const POWERUPS = {
 const POWERUP_LIST = ['rage', 'speed', 'shield'];
 const POWERUP_DROP_CHANCE = 0.025; // kans per kill
 
+/* ---------- XP / LEVELS (multiplayer-duels) ----------
+   XP per duel: winst geeft meer dan verlies. Langzame, oplopende curve:
+   level L vereist 75*L*(L-1) totale XP -> L2=150, L3=450, L4=900, L5=1500, L10=6750.
+   Met +50/win en +15/loss duurt levelen flink (niet te snel). */
+const XP_WIN = 50;
+const XP_LOSS = 15;
+function playerLevel(xp) {
+  return Math.floor((1 + Math.sqrt(1 + (4 * (xp || 0)) / 75)) / 2);
+}
+function xpForLevel(L) { return 75 * L * (L - 1); }   // totale XP nodig voor level L
+
 function buildWorld1() {
   const levels = [];
   const themeFor = (id) => id <= 3 ? 'city' : id <= 6 ? 'park' : id <= 9 ? 'graveyard' : 'sewer';
