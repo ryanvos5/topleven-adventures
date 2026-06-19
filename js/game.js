@@ -1160,11 +1160,14 @@ const Game = {
       const botChar = ids[Math.floor(Math.random() * ids.length)] || 'ryan';
       const melees = ['bat', 'machete', 'sword', 'axe', 'mace', 'katana'];
       const botMelee = melees[Math.floor(Math.random() * melees.length)];
-      const b = new Player(botMelee, null, botChar);
+      const guns = ['pistol', 'uzi', 'ak47'];
+      const botRanged = mode === 'both' ? guns[Math.floor(Math.random() * guns.length)] : null;
+      const b = new Player(botMelee, botRanged, botChar);
       b.maxJumps = 2; b.jumps = 2; b.knockVx = 0; b.dead = false; b.respawnInvuln = 0;
       b.x = rb.x; b.y = rb.y; b.dir = this.vs.botSpawn.dir; b.onGround = true;
-      b._think = 0; b._jumpCd = 0;
+      b._think = 0; b._jumpCd = 0; b._shootCd = 0; b._blockUntil = 0; b._rangedId = botRanged;
       this.bot = b;
+      this.botBullets = [];
       this.vs.remote.charId = botChar;
     } else if (window.Net) {
       Net.setVersusCallbacks({
@@ -1343,7 +1346,33 @@ const Game = {
     r.x = r.tx = b.x; r.y = r.ty = b.y; r.dir = b.dir; r.onGround = b.onGround;
     r.attacking = this.time < b.attackAnimUntil; r.swingWeapon = (this.time < (b.swingUntil || 0)) ? b.swingWeapon : null;
     r.walkPhase = b.walkPhase; r.alive = !b.dead; r.charId = b.charId;
-    r.hp = b.hp; r.maxHp = b.maxHp;
+    r.hp = b.hp; r.maxHp = b.maxHp; r.ducking = b.ducking;
+
+    // bot schiet (beide-wapens): eigen kogel-array naar de speler
+    if (this.vsMode === 'both' && b._rangedId && b.onGround && !b.dead && this.time >= (b._shootCd || 0)) {
+      const p2 = this.player;
+      if (!p2.dead && Math.abs(p2.y - b.y) < 22 && Math.abs(p2.x - b.x) > 30) {
+        b._shootCd = this.time + 750;
+        const wd = WEAPONS[b._rangedId] || WEAPONS.pistol;
+        const sdir = p2.x >= b.x ? 1 : -1; b.dir = sdir;
+        const bl = new Bullet(b.x + sdir * 14, b.y - 16, sdir * (wd.bulletSpeed || 7), wd.damage, 0);
+        this.botBullets.push(bl);
+        this.spawnMuzzleFlash(b.x + sdir * 14, b.y - 16, sdir);
+      }
+    }
+    // bot-kogels bewegen + de speler raken
+    if (this.botBullets && this.botBullets.length) {
+      for (const bl of this.botBullets) { bl.x += bl.vx * this.dtScale; bl.life += dt; }
+      for (const bl of this.botBullets) {
+        if (bl.alive && this.player.respawnInvuln <= 0 && !this.player.dead &&
+            Math.abs(bl.x - this.player.x) < 11 && Math.abs(bl.y - (this.player.y - 16)) < 16) {
+          bl.alive = false;
+          this.onVersusHit({ dir: Math.sign(bl.vx) || 1, power: 9, vy: -3, dmg: Math.round((bl.damage || 20) * 0.4) });
+          this.spawnBlood(bl.x, bl.y);
+        }
+      }
+      this.botBullets = this.botBullets.filter((bl) => bl.alive && bl.life < 1500 && bl.x > -12 && bl.x < CONFIG.VIEW_W + 12);
+    }
 
     // bot's mep raakt de speler?
     const bsw = b.swingUntil || 0;
@@ -1396,53 +1425,65 @@ const Game = {
     return best;
   },
 
-  // de AI: nadert de speler, springt tussen platforms, mept, herstelt aan de rand
+  // is een ander platform bereikbaar met een (dubbel-)sprong?
+  reachablePlatform(cur, tgt) {
+    if (!cur || !tgt) return false;
+    return Math.abs(tgt.x - cur.x) < 170 && (cur.y - tgt.y) < 95;
+  },
+
+  // de AI: nadert de speler, springt tussen platforms, mept, blokt, herstelt aan de rand
   botThink() {
     const b = this.bot, p = this.player, now = this.time;
     const inp = { left: false, right: false, jump: false, duck: false, attack: false, melee: false, jumpPressed: false };
     if (b.dead) return inp;
     const dx = p.x - b.x;
-    const face = () => { if (Math.abs(dx) > 8) b.dir = dx > 0 ? 1 : -1; };   // hysterese: niet flippen bij kleine afstand
+    const aDx = Math.abs(dx);
+    const face = () => { if (aDx > 8) b.dir = dx > 0 ? 1 : -1; };
 
-    // RECOVERY: in de lucht boven de leegte -> rustig terug naar het dichtstbijzijnde platform
+    // RECOVERY: in de lucht -> terug naar het dichtstbijzijnde platform
     if (!b.onGround) {
-      const safe = this.platformUnder(p) ? (Math.abs(this.platformUnder(p).x - b.x) < 120 ? this.platformUnder(p) : this.nearestPlatform(b.x)) : this.nearestPlatform(b.x);
+      const safe = this.nearestPlatform(b.x);
       if (safe) {
         if (safe.x > b.x + 8) inp.right = true; else if (safe.x < b.x - 8) inp.left = true; else face();
-        // alleen dubbel-jumpen als hij écht onder platformhoogte zakt (geen gespartel)
         if (b.vy > 1.5 && b.y > safe.y + 10 && b.jumps > 0 && now >= b._jumpCd) {
           inp.jump = true; inp.jumpPressed = true; b._jumpCd = now + 350;
         }
       }
-      if (Math.abs(dx) < 30 && Math.abs(p.y - b.y) < 26) { inp.melee = true; face(); }
+      if (aDx < 30 && Math.abs(p.y - b.y) < 26) { inp.melee = true; face(); }
       return inp;
     }
 
     const cur = this.platformUnder(b);
-    const tgt = this.platformUnder(p) || this.nearestPlatform(p.x);
+    const eL = cur ? cur.x - cur.w / 2 + 9 : 0;          // veilige randen
+    const eR = cur ? cur.x + cur.w / 2 - 9 : CONFIG.VIEW_W;
 
-    if (cur && tgt && cur !== tgt) {
-      // naar het platform van de speler bewegen + één doelgerichte sprong
+    // BLOKKEN: speler vlakbij en haalt uit -> soms bukken (schild)
+    if (aDx < 32 && Math.abs(p.y - b.y) < 24 && this.time < (p.swingUntil || 0) &&
+        now >= (b._blockUntil || 0) && now >= (b._blockCd || 0) && Math.random() < 0.55) {
+      b._blockUntil = now + 480; b._blockCd = now + 1200;
+    }
+    if (now < (b._blockUntil || 0)) { inp.duck = true; face(); return inp; }   // gebukt blokken
+
+    // niet de speler de leegte in volgen als die boven je in de lucht hangt
+    const playerAirAbove = !p.onGround && p.y < b.y - 6;
+    const tgt = playerAirAbove ? cur : (this.platformUnder(p) || this.nearestPlatform(p.x));
+
+    if (cur && tgt && cur !== tgt && this.reachablePlatform(cur, tgt)) {
+      // doelgericht naar een ANDER, bereikbaar platform springen
       const tdx = tgt.x - b.x;
-      if (tdx > 10) inp.right = true; else if (tdx < -10) inp.left = true; else face();
-      // pas springen als hij richting het doel aan de rand staat (natuurlijker dan continu hoppen)
-      const eL = cur.x - cur.w / 2, eR = cur.x + cur.w / 2;
-      const nearEdgeToTarget = (tdx > 0 && b.x > eR - 14) || (tdx < 0 && b.x < eL + 14);
-      if ((nearEdgeToTarget || tgt.y < cur.y - 8) && now >= b._jumpCd) {
-        inp.jump = true; inp.jumpPressed = true; b._jumpCd = now + 650;
-      }
+      if (tdx > 6) inp.right = true; else if (tdx < -6) inp.left = true; else face();
+      const nearEdge = (tdx > 0 && b.x > eR - 4) || (tdx < 0 && b.x < eL + 4) || tgt.y < cur.y - 8;
+      if (nearEdge && now >= b._jumpCd) { inp.jump = true; inp.jumpPressed = true; b._jumpCd = now + 650; }
     } else {
-      // zelfde platform: nader met een deadzone (geen jitter), mep van dichtbij
-      const aDx = Math.abs(dx);
-      if (aDx > 28) { if (dx > 0) inp.right = true; else inp.left = true; }
-      else face();                                     // dichtbij genoeg -> stilstaan en kijken
+      // op het huidige platform: nader de speler MAAR blijf binnen de veilige randen
+      const want = aDx > 26 ? (dx > 0 ? 1 : -1) : 0;
+      if (want > 0 && b.x < eR) inp.right = true;
+      else if (want < 0 && b.x > eL) inp.left = true;
+      else face();
       if (aDx < 32 && Math.abs(p.y - b.y) < 24) { inp.melee = true; face(); }
-      if (p.y < b.y - 18 && aDx < 64 && now >= b._jumpCd) { inp.jump = true; inp.jumpPressed = true; b._jumpCd = now + 650; }
-      // niet van de rand de leegte in lopen
-      if (cur) {
-        const eL = cur.x - cur.w / 2 + 8, eR = cur.x + cur.w / 2 - 8;
-        if (inp.right && b.x > eR) { inp.right = false; face(); }
-        if (inp.left && b.x < eL) { inp.left = false; face(); }
+      // speler hoog erboven -> spring (alleen veilig midden op het platform)
+      if (p.y < b.y - 18 && aDx < 50 && b.x > eL + 4 && b.x < eR - 4 && now >= b._jumpCd) {
+        inp.jump = true; inp.jumpPressed = true; b._jumpCd = now + 650;
       }
     }
     return inp;
@@ -1581,6 +1622,7 @@ const Game = {
     // kogels (beide-wapens): eigen + ghost van de tegenstander
     if (this.bullets) for (const b of this.bullets) Sprites.px(ctx, '#ffe27a', b.x - 1, b.y - 1, 3, 2);
     if (this.ghostBullets) for (const b of this.ghostBullets) Sprites.px(ctx, '#ff8a4a', b.x - 1, b.y - 1, 3, 2);
+    if (this.botBullets) for (const b of this.botBullets) Sprites.px(ctx, '#ff8a4a', b.x - 1, b.y - 1, 3, 2);
 
     // partikels
     for (const p of this.particles) {
