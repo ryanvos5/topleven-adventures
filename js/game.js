@@ -1369,9 +1369,12 @@ const Game = {
   applyHitToBot(dir, power, vy, dmg) {
     const b = this.bot;
     if (!b || b.respawnInvuln > 0 || b.dead) return;
-    b.knockVx = dir * power; b.vy = vy; b.onGround = false;
-    if (dmg) b.takeDamage(dmg, 0, this, 0);            // HP-schade
-    this.shake = Math.max(this.shake, 7);
+    const blocking = b.ducking && b.onGround;
+    b.knockVx = dir * power * (blocking ? 0.15 : 1);
+    if (!blocking) { b.vy = vy; b.onGround = false; }
+    if (dmg) b.takeDamage(Math.round(dmg * (blocking ? 0.4 : 1)), 0, this, 0);
+    if (blocking) this.spawnArmorSpark(b.x + b.dir * 10, b.y - 12);
+    this.shake = Math.max(this.shake, blocking ? 3 : 7);
   },
 
   respawnBot() {
@@ -1448,11 +1451,12 @@ const Game = {
   onVersusHit(payload) {
     const p = this.player;
     if (p.respawnInvuln > 0 || p.dead) return;       // net gespawnd = even onkwetsbaar
-    p.knockVx = (payload.dir || 1) * (payload.power || 15);
-    p.vy = payload.vy || -5.5;
-    p.onGround = false;
-    if (payload.dmg) p.takeDamage(payload.dmg);        // HP-schade
-    this.shake = Math.max(this.shake, 7);
+    const blocking = p.ducking && p.onGround;          // bukken = blok
+    p.knockVx = (payload.dir || 1) * (payload.power || 15) * (blocking ? 0.15 : 1);
+    if (!blocking) { p.vy = payload.vy || -5.5; p.onGround = false; }
+    if (payload.dmg) p.takeDamage(Math.round(payload.dmg * (blocking ? 0.4 : 1)));
+    if (blocking) this.spawnArmorSpark(p.x + p.dir * 10, p.y - 12);
+    this.shake = Math.max(this.shake, blocking ? 3 : 7);
   },
 
   localFell() {
@@ -1501,6 +1505,7 @@ const Game = {
     r.onGround = s.g !== 0; r.attacking = s.a === 1;
     r.swingWeapon = s.sw || null; r.walkPhase = s.wp || 0;
     r.alive = s.al !== 0; r.charId = s.ch || 'ryan';
+    r.ducking = s.dk === 1;
     if (typeof s.h === 'number') r.hp = s.h;
     if (typeof s.mh === 'number') r.maxHp = s.mh;
     r.lastSeen = this.time;
@@ -1514,7 +1519,7 @@ const Game = {
       g: p.onGround ? 1 : 0, a: this.time < p.attackAnimUntil ? 1 : 0,
       sw: (this.time < (p.swingUntil || 0)) ? (p.swingWeapon || 0) : 0,
       wp: p.walkPhase || 0, al: p.dead ? 0 : 1, ch: Storage.data.equippedCharacter || 'ryan',
-      h: Math.round(p.hp), mh: p.maxHp,
+      h: Math.round(p.hp), mh: p.maxHp, dk: p.ducking ? 1 : 0,
     });
   },
 
@@ -1590,9 +1595,10 @@ const Game = {
       const rc = (CHARACTERS[r.charId] || CHARACTERS.ryan);
       Sprites.shadow(ctx, r.x, r.onGround ? r.y + 1 : CONFIG.GROUND_Y, 7);
       Sprites.drawCharacter(ctx, Math.round(r.x), Math.round(r.y), r.dir, rc.palette, {
-        walkPhase: r.walkPhase, airborne: !r.onGround, attacking: r.attacking,
+        walkPhase: r.walkPhase, airborne: !r.onGround, attacking: r.attacking, ducking: r.ducking,
         weapon: r.swingWeapon || 'bat', build: rc.build, hair: rc.hair,
       });
+      if (r.ducking) this.drawBlockGuard(ctx, Math.round(r.x), Math.round(r.y), r.dir);
       this.drawVsMarker(ctx, Math.round(r.x), Math.round(r.y), rc.build, '#ff5a5a');
     }
 
@@ -1608,10 +1614,19 @@ const Game = {
           attacking: this.time < p.attackAnimUntil,
           weapon: swinging ? p.swingWeapon : p.weaponId, build: p.build, hair: p.hairStyle,
         });
+        if (p.ducking && p.onGround) this.drawBlockGuard(ctx, Math.round(p.x), Math.round(p.y), p.dir);
       }
       this.drawVsMarker(ctx, Math.round(p.x), Math.round(p.y), p.build, '#5aff7a');
     }
     ctx.restore();
+  },
+
+  // blok-stand (bukken): glanzend schildje vóór de speler
+  drawBlockGuard(ctx, x, footY, dir) {
+    const gx = x + dir * 8;
+    Sprites.px(ctx, '#9aa3ad', gx, footY - 16, 4 * dir, 12);          // metaal
+    Sprites.px(ctx, '#c8ced6', gx, footY - 15, 2 * dir, 10);          // glans
+    ctx.globalAlpha = 0.35; Sprites.px(ctx, '#bfe6ff', gx - 2, footY - 18, 8 * dir, 16); ctx.globalAlpha = 1;
   },
 
   // gekleurd pijltje boven een speler (groen = jij, rood = tegenstander)

@@ -40,6 +40,7 @@ class Player {
     this.buffs = { rage: 0, speed: 0, shield: 0 }; // eindtijden van power-ups
     this.maxJumps = 1;   // wordt 2 in wereld 2 (dubbel-jump)
     this.jumps = 1;
+    this.dblJumpMul = ch.dblJumpMul || 1;   // Tygo springt z'n dubbel-jump hoger
     this.jumping = false; // bezig met een (variabele) sprong
     // Vince: vuuraura — elke 30s, 5s lang; aanraking geeft 3s burn
     this.fireAura = !!ch.fireAura;
@@ -162,7 +163,8 @@ class Player {
     // springen (met dubbel-jump vanaf wereld 2)
     const jumpPressed = inputOverride ? inp.jumpPressed : Input.jumpPressed;
     if (jumpPressed && !this.ducking && this.jumps > 0) {
-      this.vy = CONFIG.JUMP_VELOCITY;
+      const air = !this.onGround;              // dit is de dubbel-jump (al in de lucht)
+      this.vy = CONFIG.JUMP_VELOCITY * (air ? this.dblJumpMul : 1);
       this.onGround = false;
       this.jumps--;
       this.jumping = true;     // variabele spronghoogte: actief

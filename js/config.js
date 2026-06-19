@@ -145,7 +145,7 @@ const CHARACTERS = {
   tygo: {
     id: 'tygo', name: 'Tygo', cost: 700,
     maxHp: 110, speedMul: 1.0, meleeMul: 1.0, build: 'tall', hair: 'natural',
-    forcedMelee: 'shield', shieldBlock: true,
+    dblJumpMul: 1.22,                          // iets hogere/langere dubbel-jump
     palette: {
       hair: '#a8824a', hairDark: '#7a5e30',  // blond-bruin
       skin: '#dcb088', skinDark: '#b88f64',
@@ -153,7 +153,7 @@ const CHARACTERS = {
       shirt: '#3a5048', shirtDark: '#26352f',  // groen-grijze tuniek
       pants: '#2a2622', shoe: '#161210',
     },
-    desc: 'Lang & taai (+10 HP). Meleeknop = schildbash + blok (3s cooldown). Alleen het schild als melee.'
+    desc: 'Lang & taai (+10 HP). Hogere dubbel-jump. Gebruikt elk melee-wapen.'
   },
   timo: {
     id: 'timo', name: 'Timo', cost: 900,
