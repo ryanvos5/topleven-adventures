@@ -1120,19 +1120,27 @@ const Game = {
   startVersus(role, opts) {
     opts = opts || {};
     const map = VERSUS_MAPS.find((m) => m.id === opts.mapId) || VERSUS_MAPS[0];
-    const mode = opts.mode === 'both' ? 'both' : 'melee';
+    const mode = (opts.mode === 'both') ? 'both' : (opts.mode === 'smash') ? 'smash' : 'melee';
     this.vsMap = map; this.vsMode = mode;
+    this.vsMapW = map.w || CONFIG.VIEW_W;
+    this.vsFallY = map.fallY || FALL_DEATH_Y;
+    this.vsCamX = 0; this.vsCamY = 0;
     this.worldId = -1;
-    this.level = { versus: true, parkour: true, mode: 'versus', length: CONFIG.VIEW_W, isBoss: false };
+    this.level = { versus: true, parkour: true, mode: 'versus', length: this.vsMapW, isBoss: false };
+    // Power Smash: iedereen start met de knuppel; anders je eigen uitrusting
+    const baseMelee = mode === 'smash' ? 'bat' : Storage.data.equippedMelee;
     const rangedId = mode === 'both' ? Storage.data.equippedRanged : null;
-    this.player = new Player(Storage.data.equippedMelee, rangedId, Storage.data.equippedCharacter);
+    this.player = new Player(baseMelee, rangedId, Storage.data.equippedCharacter);
     this.player.maxJumps = 2; this.player.jumps = 2;
     this.player.knockVx = 0; this.player.dead = false; this.player.respawnInvuln = 0;
+    this.player.baseMelee = baseMelee; this.player.fireballs = 0; this.player.smashRockets = 0;
+    this.player._weaponUntil = 0; this.player._fireCd = 0;
     this.zombies = []; this.bullets = []; this.particles = []; this.coinFx = []; this.ammoFx = [];
     this.ammoDrops = []; this.healthDrops = []; this.corpses = []; this.pendingZombies = [];
     this.powerUps = []; this.enemyShots = []; this.obstacles = []; this.rocketShots = []; this.platforms = [];
-    this.ghostBullets = [];                      // visuele kogels van de tegenstander
-    this.ammo = mode === 'both' ? 999 : 0;       // onbeperkte munitie in versus
+    this.ghostBullets = []; this.botBullets = [];
+    this.drops = []; this._dropTimer = SMASH_DROP_EVERY; this._dropId = 1;
+    this.ammo = mode === 'both' ? 999 : 0;
     this.rockets = 0;
     this.boss = null; this.shake = 0; this.cam.x = 0; this.time = 0; this.dtScale = 1;
     this.buildVersusPlatforms(map);
@@ -1142,7 +1150,7 @@ const Game = {
     const rb = role === 'host' ? map.spawnR : map.spawnL;
     this.vs = {
       role, spawn: sp, botSpawn: { x: rb.x, y: rb.y, dir: role === 'host' ? -1 : 1 },
-      myScore: 0, oppScore: 0, target: 5,
+      myScore: 0, oppScore: 0, target: mode === 'smash' ? SMASH_ROUNDS : 5,
       countdown: 3000, lastSwing: 0, botLastSwing: 0, netTimer: 0, over: false,
       roundFreezeUntil: 0, roundMsg: '',
       remote: {
@@ -1159,15 +1167,15 @@ const Game = {
       const ids = CHARACTER_ORDER.slice();
       const botChar = ids[Math.floor(Math.random() * ids.length)] || 'ryan';
       const melees = ['bat', 'machete', 'sword', 'axe', 'mace', 'katana'];
-      const botMelee = melees[Math.floor(Math.random() * melees.length)];
+      const botMelee = mode === 'smash' ? 'bat' : melees[Math.floor(Math.random() * melees.length)];
       const guns = ['pistol', 'uzi', 'ak47'];
       const botRanged = mode === 'both' ? guns[Math.floor(Math.random() * guns.length)] : null;
       const b = new Player(botMelee, botRanged, botChar);
       b.maxJumps = 2; b.jumps = 2; b.knockVx = 0; b.dead = false; b.respawnInvuln = 0;
       b.x = rb.x; b.y = rb.y; b.dir = this.vs.botSpawn.dir; b.onGround = true;
       b._think = 0; b._jumpCd = 0; b._shootCd = 0; b._blockUntil = 0; b._rangedId = botRanged;
+      b.baseMelee = botMelee; b.fireballs = 0; b.smashRockets = 0; b._weaponUntil = 0; b._fireCd = 0;
       this.bot = b;
-      this.botBullets = [];
       this.vs.remote.charId = botChar;
     } else if (window.Net) {
       Net.setVersusCallbacks({
@@ -1178,6 +1186,8 @@ const Game = {
         onShot: (p) => this.onVersusShot(p),
         onRematch: () => UI.onRematch(),
         onOver: (p) => this.onVersusOver(p),
+        onDrop: (p) => this.onVersusDrop(p),
+        onPickup: (p) => this.onVersusPickup(p),
       });
     }
     this.state = 'versus';
@@ -1227,11 +1237,14 @@ const Game = {
     if (v.countdown > 0) { v.countdown -= dt; }       // korte aftelling vóór de start
     else {
       if (this.player.respawnInvuln > 0) this.player.respawnInvuln -= dt;
+      if (this.vsMode === 'smash') this.smashFire(dt);   // fireball/rocket op de vuurknop (vóór update)
       this.player.update(dt, this);                   // eigen speler: volledige besturing/fysica
+      this.player.x = Math.max(8, Math.min(this.vsMapW - 8, this.player.x));   // binnen de map
       this.carryOnPlatform();                          // meebewegen met bewegend platform
+      if (this.vsMode === 'smash') this.updateSmash(dt);  // drops spawnen/oppakken + wapen-timer
       if (this.vsBot) this.updateBot(dt);              // de AI-tegenstander
       this.checkVersusHit();
-      if (this.vsMode === 'both') this.updateVersusBullets(dt);   // kogels (beide-wapens)
+      if (this.vsMode === 'both' || this.vsMode === 'smash') this.updateVersusBullets(dt);
       // Vince-vuuraura raakt de tegenstander
       if (this.player.fireAura && this.player._auraOn && v.remote.alive &&
           Math.abs(v.remote.x - this.player.x) < 24 && Math.abs(v.remote.y - this.player.y) < 26) {
@@ -1239,13 +1252,16 @@ const Game = {
         else if (this.time >= (v.burnSentAt || 0)) { v.burnSentAt = this.time + 600; if (window.Net) Net.versusSend('burn', {}); }
       }
       // eraf gevallen of doodgebrand -> punt voor de tegenstander
-      if (!this.player.dead && (this.player.y > FALL_DEATH_Y || this.player.hp <= 0)) this.localFell();
+      if (!this.player.dead && (this.player.y > this.vsFallY || this.player.hp <= 0)) this.localFell();
     }
+
+    // camera volgt de eigen speler (binnen de map-grenzen)
+    this.updateVersusCamera();
 
     // ghost-kogels van de tegenstander (alleen visueel)
     if (this.ghostBullets && this.ghostBullets.length) {
       for (const b of this.ghostBullets) { b.x += b.vx * this.dtScale; b.life -= dt; }
-      this.ghostBullets = this.ghostBullets.filter((b) => b.life > 0 && b.x > -12 && b.x < CONFIG.VIEW_W + 12);
+      this.ghostBullets = this.ghostBullets.filter((b) => b.life > 0 && b.x > -20 && b.x < this.vsMapW + 20);
     }
 
     // partikels
@@ -1281,19 +1297,22 @@ const Game = {
     const r = this.vs.remote;
     for (const b of this.bullets) {
       if (!b._announced) {
-        if (window.Net) Net.versusSend('shot', { x: Math.round(b.x), y: Math.round(b.y), vx: +b.vx.toFixed(2) });
+        if (window.Net) Net.versusSend('shot', { x: Math.round(b.x), y: Math.round(b.y), vx: +b.vx.toFixed(2), k: b.kind || 0 });
         b._announced = true;
       }
     }
     for (const b of this.bullets) b.update(dt, this);   // beweegt (geen zombies in versus)
     for (const b of this.bullets) {
-      if (b.alive && r.alive && Math.abs(b.x - r.x) < 11 && Math.abs(b.y - (r.y - 16)) < 16) {
+      const rw = b.kind === 'rocket' ? 16 : 11, rh = b.kind === 'rocket' ? 20 : 16;
+      if (b.alive && r.alive && Math.abs(b.x - r.x) < rw && Math.abs(b.y - (r.y - 16)) < rh) {
         b.alive = false;
-        const dmg = Math.round((b.damage || 20) * 0.4);
+        const dmg = (b.hitDmg != null) ? b.hitDmg : Math.round((b.damage || 20) * 0.4);
+        const power = (b.power != null) ? b.power : 9;
         const kd = Math.sign(b.vx) || 1;
-        if (this.vsBot) this.applyHitToBot(kd, 9, -3, dmg);
-        else if (window.Net) Net.versusSend('hit', { dir: kd, power: 9, vy: -3, dmg: dmg });
+        if (this.vsBot) this.applyHitToBot(kd, power, -3.5, dmg);
+        else if (window.Net) Net.versusSend('hit', { dir: kd, power: power, vy: -3.5, dmg: dmg });
         this.spawnBlood(b.x, b.y);
+        if (b.kind) for (let i = 0; i < 6; i++) this.particles.push(new Particle(b.x, b.y, (Math.random() - 0.5) * 3, -Math.random() * 2, b.kind === 'rocket' ? '#ffd24a' : '#ff7a2a', 320, 2));
       }
     }
     this.bullets = this.bullets.filter((b) => b.alive);
@@ -1301,7 +1320,98 @@ const Game = {
 
   onVersusShot(p) {
     if (!this.ghostBullets) this.ghostBullets = [];
-    if (this.ghostBullets.length < 40) this.ghostBullets.push({ x: p.x, y: p.y, vx: p.vx, life: 1200 });
+    if (this.ghostBullets.length < 40) this.ghostBullets.push({ x: p.x, y: p.y, vx: p.vx, life: 1200, kind: p.k || 0 });
+  },
+
+  // ---- camera (volgt de eigen speler binnen de map-grenzen) ----
+  updateVersusCamera() {
+    const map = this.vsMap || VERSUS_MAPS[0];
+    const W = CONFIG.VIEW_W, H = CONFIG.VIEW_H;
+    let tx = this.player.x - W / 2;
+    tx = Math.max(0, Math.min((this.vsMapW || W) - W, tx));
+    let ty = this.player.y - H * 0.62;
+    ty = Math.max(map.camTop || 0, Math.min(map.camBottom || 0, ty));
+    this.vsCamX += (tx - this.vsCamX) * 0.18;
+    this.vsCamY += (ty - this.vsCamY) * 0.18;
+  },
+
+  // ---- POWER SMASH: vuurknop, drops, pickups ----
+  smashFire() {
+    const p = this.player;
+    if (!p.dead && Input.state.attack && this.time >= (p._fireCd || 0)) {
+      if (p.fireballs > 0) { p.fireballs--; p._fireCd = this.time + 420; this.spawnVersusProjectile(p, 'fire'); }
+      else if (p.smashRockets > 0) { p.smashRockets--; p._fireCd = this.time + 850; this.spawnVersusProjectile(p, 'rocket'); if (p.smashRockets <= 0) p.rangedId = null; }
+    }
+    Input.state.attack = false;   // vuurknop doet GEEN melee in smash (melee = aparte knop)
+  },
+
+  spawnVersusProjectile(shooter, kind) {
+    const dir = shooter.dir;
+    const bl = new Bullet(shooter.x + dir * 14, shooter.y - 16, dir * (kind === 'rocket' ? 6 : 7.5), 0, 0);
+    bl.kind = kind;
+    if (kind === 'fire') { bl.hitDmg = 22; bl.power = 14; } else { bl.hitDmg = 40; bl.power = 26; }
+    this.bullets.push(bl);
+    this.spawnMuzzleFlash(shooter.x + dir * 14, shooter.y - 16, dir);
+  },
+
+  updateSmash(dt) {
+    const p = this.player;
+    if (p._weaponUntil && this.time > p._weaponUntil) { p.meleeId = p.baseMelee || 'bat'; p.weaponId = p.rangedId || p.meleeId; p._weaponUntil = 0; }
+    // drops spawnen: host (online) of lokaal (bot)
+    if (this.vsBot || this.vs.role === 'host') {
+      this._dropTimer -= dt;
+      if (this._dropTimer <= 0 && this.drops.length < 3) { this._dropTimer = SMASH_DROP_EVERY; this.spawnDrop(); }
+    }
+    // eigen speler pakt op
+    for (const d of this.drops) {
+      if (d.taken) continue;
+      if (Math.abs(this.player.x - d.x) < 16 && Math.abs((this.player.y - 12) - d.y) < 22) {
+        d.taken = true; this.applyDrop(this.player, d);
+        if (window.Net && !this.vsBot) Net.versusSend('pickup', { id: d.id });
+      }
+    }
+    // bot pakt op + wapen-timer
+    if (this.vsBot && this.bot && !this.bot.dead) {
+      for (const d of this.drops) {
+        if (d.taken) continue;
+        if (Math.abs(this.bot.x - d.x) < 16 && Math.abs((this.bot.y - 12) - d.y) < 22) { d.taken = true; this.applyDrop(this.bot, d); }
+      }
+      if (this.bot._weaponUntil && this.time > this.bot._weaponUntil) { this.bot.meleeId = this.bot.baseMelee || 'bat'; this.bot._weaponUntil = 0; }
+    }
+    this.drops = this.drops.filter((d) => !d.taken && this.time - d.born < 16000);
+  },
+
+  spawnDrop() {
+    let tot = 0; for (const d of SMASH_DROPS) tot += d.w;
+    let r = Math.random() * tot, kind = 'health';
+    for (const d of SMASH_DROPS) { r -= d.w; if (r <= 0) { kind = d.kind; break; } }
+    const pf = this.platforms[Math.floor(Math.random() * this.platforms.length)] || { x: 180, y: 140, w: 60 };
+    const x = Math.round(pf.x + (Math.random() - 0.5) * Math.max(8, pf.w - 16));
+    const y = Math.round(pf.y - 9);
+    const wid = kind === 'weapon' ? SMASH_WEAPON_POOL[Math.floor(Math.random() * SMASH_WEAPON_POOL.length)] : 0;
+    const id = this._dropId++;
+    this.drops.push({ id, kind, x, y, wid, born: this.time, taken: false });
+    if (window.Net && !this.vsBot) Net.versusSend('drop', { id, kind, x, y, wid });
+  },
+
+  applyDrop(pl, d) {
+    for (let i = 0; i < 8; i++) this.particles.push(new Particle(d.x, d.y, (Math.random() - 0.5) * 2, -Math.random() * 2, '#ffe27a', 340, 2));
+    if (d.kind === 'weapon') { pl.meleeId = d.wid; pl.weaponId = pl.rangedId || d.wid; pl._weaponUntil = this.time + SMASH_WEAPON_TIME; }
+    else if (d.kind === 'fireball') pl.fireballs = SMASH_FIREBALL_SHOTS;
+    else if (d.kind === 'rocket') pl.smashRockets = SMASH_ROCKETS;
+    else if (d.kind === 'health') pl.hp = Math.min(pl.maxHp, pl.hp + 40);
+    else if (d.kind === 'rage') pl.buffs.rage = this.time + POWERUPS.rage.dur;
+    else if (d.kind === 'speed') pl.buffs.speed = this.time + POWERUPS.speed.dur;
+  },
+
+  onVersusDrop(p) {
+    if (!this.drops) this.drops = [];
+    if (this.drops.some((d) => d.id === p.id)) return;
+    this.drops.push({ id: p.id, kind: p.kind, x: p.x, y: p.y, wid: p.wid, born: this.time, taken: false });
+  },
+  onVersusPickup(p) {
+    if (!this.drops) return;
+    for (const d of this.drops) if (d.id === p.id) d.taken = true;
   },
 
   beginRoundFreeze(msg) {
@@ -1348,30 +1458,40 @@ const Game = {
     r.walkPhase = b.walkPhase; r.alive = !b.dead; r.charId = b.charId;
     r.hp = b.hp; r.maxHp = b.maxHp; r.ducking = b.ducking;
 
-    // bot schiet (beide-wapens): eigen kogel-array naar de speler
-    if (this.vsMode === 'both' && b._rangedId && b.onGround && !b.dead && this.time >= (b._shootCd || 0)) {
-      const p2 = this.player;
-      if (!p2.dead && Math.abs(p2.y - b.y) < 22 && Math.abs(p2.x - b.x) > 30) {
-        b._shootCd = this.time + 750;
+    // bot schiet: vuurwapen (beide-wapens) of fireball/rocket (smash)
+    const p2 = this.player;
+    const canShoot = b.onGround && !b.dead && this.time >= (b._shootCd || 0) && !p2.dead &&
+      Math.abs(p2.y - b.y) < 22 && Math.abs(p2.x - b.x) > 30;
+    if (canShoot) {
+      const sdir = p2.x >= b.x ? 1 : -1;
+      let bl = null;
+      if (this.vsMode === 'both' && b._rangedId) {
         const wd = WEAPONS[b._rangedId] || WEAPONS.pistol;
-        const sdir = p2.x >= b.x ? 1 : -1; b.dir = sdir;
-        const bl = new Bullet(b.x + sdir * 14, b.y - 16, sdir * (wd.bulletSpeed || 7), wd.damage, 0);
-        this.botBullets.push(bl);
-        this.spawnMuzzleFlash(b.x + sdir * 14, b.y - 16, sdir);
+        bl = new Bullet(b.x + sdir * 14, b.y - 16, sdir * (wd.bulletSpeed || 7), wd.damage, 0);
+        b._shootCd = this.time + 750;
+      } else if (this.vsMode === 'smash' && b.fireballs > 0) {
+        bl = new Bullet(b.x + sdir * 14, b.y - 16, sdir * 7.5, 0, 0); bl.kind = 'fire'; bl.hitDmg = 22; bl.power = 14;
+        b.fireballs--; b._shootCd = this.time + 600;
+      } else if (this.vsMode === 'smash' && b.smashRockets > 0) {
+        bl = new Bullet(b.x + sdir * 14, b.y - 16, sdir * 6, 0, 0); bl.kind = 'rocket'; bl.hitDmg = 40; bl.power = 26;
+        b.smashRockets--; b._shootCd = this.time + 950;
       }
+      if (bl) { b.dir = sdir; this.botBullets.push(bl); this.spawnMuzzleFlash(b.x + sdir * 14, b.y - 16, sdir); }
     }
     // bot-kogels bewegen + de speler raken
     if (this.botBullets && this.botBullets.length) {
       for (const bl of this.botBullets) { bl.x += bl.vx * this.dtScale; bl.life += dt; }
       for (const bl of this.botBullets) {
+        const rw = bl.kind === 'rocket' ? 16 : 11, rh = bl.kind === 'rocket' ? 20 : 16;
         if (bl.alive && this.player.respawnInvuln <= 0 && !this.player.dead &&
-            Math.abs(bl.x - this.player.x) < 11 && Math.abs(bl.y - (this.player.y - 16)) < 16) {
+            Math.abs(bl.x - this.player.x) < rw && Math.abs(bl.y - (this.player.y - 16)) < rh) {
           bl.alive = false;
-          this.onVersusHit({ dir: Math.sign(bl.vx) || 1, power: 9, vy: -3, dmg: Math.round((bl.damage || 20) * 0.4) });
+          const dmg = (bl.hitDmg != null) ? bl.hitDmg : Math.round((bl.damage || 20) * 0.4);
+          this.onVersusHit({ dir: Math.sign(bl.vx) || 1, power: (bl.power != null ? bl.power : 9), vy: -3.5, dmg: dmg });
           this.spawnBlood(bl.x, bl.y);
         }
       }
-      this.botBullets = this.botBullets.filter((bl) => bl.alive && bl.life < 1500 && bl.x > -12 && bl.x < CONFIG.VIEW_W + 12);
+      this.botBullets = this.botBullets.filter((bl) => bl.alive && bl.life < 1500 && bl.x > -20 && bl.x < this.vsMapW + 20);
     }
 
     // bot's mep raakt de speler?
@@ -1411,6 +1531,7 @@ const Game = {
     const sp = this.vs.botSpawn;
     b.x = sp.x; b.y = sp.y; b.dir = sp.dir; b.vy = 0; b.knockVx = 0;
     b.onGround = true; b.dead = false; b.respawnInvuln = 1300; b.hp = b.maxHp; b.burnUntil = 0;
+    if (this.vsMode === 'smash') { b.meleeId = b.baseMelee || 'bat'; b.fireballs = 0; b.smashRockets = 0; b._weaponUntil = 0; }
     this.vs.remote.alive = true;
   },
 
@@ -1515,6 +1636,10 @@ const Game = {
     this.player.vy = 0; this.player.knockVx = 0; this.player.onGround = true;
     this.player.dead = false; this.player.respawnInvuln = 1300;
     this.player.hp = this.player.maxHp; this.player.burnUntil = 0;   // fris (ook na burn-dood)
+    if (this.vsMode === 'smash') {                  // elke ronde weer met de knuppel
+      this.player.meleeId = this.player.baseMelee || 'bat'; this.player.rangedId = null;
+      this.player.fireballs = 0; this.player.smashRockets = 0; this.player._weaponUntil = 0;
+    }
   },
 
   onVersusFell(payload) {
@@ -1605,13 +1730,24 @@ const Game = {
     sky.addColorStop(0, map.sky[0]); sky.addColorStop(1, map.sky[1]);
     ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
 
+    // wolk-parallax voor de Sky-map (scherm-ruimte, beweegt licht mee)
+    if (map.id === 'sky') {
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      for (let i = 0; i < 6; i++) {
+        const cx = ((i * 150 - this.vsCamX * 0.3) % (W + 140)) - 60;
+        const cy = 20 + (i % 3) * 50 - this.vsCamY * 0.25;
+        ctx.fillRect(cx, cy, 40, 9); ctx.fillRect(cx + 10, cy - 5, 24, 9);
+      }
+    }
+
     const shx = this.shake > 0 ? Math.round((Math.random() - 0.5) * this.shake) : 0;
     const shy = this.shake > 0 ? Math.round((Math.random() - 0.5) * this.shake) : 0;
-    ctx.save(); ctx.translate(shx, shy);
+    const camX = Math.round(this.vsCamX), camY = Math.round(this.vsCamY);
+    ctx.save(); ctx.translate(-camX + shx, -camY + shy);
 
-    // afgrond onderin (map-thema)
-    ctx.fillStyle = map.void || '#06090d'; ctx.fillRect(0, CONFIG.GROUND_Y - 2, W, H);
-    ctx.globalAlpha = 0.5; ctx.fillStyle = '#04060a'; ctx.fillRect(0, CONFIG.GROUND_Y + 18, W, H); ctx.globalAlpha = 1;
+    // afgrond onderin (map-thema), camera-bewust
+    ctx.fillStyle = map.void || '#06090d'; ctx.fillRect(camX - 4, CONFIG.GROUND_Y - 2, W + 8, H + Math.abs(camY) + 320);
+    ctx.globalAlpha = 0.5; ctx.fillStyle = '#04060a'; ctx.fillRect(camX - 4, CONFIG.GROUND_Y + 18, W + 8, H + Math.abs(camY) + 320); ctx.globalAlpha = 1;
 
     // platforms (bewegende krijgen een pijltjes-hint)
     for (const pf of this.platforms) {
@@ -1619,10 +1755,18 @@ const Game = {
       if (pf.mv) { ctx.globalAlpha = 0.5; Sprites.px(ctx, '#ffe9a0', pf.x - 1, pf.y - 5, 2, 2); ctx.globalAlpha = 1; }
     }
 
-    // kogels (beide-wapens): eigen + ghost van de tegenstander
-    if (this.bullets) for (const b of this.bullets) Sprites.px(ctx, '#ffe27a', b.x - 1, b.y - 1, 3, 2);
-    if (this.ghostBullets) for (const b of this.ghostBullets) Sprites.px(ctx, '#ff8a4a', b.x - 1, b.y - 1, 3, 2);
-    if (this.botBullets) for (const b of this.botBullets) Sprites.px(ctx, '#ff8a4a', b.x - 1, b.y - 1, 3, 2);
+    // drops (Power Smash)
+    if (this.drops) for (const d of this.drops) { if (!d.taken) this.drawDrop(ctx, d); }
+
+    // kogels: gewoon + fireball/rocket + ghost van de tegenstander + bot
+    const drawBullet = (b) => {
+      if (b.kind === 'fire') { Sprites.px(ctx, '#ff7a2a', b.x - 2, b.y - 2, 5, 5); Sprites.px(ctx, '#ffd24a', b.x - 1, b.y - 1, 3, 3); }
+      else if (b.kind === 'rocket') { Sprites.px(ctx, '#cfd6df', b.x - 3, b.y - 1, 6, 3); Sprites.px(ctx, '#ffd24a', b.x - (Math.sign(b.vx) || 1) * 3, b.y - 1, 2, 3); }
+      else Sprites.px(ctx, '#ffe27a', b.x - 1, b.y - 1, 3, 2);
+    };
+    if (this.bullets) for (const b of this.bullets) drawBullet(b);
+    if (this.ghostBullets) for (const b of this.ghostBullets) drawBullet(b);
+    if (this.botBullets) for (const b of this.botBullets) drawBullet(b);
 
     // partikels
     for (const p of this.particles) {
@@ -1635,7 +1779,7 @@ const Game = {
     const r = this.vs.remote;
     if (r.alive) {
       const rc = (CHARACTERS[r.charId] || CHARACTERS.ryan);
-      Sprites.shadow(ctx, r.x, r.onGround ? r.y + 1 : CONFIG.GROUND_Y, 7);
+      if (r.onGround) Sprites.shadow(ctx, r.x, r.y + 1, 7);
       Sprites.drawCharacter(ctx, Math.round(r.x), Math.round(r.y), r.dir, rc.palette, {
         walkPhase: r.walkPhase, airborne: !r.onGround, attacking: r.attacking, ducking: r.ducking,
         weapon: r.swingWeapon || 'bat', build: rc.build, hair: rc.hair,
@@ -1649,7 +1793,7 @@ const Game = {
     const blink = p.respawnInvuln > 0 && Math.floor(this.time / 90) % 2 === 0;
     if (!p.dead) {
       if (!blink) {
-        Sprites.shadow(ctx, p.x, p.onGround ? p.y + 1 : CONFIG.GROUND_Y, 7);
+        if (p.onGround) Sprites.shadow(ctx, p.x, p.y + 1, 7);
         const swinging = this.time < (p.swingUntil || 0) && p.swingWeapon;
         Sprites.drawCharacter(ctx, Math.round(p.x), Math.round(p.y), p.dir, p.pal, {
           walkPhase: p.walkPhase, airborne: !p.onGround, ducking: p.ducking,
@@ -1661,6 +1805,29 @@ const Game = {
       this.drawVsMarker(ctx, Math.round(p.x), Math.round(p.y), p.build, '#5aff7a');
     }
     ctx.restore();
+
+    // Power Smash: huidige item/wapen (scherm-ruimte, onderin)
+    if (this.vsMode === 'smash') {
+      const p2 = this.player; let line = '';
+      if (p2.fireballs > 0) line = 'FIRE x' + p2.fireballs;
+      else if (p2.smashRockets > 0) line = 'RPG x' + p2.smashRockets;
+      const wn = (WEAPONS[p2.meleeId] && p2.meleeId !== 'bat') ? WEAPONS[p2.meleeId].name : 'Bat';
+      ctx.fillStyle = '#ffe27a'; ctx.font = 'bold 9px "Courier New", monospace'; ctx.textAlign = 'center';
+      ctx.fillText(wn + (line ? '   ' + line : ''), W / 2, H - 7);
+      ctx.textAlign = 'left';
+    }
+  },
+
+  drawDrop(ctx, d) {
+    const bob = Math.round(Math.sin((this.time + d.id * 200) / 300) * 2);
+    const x = d.x, y = d.y + bob;
+    ctx.globalAlpha = 0.22; Sprites.px(ctx, '#ffffff', x - 7, y - 9, 14, 16); ctx.globalAlpha = 1;
+    if (d.kind === 'weapon') { Sprites.px(ctx, '#cfd6df', x - 5, y - 3, 10, 3); Sprites.px(ctx, '#9aa3ad', x - 5, y - 3, 10, 1); Sprites.px(ctx, '#5a3a22', x + 3, y - 4, 3, 5); }
+    else if (d.kind === 'fireball') { Sprites.px(ctx, '#ff7a2a', x - 4, y - 5, 8, 9); Sprites.px(ctx, '#ffd24a', x - 2, y - 3, 4, 5); }
+    else if (d.kind === 'rocket') { Sprites.px(ctx, '#3a4750', x - 5, y - 2, 9, 4); Sprites.px(ctx, '#d94343', x + 3, y - 2, 3, 4); Sprites.px(ctx, '#ffd24a', x - 6, y - 1, 2, 2); }
+    else if (d.kind === 'health') { Sprites.px(ctx, '#ffffff', x - 5, y - 5, 10, 10); Sprites.px(ctx, '#d33', x - 1, y - 5, 3, 10); Sprites.px(ctx, '#d33', x - 5, y - 1, 10, 3); }
+    else if (d.kind === 'rage') { Sprites.px(ctx, '#ff5a3a', x - 4, y - 5, 8, 9); Sprites.px(ctx, '#ffd24a', x - 1, y - 3, 2, 5); }
+    else if (d.kind === 'speed') { Sprites.px(ctx, '#3ad0ff', x - 4, y - 5, 8, 9); Sprites.px(ctx, '#eaffff', x - 1, y - 3, 2, 5); }
   },
 
   // blok-stand (bukken): glanzend schildje vóór de speler

@@ -360,9 +360,29 @@ const POWERUPS = {
   rage:  { id: 'rage',  name: 'RAGE',   dur: 8000, color: '#ff5a3a', icon: '⚔' },
   speed: { id: 'speed', name: 'SPEED',  dur: 8000, color: '#3ad0ff', icon: '⚡' },
   shield:{ id: 'shield',name: 'SCHILD', dur: 6000, color: '#f2c94c', icon: '🛡' },
+  fireball:{ id: 'fireball', name: 'FIREBALL', dur: 0, color: '#ff7a2a', icon: '🔥' }, // 3 schoten
 };
 const POWERUP_LIST = ['rage', 'speed', 'shield'];
 const POWERUP_DROP_CHANCE = 0.025; // kans per kill
+
+/* ---------- POWER SMASH (multiplayer-gamemode) ----------
+   8 rondes, melee-only start met de knuppel; er vallen wapens/power-ups/health in de arena. */
+const SMASH_ROUNDS = 8;
+const SMASH_DROP_EVERY = 5000;       // ms tussen drops (host bepaalt)
+const SMASH_WEAPON_TIME = 13000;     // opgepakt melee-wapen ben je na ~13s weer kwijt
+const SMASH_FIREBALL_SHOTS = 3;      // aantal vuurballen
+const SMASH_ROCKETS = 3;             // raketten bij een RPG-drop
+// dropsoorten + relatieve kans
+const SMASH_DROPS = [
+  { kind: 'weapon', w: 34 },         // willekeurig melee-wapen
+  { kind: 'fireball', w: 16 },
+  { kind: 'rocket', w: 10 },
+  { kind: 'health', w: 20 },
+  { kind: 'rage', w: 10 },
+  { kind: 'speed', w: 10 },
+];
+// melee-wapens die kunnen vallen (alle echte melee, geen knuppel/schild)
+const SMASH_WEAPON_POOL = ['club', 'machete', 'sword', 'dagger', 'axe', 'spear', 'mace', 'flail', 'bostaff', 'katana', 'halberd'];
 
 /* ---------- XP / LEVELS (multiplayer-duels) ----------
    XP per duel: winst geeft meer dan verlies. Langzame, oplopende curve:
@@ -413,6 +433,21 @@ const VERSUS_MAPS = [
       { x: 64, y: 150, w: 60 }, { x: 296, y: 150, w: 60 },
       { x: 180, y: 120, w: 54, mv: { axis: 'y', amp: 30, speed: 0.0015, phase: 0 } },
       { x: 120, y: 168, w: 40 }, { x: 240, y: 168, w: 40 },
+    ],
+  },
+  {
+    // grootste map: hoog in de lucht, camera beweegt mee (omhoog + horizontaal), spring op wolken
+    id: 'sky', name: 'Sky', sky: ['#6fb6e8', '#bfe3f5'], void: '#9fcce8', plat: 'cloud',
+    w: 720, fallY: 232, camTop: -120, camBottom: 30,
+    spawnL: { x: 110, y: 176 }, spawnR: { x: 610, y: 176 },
+    platforms: [
+      { x: 110, y: 176, w: 74 }, { x: 610, y: 176, w: 74 }, { x: 360, y: 182, w: 86 },
+      { x: 240, y: 130, w: 60 }, { x: 480, y: 130, w: 60 },
+      { x: 360, y: 96, w: 64, mv: { axis: 'x', amp: 30, speed: 0.0013, phase: 0 } },
+      { x: 160, y: 60, w: 56 }, { x: 560, y: 60, w: 56 },
+      { x: 360, y: 24, w: 60 },
+      { x: 260, y: -28, w: 52 }, { x: 460, y: -28, w: 52 },
+      { x: 360, y: -78, w: 64 },
     ],
   },
 ];

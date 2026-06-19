@@ -462,7 +462,7 @@ body.is-touch #hud { justify-content: flex-start; gap: 8px; }
 }
 .vs-map-btn.picked { border-color: var(--accent); background: #1c2a1c; }
 .vs-map-votes { color: var(--gold); font-size: 11px; letter-spacing: 1px; }
-.vs-mode-row { display: flex; gap: 8px; justify-content: center; }
+.vs-mode-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 .vs-mode-btn {
   padding: 8px 14px; font-size: 13px; color: #cfe0ee;
   background: #161b27; border: 2px solid #2a3242; border-radius: 8px; cursor: pointer;
