@@ -11,7 +11,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#0d0f14" />
   <title>Topleven Adventures — Wereld 1</title>
-  <link rel="stylesheet" href="css/style.css?v=noinvite1" />
+  <link rel="stylesheet" href="css/style.css?v=chat1" />
 </head>
 <body>
   <div id="game-root">
@@ -82,6 +82,7 @@
           <button id="btn-shop" class="big-btn secondary">WAPENSHOP</button>
           <button id="btn-characters" class="big-btn secondary">CHARACTERS</button>
           <button id="btn-leaderboard" class="big-btn secondary">🏆 LEADERBOARD</button>
+          <button id="btn-chat" class="big-btn secondary">💬 LOBBY CHAT</button>
         </div>
         <div class="menu-coins">Munten: <span id="menu-coin-count">0</span> ●</div>
         <div id="account-bar" class="account-bar">
@@ -160,6 +161,33 @@
         <div id="lb-list" class="lb-list"></div>
         <p id="lb-msg" class="screen-sub"></p>
         <button class="back-btn" data-back="menu">◀ TERUG</button>
+      </div>
+    </div>
+
+    <!-- ===== Lobby chat ===== -->
+    <div id="chat-screen" class="screen hidden">
+      <div class="screen-inner chat-inner">
+        <h2 class="screen-title">💬 LOBBY CHAT</h2>
+        <div class="chat-online"><span class="chat-online-label">Online:</span><span id="chat-online-list"></span></div>
+        <div id="chat-messages" class="chat-messages"></div>
+        <div class="chat-input-row">
+          <input id="chat-input" class="auth-input" type="text" maxlength="120" autocomplete="off" placeholder="Typ een bericht…" />
+          <button id="chat-send" class="big-btn">➤</button>
+        </div>
+        <p id="chat-msg" class="screen-sub"></p>
+        <button class="back-btn" id="btn-chat-back">◀ TERUG</button>
+      </div>
+    </div>
+
+    <!-- ===== Invite-prompt (uit de chat) ===== -->
+    <div id="invite-screen" class="overlay hidden">
+      <div class="overlay-box">
+        <h2 class="screen-title">UITNODIGING</h2>
+        <p id="invite-text" class="auth-sub"></p>
+        <div class="menu-buttons">
+          <button id="btn-invite-accept" class="big-btn">MEEDOEN</button>
+          <button id="btn-invite-ignore" class="big-btn secondary">NEGEREN</button>
+        </div>
       </div>
     </div>
 
@@ -308,14 +336,14 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-  <script src="js/config.js?v=noinvite1"></script>
-  <script src="js/storage.js?v=noinvite1"></script>
-  <script src="js/net.js?v=noinvite1"></script>
-  <script src="js/input.js?v=noinvite1"></script>
-  <script src="js/sprites.js?v=noinvite1"></script>
-  <script src="js/entities.js?v=noinvite1"></script>
-  <script src="js/ui.js?v=noinvite1"></script>
-  <script src="js/game.js?v=noinvite1"></script>
-  <script src="js/main.js?v=noinvite1"></script>
+  <script src="js/config.js?v=chat1"></script>
+  <script src="js/storage.js?v=chat1"></script>
+  <script src="js/net.js?v=chat1"></script>
+  <script src="js/input.js?v=chat1"></script>
+  <script src="js/sprites.js?v=chat1"></script>
+  <script src="js/entities.js?v=chat1"></script>
+  <script src="js/ui.js?v=chat1"></script>
+  <script src="js/game.js?v=chat1"></script>
+  <script src="js/main.js?v=chat1"></script>
 </body>
 </html>

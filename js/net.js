@@ -271,6 +271,67 @@ const Net = {
     }
   },
 
+  // ============ LOBBY-CHAT (globaal: chat + wie-is-online + invites) ============
+  lobby: null,
+  lobbyPeers: {},
+  _guestId: null,
+
+  lobbyMyId() { return (this.user && this.user.id) || (this._guestId || (this._guestId = 'gast-' + Math.floor(Math.random() * 1e7))); },
+  lobbyMyNick() { return this.nickname() || ('Gast' + this.lobbyMyId().slice(-4)); },
+
+  async lobbyJoin(cbs) {
+    if (!this.ready) throw new Error('Geen verbinding met de server.');
+    this.lobbyLeave();
+    const id = this.lobbyMyId(), nick = this.lobbyMyNick();
+    const ch = this.sb.channel('lobby-chat', { config: { broadcast: { self: false } } });
+    const L = { channel: ch, cbs: cbs || {}, id, nick, hbTimer: null, pruneTimer: null };
+    this.lobbyPeers = {};
+    ch.on('broadcast', { event: 'chat' }, (m) => { if (L.cbs.onChat) L.cbs.onChat(m.payload); });
+    ch.on('broadcast', { event: 'here' }, (m) => { const p = m.payload; if (p && p.id) { this.lobbyPeers[p.id] = { nick: p.nick, t: Date.now() }; this._emitPeers(L); } });
+    ch.on('broadcast', { event: 'lbye' }, (m) => { if (m.payload && m.payload.id) { delete this.lobbyPeers[m.payload.id]; this._emitPeers(L); } });
+    ch.on('broadcast', { event: 'invite' }, (m) => { if (m.payload && m.payload.to === id && L.cbs.onInvite) L.cbs.onInvite(m.payload); });
+    await new Promise((resolve, reject) => {
+      let done = false;
+      ch.subscribe((st) => {
+        if (st === 'SUBSCRIBED' && !done) { done = true; resolve(); }
+        else if ((st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') && !done) { done = true; reject(new Error('Kon de chat niet verbinden.')); }
+      });
+      setTimeout(() => { if (!done) { done = true; reject(new Error('Time-out bij de chat.')); } }, 8000);
+    });
+    this.lobby = L;
+    const beat = () => this.lobbySend('here', { id, nick });
+    beat();
+    L.hbTimer = setInterval(beat, 4000);                 // heartbeat: ik ben online
+    L.pruneTimer = setInterval(() => this._prunePeers(L), 3000);
+    this._emitPeers(L);
+    return true;
+  },
+
+  _emitPeers(L) {
+    const list = [{ id: L.id, nick: L.nick, me: true }];
+    for (const pid in this.lobbyPeers) list.push({ id: pid, nick: this.lobbyPeers[pid].nick, me: false });
+    if (L.cbs.onPeers) L.cbs.onPeers(list);
+  },
+  _prunePeers(L) {
+    const now = Date.now(); let changed = false;
+    for (const pid in this.lobbyPeers) if (now - this.lobbyPeers[pid].t > 12000) { delete this.lobbyPeers[pid]; changed = true; }
+    if (changed) this._emitPeers(L);
+  },
+
+  lobbySend(event, payload) { if (this.lobby && this.lobby.channel) this.lobby.channel.send({ type: 'broadcast', event, payload }); },
+  lobbyChat(text) { if (this.lobby) this.lobbySend('chat', { id: this.lobby.id, nick: this.lobby.nick, text: text }); },
+  lobbyInvite(toId, code) { if (this.lobby) this.lobbySend('invite', { to: toId, from: this.lobby.nick, fromId: this.lobby.id, code: code }); },
+
+  lobbyLeave() {
+    if (this.lobby) {
+      if (this.lobby.hbTimer) clearInterval(this.lobby.hbTimer);
+      if (this.lobby.pruneTimer) clearInterval(this.lobby.pruneTimer);
+      try { this.lobby.channel.send({ type: 'broadcast', event: 'lbye', payload: { id: this.lobby.id } }); } catch (e) {}
+      try { this.sb.removeChannel(this.lobby.channel); } catch (e) {}
+    }
+    this.lobby = null; this.lobbyPeers = {};
+  },
+
   leaveVersus() {
     if (this.versus) {
       if (this.versus.joinTimer) { clearInterval(this.versus.joinTimer); }

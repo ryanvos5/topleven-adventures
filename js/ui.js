@@ -21,7 +21,7 @@ const UI = {
       charCoins: $('char-coin-count'),
       levelGrid: $('level-grid'), shopGrid: $('shop-grid'), charGrid: $('character-grid'),
       character: $('character-screen'), arena: $('arena-screen'), versus: $('versus-screen'),
-      leaderboard: $('leaderboard-screen'),
+      leaderboard: $('leaderboard-screen'), chat: $('chat-screen'),
       arenaRound: $('arena-round'), arenaCoins: $('arena-coins'), arenaBest: $('arena-best'),
       arenaLeft: $('arena-left'), arenaRecord: $('arena-record'),
       winKills: $('win-kills'), winCoins: $('win-coins'), winReplayNote: $('win-replay-note'),
@@ -70,6 +70,14 @@ const UI = {
     $('btn-auth-toggle').onclick = () => this.openAuth(this.authMode === 'login' ? 'register' : 'login');
     $('btn-auth-submit').onclick = () => this.submitAuth();
     this.refreshAuthUI();
+
+    // ---- lobby chat ----
+    $('btn-chat').onclick = () => this.openChat();
+    $('btn-chat-back').onclick = () => { this.closeChat(); this.show('menu'); };
+    $('chat-send').onclick = () => this.sendChat();
+    $('chat-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') this.sendChat(); });
+    $('btn-invite-accept').onclick = () => this.acceptChatInvite();
+    $('btn-invite-ignore').onclick = () => { document.getElementById('invite-screen').classList.add('hidden'); this._chatInvite = null; };
 
     // ---- leaderboard ----
     $('btn-leaderboard').onclick = () => this.openLeaderboard();
@@ -320,6 +328,102 @@ const UI = {
     }
   },
 
+  // ---- LOBBY CHAT ----
+  async openChat() {
+    if (!window.Net || !Net.ready) { alert('Geen verbinding met de server.'); return; }
+    this.show('chat');
+    document.getElementById('chat-messages').innerHTML = '';
+    document.getElementById('chat-online-list').innerHTML = '';
+    document.getElementById('chat-msg').textContent = 'Verbinden…';
+    try {
+      await Net.lobbyJoin({
+        onChat: (m) => this.onChatMsg(m),
+        onPeers: (list) => this.renderOnline(list),
+        onInvite: (p) => this.onChatInvite(p),
+      });
+      document.getElementById('chat-msg').textContent = '';
+      this.addChatLine(null, 'Welkom in de lobby! Wees aardig 🙂', true);
+    } catch (e) { document.getElementById('chat-msg').textContent = '⚠ ' + (e.message || e); }
+  },
+
+  closeChat() { if (window.Net) Net.lobbyLeave(); },
+
+  sendChat() {
+    const inp = document.getElementById('chat-input');
+    const text = (inp.value || '').trim();
+    if (!text) return;
+    if (!window.Net || !Net.lobby) return;
+    const now = (window.Date && Date.now) ? Date.now() : 0;
+    if (now && this._lastChat && now - this._lastChat < 500) return;   // anti-spam
+    this._lastChat = now;
+    Net.lobbyChat(text);
+    this.addChatLine(Net.lobbyMyNick(), text, false, true);            // eigen bericht meteen tonen
+    inp.value = '';
+  },
+
+  onChatMsg(m) { if (m && m.text) this.addChatLine(m.nick, m.text, false, false); },
+
+  addChatLine(nick, text, system, me) {
+    const box = document.getElementById('chat-messages');
+    if (!box) return;
+    const row = document.createElement('div');
+    row.className = 'chat-line' + (system ? ' sys' : '') + (me ? ' me' : '');
+    if (system) row.innerHTML = '<span class="chat-sys">' + this._esc(text) + '</span>';
+    else row.innerHTML = '<span class="chat-nick">' + this._esc(nick) + ':</span> ' + this._esc(text);
+    box.appendChild(row);
+    while (box.children.length > 60) box.removeChild(box.firstChild);
+    box.scrollTop = box.scrollHeight;
+  },
+
+  renderOnline(list) {
+    const el = document.getElementById('chat-online-list');
+    if (!el) return;
+    el.innerHTML = '';
+    list.forEach((p) => {
+      const chip = document.createElement('span');
+      chip.className = 'chat-chip' + (p.me ? ' me' : '');
+      chip.textContent = p.nick + (p.me ? ' (jij)' : '');
+      if (!p.me) {
+        const inv = document.createElement('button');
+        inv.className = 'chat-invite-btn'; inv.textContent = '⚔';
+        inv.title = 'Uitnodigen voor 1v1';
+        inv.onclick = () => this.inviteFromChat(p.id, p.nick);
+        chip.appendChild(inv);
+      }
+      el.appendChild(chip);
+    });
+  },
+
+  // iemand uitnodigen vanuit de chat: maak een kamer + stuur de invite, ga naar de wachtruimte
+  async inviteFromChat(toId, toNick) {
+    if (!window.Net || !Net.ready) return;
+    try {
+      this._vsRole = 'host';
+      const code = await Net.versusHost(this._versusCbs());
+      Net.lobbyInvite(toId, code);            // broadcast op de nog-open chat-channel
+      this.show('versus');                     // naar de versus-wachtruimte
+      this._enterRoom(code);
+      document.getElementById('vs-peer-status').textContent = 'Uitnodiging naar ' + toNick + ' gestuurd… wachten tot die meedoet.';
+    } catch (e) { alert('Kon geen kamer maken: ' + (e.message || e)); }
+  },
+
+  onChatInvite(p) {
+    this._chatInvite = p;
+    document.getElementById('invite-text').textContent = (p.from || 'Iemand') + ' nodigt je uit voor een 1v1!';
+    document.getElementById('invite-screen').classList.remove('hidden');
+  },
+
+  acceptChatInvite() {
+    const p = this._chatInvite; this._chatInvite = null;
+    document.getElementById('invite-screen').classList.add('hidden');
+    if (!p) return;
+    this.closeChat();                       // chat verlaten, naar de versus-lobby
+    this._vsRole = 'guest';
+    this.openVersusLobby();
+    const inp = document.getElementById('vs-code-input'); if (inp) inp.value = p.code;
+    this.versusJoin();
+  },
+
   // ---- LEADERBOARD ----
   openLeaderboard() {
     document.querySelectorAll('#lb-tabs [data-lb]').forEach((b, i) => b.classList.toggle('active', i === 0));
@@ -476,6 +580,7 @@ const UI = {
 
   // tegenstander aanwezig -> open de vote-lobby (NIET meteen starten)
   _onVersusMatch() {
+    if (window.Net && Net.lobby) Net.lobbyLeave();   // chat niet meer nodig tijdens het potje
     document.getElementById('vs-peer-status').textContent = '✅ Tegenstander aanwezig!';
     document.getElementById('vs-lobby-opts').classList.remove('hidden');
     this.renderMapVote();
@@ -588,11 +693,11 @@ const UI = {
     this._vsStarted = false; this._peer = null; this._myReady = false; this._botSetup = false;
     const lbl = document.querySelector('.vs-wait-label'); if (lbl) lbl.classList.remove('hidden');
     const rb = document.getElementById('btn-vs-ready'); if (rb) { rb.textContent = 'READY'; rb.classList.remove('on'); }
-    if (window.Net) Net.leaveVersus();
+    if (window.Net) { Net.leaveVersus(); Net.lobbyLeave(); }   // ook de chat-channel opruimen
   },
 
   showVersus() {
-    ['menu', 'level', 'shop', 'character', 'arena', 'win', 'lose', 'versus', 'leaderboard'].forEach((s) =>
+    ['menu', 'level', 'shop', 'character', 'arena', 'win', 'lose', 'versus', 'leaderboard', 'chat'].forEach((s) =>
       this.el[s].classList.add('hidden'));
     document.body.classList.add('in-game');
     this.el.hud.classList.add('hidden');
@@ -698,7 +803,7 @@ const UI = {
   },
 
   show(name) {
-    ['menu', 'level', 'shop', 'character', 'arena', 'win', 'lose', 'versus', 'leaderboard'].forEach((s) => {
+    ['menu', 'level', 'shop', 'character', 'arena', 'win', 'lose', 'versus', 'leaderboard', 'chat'].forEach((s) => {
       this.el[s].classList.toggle('hidden', s !== name);
     });
     const inGame = (name === 'game');
