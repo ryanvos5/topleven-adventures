@@ -1153,6 +1153,10 @@ const Game = {
     this.drops = []; this._dropTimer = SMASH_DROP_EVERY; this._dropId = 1;
     this.portals = []; this._portalTimer = SMASH_PORTAL_EVERY;
     this.dragons = [];
+    // Cave: knoppen + muur + sfeer (bats/druppels)
+    this.caveWall = null; this._caveArmAt = this.time + CAVE_ARM_MS; this.caveArmed = -1;
+    this.caveButtons = (map.buttons || []).map((b) => ({ at: b.at, x: b.x, y: b.y, hits: b.hits }));
+    this.caveBats = []; this.caveDrips = []; this.lightningFx = null;
     this.ammo = mode === 'both' ? 999 : 0;
     this.rockets = 0;
     this.boss = null; this.shake = 0; this.cam.x = 0; this.time = 0; this.dtScale = 1;
@@ -1203,6 +1207,9 @@ const Game = {
         onPickup: (p) => this.onVersusPickup(p),
         onPortal: (p) => this.onVersusPortal(p),
         onDragon: () => this.onVersusDragon(),
+        onStun: () => this.onVersusStun(),
+        onCaveArm: (p) => this.onCaveArm(p),
+        onCaveWall: (p) => this.onCaveWall(p),
       });
     }
     this.state = 'versus';
@@ -1257,6 +1264,7 @@ const Game = {
       this.player.x = Math.max(8, Math.min(this.vsMapW - 8, this.player.x));   // binnen de map
       this.carryOnPlatform();                          // meebewegen met bewegend platform
       if (this.vsMode === 'smash') this.updateSmash(dt);  // drops spawnen/oppakken + wapen-timer
+      if (this.vsMap && this.vsMap.cave) this.updateCave(dt);   // knoppen/muur + sfeer
       if (this.vsBot) this.updateBot(dt);              // de AI-tegenstander
       this.checkVersusHit();
       // Just: stamp-schade op de tegenstander bij de landing
@@ -1472,6 +1480,70 @@ const Game = {
 
   onVersusDragon() { this.spawnDragon('foe'); },
 
+  // ---- CAVE: sfeer (bats/druppels) + knoppen + muur ----
+  updateCave(dt) {
+    const mapW = this.vsMapW;
+    // vleermuizen
+    if (!this.caveBats.length) for (let i = 0; i < 5; i++)
+      this.caveBats.push({ x: Math.random() * mapW, y: -10 + Math.random() * 70, vx: (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 0.6), ph: Math.random() * 6 });
+    for (const bt of this.caveBats) { bt.x += bt.vx * this.dtScale; bt.ph += dt * 0.02; bt.y += Math.sin(bt.ph) * 0.4; if (bt.x < -14) bt.x = mapW + 14; else if (bt.x > mapW + 14) bt.x = -14; }
+    // waterdruppels
+    if (Math.random() < 0.04) this.caveDrips.push({ x: Math.random() * mapW, y: -16 + Math.random() * 24, vy: 0 });
+    for (const dr of this.caveDrips) { dr.vy += 0.25 * this.dtScale; dr.y += dr.vy * this.dtScale; }
+    this.caveDrips = this.caveDrips.filter((dr) => dr.y < this.vsFallY);
+
+    // knop scherp maken (host/lokaal)
+    if ((this.vsBot || this.vs.role === 'host') && this.caveArmed < 0 && !this.caveWall && this.time >= this._caveArmAt) {
+      this.caveArmed = Math.floor(Math.random() * this.caveButtons.length);
+      if (window.Net && !this.vsBot) Net.versusSend('cavearm', { idx: this.caveArmed });
+    }
+    // knop indrukken
+    if (this.caveArmed >= 0) {
+      const b = this.caveButtons[this.caveArmed];
+      const near = (e) => e && !e.dead && Math.abs(e.x - b.x) < 13 && Math.abs(e.y - b.y) < 16;
+      if (near(this.player)) this.pressCaveButton(true);
+      else if (this.vsBot && near(this.bot)) this.pressCaveButton(false);
+    }
+    // muur sweept + gooit wie in de zone is eraf
+    if (this.caveWall) {
+      const wl = this.caveWall;
+      wl.x += CAVE_WALL_SPEED * this.dtScale;
+      const inZone = (e) => wl.zone === 'top' ? (e.y < CAVE_TOP_KILL_Y) : (e.y > CAVE_BOT_KILL_Y);
+      if (!this.player.dead && this.player.respawnInvuln <= 0 && inZone(this.player) && wl.x >= this.player.x) {
+        for (let i = 0; i < 10; i++) this.particles.push(new Particle(this.player.x, this.player.y - 12, (Math.random() - 0.5) * 3, -Math.random() * 2, '#b85a3a', 320, 2));
+        this.player.hp = 0; this.localFell();
+      }
+      if (this.vsBot && this.bot && !this.bot.dead && inZone(this.bot) && wl.x >= this.bot.x) { this.bot.dead = true; this.onVersusFell(); }
+      if (wl.x > mapW + 30) this.caveWall = null;
+    }
+  },
+
+  pressCaveButton(byPlayer) {
+    const b = this.caveButtons[this.caveArmed]; if (!b) return;
+    this.triggerCaveWall(b.hits);
+    if (window.Net && !this.vsBot && byPlayer) Net.versusSend('cavewall', { zone: b.hits });
+  },
+  triggerCaveWall(zone) {
+    this.caveWall = { zone, x: -30 };
+    this.caveArmed = -1;
+    this._caveArmAt = this.time + CAVE_ARM_MS;
+    this.shake = Math.max(this.shake, 6);
+  },
+  onCaveArm(p) { if (!this.caveWall) this.caveArmed = (p && typeof p.idx === 'number') ? p.idx : -1; },
+  onCaveWall(p) { if (p && p.zone) this.triggerCaveWall(p.zone); },
+
+  // bliksem-effect op een doel (wereldpositie)
+  strikeLightning(wx, wy) {
+    this.lightningFx = { wx, wy, until: this.time + 450 };
+    for (let i = 0; i < 14; i++) this.particles.push(new Particle(wx + (Math.random() - 0.5) * 12, wy - 14 + (Math.random() - 0.5) * 14, (Math.random() - 0.5) * 2, -Math.random() * 1.5, Math.random() < 0.5 ? '#9fe0ff' : '#4aa6ff', 360, 2));
+    this.shake = Math.max(this.shake, 7);
+  },
+  // de tegenstander stunde MIJ (online) -> mezelf stunnen + bliksem tonen
+  onVersusStun() {
+    if (this.player.respawnInvuln <= 0 && !this.player.dead) this.player.stunUntil = this.time + SMASH_LIGHTNING_STUN;
+    this.strikeLightning(this.player.x, this.player.y);
+  },
+
   // portaalpaar: één in de linkerhelft, één in de rechterhelft (host/lokaal bepaalt)
   spawnPortal() {
     const mapW = this.vsMapW;
@@ -1512,9 +1584,11 @@ const Game = {
   },
 
   spawnDrop() {
-    let tot = 0; for (const d of SMASH_DROPS) tot += d.w;
+    const pool = SMASH_DROPS.slice();
+    if (this.vsMap && this.vsMap.id === 'cave') pool.push({ kind: 'lightning', w: 8 });   // alleen op Cave
+    let tot = 0; for (const d of pool) tot += d.w;
     let r = Math.random() * tot, kind = 'health';
-    for (const d of SMASH_DROPS) { r -= d.w; if (r <= 0) { kind = d.kind; break; } }
+    for (const d of pool) { r -= d.w; if (r <= 0) { kind = d.kind; break; } }
     const pf = this.platforms[Math.floor(Math.random() * this.platforms.length)] || { x: 180, y: 140, w: 60 };
     const x = Math.round(pf.x + (Math.random() - 0.5) * Math.max(8, pf.w - 16));
     const y = Math.round(pf.y - 9);
@@ -1536,6 +1610,14 @@ const Game = {
       if (pl === this.player) { this.spawnDragon('me'); if (window.Net && !this.vsBot) Net.versusSend('dragon', {}); }
       else { this.spawnDragon('bot'); }
     }
+    else if (d.kind === 'lightning') {
+      if (pl === this.player) {
+        if (this.vsBot) { if (this.bot && this.bot.respawnInvuln <= 0 && !this.bot.dead) { this.bot.stunUntil = this.time + SMASH_LIGHTNING_STUN; this.strikeLightning(this.bot.x, this.bot.y); } }
+        else { if (window.Net) Net.versusSend('stun', {}); const r = this.vs.remote; this.strikeLightning(r.x, r.y); }
+      } else {                                   // bot pakte de bliksem -> stun de speler
+        if (this.player.respawnInvuln <= 0 && !this.player.dead) { this.player.stunUntil = this.time + SMASH_LIGHTNING_STUN; this.strikeLightning(this.player.x, this.player.y); }
+      }
+    }
   },
 
   onVersusDrop(p) {
@@ -1552,6 +1634,7 @@ const Game = {
     this.vs.roundFreezeUntil = this.time + 2200;       // ~2,2s freeze
     this.vs.roundMsg = msg;
     this.dragons = [];                                  // draken stoppen bij rondewissel
+    this.caveWall = null; this.caveArmed = -1; this._caveArmAt = this.time + CAVE_ARM_MS;
     this.shake = Math.max(this.shake, 7);
   },
 
@@ -1591,6 +1674,7 @@ const Game = {
     r.x = r.tx = b.x; r.y = r.ty = b.y; r.dir = b.dir; r.onGround = b.onGround;
     r.attacking = this.time < b.attackAnimUntil; r.swingWeapon = (this.time < (b.swingUntil || 0)) ? b.swingWeapon : null;
     r.heldWeapon = b.weaponId || b.meleeId || 'bat';
+    r.stunned = b.stunUntil && this.time < b.stunUntil;
     r.walkPhase = b.walkPhase; r.alive = !b.dead; r.charId = b.charId;
     r.hp = b.hp; r.maxHp = b.maxHp; r.ducking = b.ducking;
 
@@ -1677,7 +1761,7 @@ const Game = {
     const sp = this.vs.botSpawn;
     b.x = sp.x; b.y = sp.y; b.dir = sp.dir; b.vy = 0; b.knockVx = 0;
     b.onGround = true; b.dead = false; b.respawnInvuln = 1300; b.hp = b.maxHp; b.burnUntil = 0;
-    b.swingWeapon = null; b.swingUntil = 0;
+    b.swingWeapon = null; b.swingUntil = 0; b.stunUntil = 0;
     if (this.vsMode === 'smash') { b.meleeId = b.baseMelee || 'bat'; b.weaponId = b.meleeId; b.fireballs = 0; b.smashRockets = 0; b._weaponUntil = 0; }
     this.vs.remote.alive = true;
   },
@@ -1788,6 +1872,7 @@ const Game = {
     this.player.vy = 0; this.player.knockVx = 0; this.player.onGround = true;
     this.player.dead = false; this.player.respawnInvuln = 1300;
     this.player.hp = this.player.maxHp; this.player.burnUntil = 0;   // fris (ook na burn-dood)
+    this.player.stunUntil = 0;
     this.player.swingWeapon = null; this.player.swingUntil = 0;       // geen lingerende mep-animatie
     if (this.vsMode === 'smash') {                  // elke ronde weer met de knuppel
       this.player.meleeId = this.player.baseMelee || 'bat'; this.player.rangedId = null;
@@ -1825,6 +1910,7 @@ const Game = {
     r.onGround = s.g !== 0; r.attacking = s.a === 1;
     r.swingWeapon = s.sw || null; r.walkPhase = s.wp || 0;
     r.heldWeapon = s.wid || 'bat';
+    r.stunned = s.su === 1;
     r.alive = s.al !== 0; r.charId = s.ch || 'ryan';
     r.ducking = s.dk === 1;
     if (typeof s.h === 'number') r.hp = s.h;
@@ -1839,7 +1925,7 @@ const Game = {
       x: Math.round(p.x), y: Math.round(p.y), vy: +(p.vy || 0).toFixed(1), d: p.dir,
       g: p.onGround ? 1 : 0, a: this.time < p.attackAnimUntil ? 1 : 0,
       sw: (this.time < (p.swingUntil || 0)) ? (p.swingWeapon || 0) : 0,
-      wid: p.weaponId || 0,
+      wid: p.weaponId || 0, su: (p.stunUntil && this.time < p.stunUntil) ? 1 : 0,
       wp: p.walkPhase || 0, al: p.dead ? 0 : 1, ch: Storage.data.equippedCharacter || 'ryan',
       h: Math.round(p.hp), mh: p.maxHp, dk: p.ducking ? 1 : 0,
     });
@@ -1903,6 +1989,8 @@ const Game = {
     const camX = Math.round(this.vsCamX), camY = Math.round(this.vsCamY);
     ctx.save(); ctx.translate(-camX + shx, -camY + shy);
 
+    if (map.cave) this.drawCaveBg(ctx);                 // diepe grotten / vleermuizen / druppels
+
     // afgrond onderin (map-thema), camera-bewust
     ctx.fillStyle = map.void || '#06090d'; ctx.fillRect(camX - 4, CONFIG.GROUND_Y - 2, W + 8, H + Math.abs(camY) + 320);
     ctx.globalAlpha = 0.5; ctx.fillStyle = '#04060a'; ctx.fillRect(camX - 4, CONFIG.GROUND_Y + 18, W + 8, H + Math.abs(camY) + 320); ctx.globalAlpha = 1;
@@ -1912,6 +2000,8 @@ const Game = {
       Sprites.drawPlatform(ctx, pf.x, pf.y, pf.w);
       if (pf.mv) { ctx.globalAlpha = 0.5; Sprites.px(ctx, '#ffe9a0', pf.x - 1, pf.y - 5, 2, 2); ctx.globalAlpha = 1; }
     }
+
+    if (map.cave) this.drawCaveButtons(ctx);            // knoppen op de platforms
 
     // portalen (Power Smash) — achter de spelers
     if (this.portals) for (const pt of this.portals) this.drawPortal(ctx, pt);
@@ -1946,6 +2036,7 @@ const Game = {
         weapon: r.swingWeapon || r.heldWeapon || 'bat', build: rc.build, hair: rc.hair,
       });
       if (r.ducking) this.drawBlockGuard(ctx, Math.round(r.x), Math.round(r.y), r.dir);
+      if (r.stunned) this.drawStunAura(ctx, Math.round(r.x), Math.round(r.y));
       this.drawVsMarker(ctx, Math.round(r.x), Math.round(r.y), rc.build, '#ff5a5a');
     }
 
@@ -1962,13 +2053,18 @@ const Game = {
           weapon: swinging ? p.swingWeapon : p.weaponId, build: p.build, hair: p.hairStyle,
         });
         if (p.ducking && p.onGround) this.drawBlockGuard(ctx, Math.round(p.x), Math.round(p.y), p.dir);
+        if (p.stunUntil && this.time < p.stunUntil) this.drawStunAura(ctx, Math.round(p.x), Math.round(p.y));
       }
       this.drawVsMarker(ctx, Math.round(p.x), Math.round(p.y), p.build, '#5aff7a');
     }
+
+    if (map.cave && this.caveWall) this.drawCaveWall(ctx);   // de muur sweept over de spelers heen
     ctx.restore();
 
     // draken (drakenei-powerup) — scherm-ruimte, over de wereld heen
     this.renderDragons(ctx);
+    // bliksem (Cave) — scherm-ruimte
+    this.renderLightning(ctx);
 
     // Power Smash: huidige item/wapen (scherm-ruimte, onderin)
     if (this.vsMode === 'smash') {
@@ -2001,6 +2097,13 @@ const Game = {
       Sprites.px(ctx, '#3f1f6e', x - 3, y, 6, 1);
       Sprites.px(ctx, '#ffd24a', x - 1, y - 9, 2, 2);          // sprankel = zeldzaam
     }
+    else if (d.kind === 'lightning') {
+      // bliksemschicht-icoon (alleen Cave)
+      ctx.globalAlpha = 0.3; Sprites.px(ctx, '#bfe6ff', x - 5, y - 8, 10, 14); ctx.globalAlpha = 1;
+      Sprites.px(ctx, '#ffd24a', x - 1, y - 7, 3, 5);
+      Sprites.px(ctx, '#bfe6ff', x - 3, y - 3, 3, 5);
+      Sprites.px(ctx, '#fff', x, y - 2, 2, 4);
+    }
   },
 
   // draken tekenen (scherm-ruimte): de draak vliegt bovenin en spuugt vuur naar het doel
@@ -2024,6 +2127,71 @@ const Game = {
     ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
     ctx.globalAlpha = 1; ctx.strokeStyle = '#ffd24a'; ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    ctx.restore();
+  },
+
+  // ---- CAVE render ----
+  drawCaveBg(ctx) {
+    const mapW = this.vsMapW;
+    // diepe grot-holtes achter de grond
+    const holes = [[120, 150, 58, 40], [360, 168, 90, 54], [600, 150, 58, 40], [250, 116, 44, 28], [470, 116, 44, 28]];
+    for (const h of holes) {
+      ctx.globalAlpha = 0.65; Sprites.px(ctx, '#05030a', h[0] - h[2], h[1] - h[3], h[2] * 2, h[3] * 2);
+      ctx.globalAlpha = 0.35; Sprites.px(ctx, '#1a1230', h[0] - h[2] + 2, h[1] - h[3] + 2, h[2] * 2 - 4, 3);
+    }
+    ctx.globalAlpha = 1;
+    // vleermuizen
+    for (const bt of this.caveBats) {
+      const up = Math.sin(bt.ph) > 0 ? -2 : 0;
+      const x = Math.round(bt.x), y = Math.round(bt.y);
+      Sprites.px(ctx, '#0a0710', x - 3, y + up, 2, 2);
+      Sprites.px(ctx, '#0a0710', x + 1, y + up, 2, 2);
+      Sprites.px(ctx, '#1a1326', x - 1, y, 2, 2);
+    }
+    // waterdruppels
+    for (const dr of this.caveDrips) Sprites.px(ctx, '#5aa0c8', Math.round(dr.x), Math.round(dr.y), 1, 3);
+  },
+
+  drawCaveButtons(ctx) {
+    if (!this.caveButtons) return;
+    for (let i = 0; i < this.caveButtons.length; i++) {
+      const b = this.caveButtons[i];
+      const armed = i === this.caveArmed;
+      const blink = armed && Math.floor(this.time / 200) % 2 === 0;
+      Sprites.px(ctx, '#2a2a33', b.x - 5, b.y - 6, 10, 6);                  // sokkel
+      Sprites.px(ctx, armed ? (blink ? '#ff3030' : '#7a1414') : '#566', b.x - 3, b.y - 9, 6, 4);   // knop
+      if (blink) { ctx.globalAlpha = 0.4; Sprites.px(ctx, '#ff5a5a', b.x - 7, b.y - 13, 14, 12); ctx.globalAlpha = 1; }
+    }
+  },
+
+  drawCaveWall(ctx) {
+    const wl = this.caveWall, map = this.vsMap;
+    const y0 = wl.zone === 'top' ? ((map.camTop || 0) - 30) : CAVE_BOT_KILL_Y;
+    const y1 = wl.zone === 'top' ? CAVE_TOP_KILL_Y : (this.vsFallY + 12);
+    ctx.globalAlpha = 0.3; Sprites.px(ctx, '#ff8a4a', wl.x - 16, y0, 10, y1 - y0); ctx.globalAlpha = 1;   // gloed
+    Sprites.px(ctx, '#7a2e2e', wl.x - 8, y0, 10, y1 - y0);                  // muur
+    Sprites.px(ctx, '#b85a3a', wl.x - 8, y0, 3, y1 - y0);                   // rand
+    for (let i = 0; i < 3; i++) Sprites.px(ctx, '#5a1e1e', wl.x - 7, y0 + ((this.time / 60 + i * 13) % (y1 - y0)), 8, 2);   // textuur
+  },
+
+  drawStunAura(ctx, x, footY) {
+    const t = this.time;
+    ctx.globalAlpha = 0.22; Sprites.px(ctx, '#6ab8ff', x - 7, footY - 32, 14, 32); ctx.globalAlpha = 1;
+    for (let i = 0; i < 4; i++) {
+      const a = t / 55 + i * Math.PI / 2;
+      Sprites.px(ctx, (i % 2 ? '#cfeeff' : '#4aa6ff'), Math.round(x + Math.cos(a) * 9), Math.round(footY - 16 + Math.sin(a) * 13), 2, 2);
+    }
+  },
+
+  renderLightning(ctx) {
+    if (!this.lightningFx) return;
+    if (this.time > this.lightningFx.until) { this.lightningFx = null; return; }
+    const camX = Math.round(this.vsCamX), camY = Math.round(this.vsCamY);
+    const tx = Math.round(this.lightningFx.wx - camX), ty = Math.round(this.lightningFx.wy - camY - 8);
+    ctx.save(); ctx.lineCap = 'round';
+    const zig = () => { ctx.beginPath(); ctx.moveTo(tx, 0); const segs = 6; for (let i = 1; i <= segs; i++) { const cy = ty * i / segs; const cx = tx + (i < segs ? (Math.random() - 0.5) * 24 : 0); ctx.lineTo(cx, cy); } ctx.stroke(); };
+    ctx.globalAlpha = 0.4; ctx.strokeStyle = '#bfe6ff'; ctx.lineWidth = 6; zig();
+    ctx.globalAlpha = 1; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; zig();
     ctx.restore();
   },
 

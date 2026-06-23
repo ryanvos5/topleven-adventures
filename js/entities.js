@@ -78,7 +78,10 @@ class Player {
 
   update(dt, game, inputOverride) {
     const s = game.dtScale;
-    const inp = inputOverride || Input.state;          // bot kan eigen input meegeven
+    // bliksem-stun (Cave): geen besturing tijdens de stun
+    const stunned = this.stunUntil && game.time < this.stunUntil;
+    const inp = stunned ? { left: false, right: false, jump: false, duck: false, attack: false, melee: false, jumpPressed: false }
+                        : (inputOverride || Input.state);   // bot kan eigen input meegeven
 
     // richting bepalen
     if (inp.left && !inp.right) this.dir = -1;
@@ -163,7 +166,7 @@ class Player {
     if (game.obstacles) this.resolveObstacles(game, prevX);
 
     // springen (met dubbel-jump vanaf wereld 2)
-    const jumpPressed = inputOverride ? inp.jumpPressed : Input.jumpPressed;
+    const jumpPressed = stunned ? false : (inputOverride ? inp.jumpPressed : Input.jumpPressed);
     if (jumpPressed && !this.ducking && this.jumps > 0) {
       const air = !this.onGround;              // dit is de dubbel-jump (al in de lucht)
       this.vy = CONFIG.JUMP_VELOCITY * (air ? this.dblJumpMul : 1);

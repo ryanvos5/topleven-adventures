@@ -392,6 +392,12 @@ const SMASH_DRAGON_LIFE = 4500;      // het ei blijft maar kort liggen
 const DRAGON_DUR = 10000;            // de draak blijft 10s
 const DRAGON_SPIT_MS = 1600;         // spuugt elke ~1,6s een vuurstraal
 const DRAGON_DMG = 10;               // schade per vuurstraal
+const SMASH_LIGHTNING_STUN = 3000;   // bliksem (alleen Cave): stunt de tegenstander 3s
+// Cave: knop -> muur die de tegenstander aan de andere kant eraf gooit
+const CAVE_ARM_MS = 7000;            // hoe vaak een knop scherp wordt (rood knippert)
+const CAVE_WALL_SPEED = 8;           // px/frame dat de muur over de map sweept
+const CAVE_TOP_KILL_Y = 104;         // boven deze y = "boven" (top-muur gooit je eraf)
+const CAVE_BOT_KILL_Y = 158;         // onder deze y = "beneden"
 // dropsoorten + relatieve kans
 const SMASH_DROPS = [
   { kind: 'weapon', w: 34 },         // willekeurig melee-wapen
@@ -467,6 +473,26 @@ const VERSUS_MAPS = [
       { x: 215, y: 82, w: 56 }, { x: 505, y: 82, w: 56 },
       { x: 295, y: 34, w: 52 }, { x: 425, y: 34, w: 52 },
       { x: 360, y: -16, w: 128 },                             // top (midden): 2x zo groot
+    ],
+  },
+  {
+    // grot: net zo groot als Sky. Diepe grotten op de achtergrond, vleermuizen, waterdruppels.
+    // Knoppen onder/boven die af en toe rood knipperen -> een muur gooit de tegenstander aan de andere kant eraf.
+    id: 'cave', name: 'Cave', sky: ['#241f33', '#0b0810'], void: '#050308', plat: 'rock', cave: true,
+    w: 720, fallY: 232, camTop: -30, camBottom: 30,
+    spawnL: { x: 90, y: 176 }, spawnR: { x: 630, y: 176 },
+    platforms: [
+      { x: 110, y: 176, w: 120 }, { x: 610, y: 176, w: 120 },   // grond (groot)
+      { x: 360, y: 150, w: 150 },                                // grote middenplaat
+      { x: 215, y: 120, w: 30 }, { x: 505, y: 120, w: 30 },      // kleine
+      { x: 360, y: 98, w: 96 },                                  // grote
+      { x: 150, y: 80, w: 28 }, { x: 570, y: 80, w: 28 },        // kleine hoog
+      { x: 300, y: 60, w: 30 }, { x: 420, y: 60, w: 30 },        // kleine top
+      { x: 360, y: 60, w: 40 },                                  // center-top (bovenste knop)
+    ],
+    buttons: [
+      { at: 'bottom', x: 160, y: 176, hits: 'top' },             // beneden -> muur aan de bovenkant
+      { at: 'top', x: 360, y: 60, hits: 'bottom' },              // boven -> muur aan de onderkant
     ],
   },
 ];
