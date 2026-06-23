@@ -41,16 +41,25 @@ const Sprites = {
     const torsoTop = legTop - torsoH;
     const headTop = torsoTop - headH;
 
-    // --- benen (loop-animatie) ---
-    let swing = 0;
+    // --- benen (vloeiende loop-animatie) ---
+    // walkPhase is een doorlopende fase (radialen); sin() geeft een soepele schaarbeweging
+    let swF = 0, swB = 0, liftF = 0, liftB = 0;
     if (!pose.airborne && !duck) {
       const ph = pose.walkPhase || 0;
-      swing = (ph === 1) ? 2 : (ph === 3) ? -2 : 0;
+      const amp = (small || tall) ? 2 : 3;                  // pas-amplitude
+      const s = Math.sin(ph);
+      swF = Math.round(s * amp);                            // voorbeen
+      swB = -swF;                                           // achterbeen tegengesteld -> stappen
+      liftF = Math.max(0, Math.round(s * 2));               // voet die naar voren gaat tilt iets op
+      liftB = Math.max(0, Math.round(-s * 2));
     }
-    this.px(ctx, pal.pants, cx - (legW + 1), legTop, legW, legH);          // achterbeen
-    this.px(ctx, pal.shoe, cx - (legW + 1) - swing, footY - 2, legW + 1, 2);
-    this.px(ctx, pal.pants, cx + 1, legTop, legW, legH);                   // voorbeen
-    this.px(ctx, pal.shoe, cx + 1 + swing, footY - 2, legW + 1, 2);
+    const drawLeg = (baseX, sw, lift) => {
+      const lx = baseX + sw * dir;                          // stap mee in de loopdrichting
+      this.px(ctx, pal.pants, lx, legTop - lift, legW, legH);
+      this.px(ctx, pal.shoe, lx, footY - 2 - lift, legW + 1, 2);
+    };
+    drawLeg(cx - (legW + 1), swB, liftB);                   // achterbeen
+    drawLeg(cx + 1, swF, liftF);                            // voorbeen
 
     // --- torso (shirt) ---
     this.px(ctx, pal.shirt, cx - bh, torsoTop, bh * 2, torsoH);

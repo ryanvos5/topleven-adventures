@@ -237,11 +237,15 @@ class Player {
       }
     }
 
-    // loop-animatie
+    // loop-animatie — doorlopende fase voor een vloeiende stap
     if (moving && this.onGround) {
-      this.walkTimer += dt;
-      if (this.walkTimer > 120) { this.walkTimer = 0; this.walkPhase = (this.walkPhase + 1) % 4; }
-    } else { this.walkPhase = 0; }
+      this.walkPhase = (this.walkPhase + dt * 0.015) % (Math.PI * 2);
+    } else {
+      // soepel uitlopen naar de dichtstbijzijnde neutrale stand (benen bij elkaar)
+      const target = Math.round(this.walkPhase / Math.PI) * Math.PI;
+      this.walkPhase += (target - this.walkPhase) * Math.min(1, dt * 0.02);
+      if (Math.abs(target - this.walkPhase) < 0.02) this.walkPhase = target % (Math.PI * 2);
+    }
 
     // aanvallen — aparte slots: vuurknop schiet, meleeknop slaat
     const ranged = this.rangedId ? WEAPONS[this.rangedId] : null;
