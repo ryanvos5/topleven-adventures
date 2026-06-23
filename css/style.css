@@ -586,6 +586,26 @@ body.is-touch #hud { justify-content: flex-start; gap: 8px; }
 }
 .back-btn:active { background: #252c3b; }
 
+/* ====== Bot-moeilijkheidsschuif ====== */
+#vs-bot-diff { margin: 6px 0 4px; }
+.vs-slider {
+  -webkit-appearance: none; appearance: none;
+  width: min(280px, 86%); height: 8px; border-radius: 5px;
+  background: linear-gradient(90deg, #2ecc55, #f2c94c, #e8483b);
+  outline: none; margin: 4px 0 2px;
+}
+.vs-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #fff; border: 3px solid #1a2030; cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+.vs-slider::-moz-range-thumb {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #fff; border: 3px solid #1a2030; cursor: pointer;
+}
+#vs-diff-name { color: var(--accent, #f2c94c); font-weight: bold; }
+
 /* ====== Online-teller op de chat-knop ====== */
 #btn-chat { position: relative; }
 .chat-badge { display: none; }

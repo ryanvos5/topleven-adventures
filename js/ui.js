@@ -93,6 +93,8 @@ const UI = {
     $('btn-vs-host').onclick = () => this.versusHost();
     $('btn-vs-join').onclick = () => this.versusJoin();
     $('btn-vs-bot').onclick = () => this.openBotSetup();
+    const diffSlider = document.getElementById('vs-diff-slider');
+    if (diffSlider) diffSlider.oninput = () => this.setBotDiff(parseInt(diffSlider.value, 10));
     $('btn-vs-quit').onclick = () => Game.quitVersus();
     $('btn-vs-again').onclick = () => { document.getElementById('versus-result').classList.add('hidden'); this.openVersusLobby(); };
     $('btn-vs-menu').onclick = () => { document.getElementById('versus-result').classList.add('hidden'); this.leaveLobby(); this.show('menu'); };
@@ -594,7 +596,19 @@ const UI = {
     document.getElementById('btn-vs-ready').textContent = '▶ START';
     document.getElementById('btn-vs-ready').classList.remove('on');
     document.getElementById('vs-ready-status').textContent = '🤖 Oefenpotje — geen XP';
+    document.getElementById('vs-bot-diff').classList.remove('hidden');     // moeilijkheidsschuif tonen
+    this.setBotDiff(this._botDiff || 5);
     this.show('versus');
+  },
+
+  // moeilijkheid + speelstijl-label bijwerken
+  setBotDiff(n) {
+    n = Math.max(1, Math.min(10, n || 5));
+    this._botDiff = n;
+    const prof = (typeof BOT_PROFILES !== 'undefined' && BOT_PROFILES[n - 1]) || null;
+    const val = document.getElementById('vs-diff-val'); if (val) val.textContent = n;
+    const nm = document.getElementById('vs-diff-name'); if (nm) nm.textContent = prof ? prof.name : '';
+    const sl = document.getElementById('vs-diff-slider'); if (sl && +sl.value !== n) sl.value = n;
   },
 
   // tegen de bot spelen (lokaal, gekozen map, geen XP)
@@ -603,7 +617,7 @@ const UI = {
     this._vsStarted = true;
     document.querySelector('.vs-wait-label').classList.remove('hidden');
     const v = this._myVote || { map: (Game.vsMap && Game.vsMap.id) || VERSUS_MAPS[0].id, mode: Game.vsMode || 'melee' };
-    Game.startVersus('host', { mapId: v.map, mode: v.mode, bot: true });
+    Game.startVersus('host', { mapId: v.map, mode: v.mode, bot: true, diff: this._botDiff || 5 });
   },
 
   // in een kamer: toon code, wacht op tegenstander
@@ -622,6 +636,7 @@ const UI = {
   _onVersusMatch() {
     if (window.Net && Net.lobby) Net.lobbyLeave();   // chat niet meer nodig tijdens het potje
     document.getElementById('vs-peer-status').textContent = '✅ Tegenstander aanwezig!';
+    const bd = document.getElementById('vs-bot-diff'); if (bd) bd.classList.add('hidden');   // alleen bij bot
     document.getElementById('vs-lobby-opts').classList.remove('hidden');
     this.renderMapVote();
     this.refreshLobby();

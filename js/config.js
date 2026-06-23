@@ -402,6 +402,24 @@ const CAVE_BEAM_KNOCK = 24;          // harde knockback
 const SMASH_ROCK_COUNT = 3;
 const SMASH_ROCK_FLAT = 2000;        // 2s plat (niet bewegen)
 const SMASH_ROCK_SPREAD = 55;        // spreiding rond de tegenstander
+
+/* ---------- BOT-MOEILIJKHEID (level 1..10) ----------
+   Elk level heeft een eigen speelstijl. Velden:
+   meleeCd = ms tussen meppen, block = blokkans, aggro = hoe vaak 'ie de aanval zoekt,
+   react = reactietijd vóór 'ie mept (ms), shootCd = ms tussen schoten (beide-wapens),
+   jumpy = kans dat 'ie naar platforms springt, standoff = gewenste afstand tot de speler */
+const BOT_PROFILES = [
+  { name: 'Luiaard',      meleeCd: 1300, block: 0.00, aggro: 0.30, react: 700, shootCd: 2600, jumpy: 0.00, standoff: 70 },
+  { name: 'Schuchter',    meleeCd: 1100, block: 0.05, aggro: 0.45, react: 600, shootCd: 2200, jumpy: 0.10, standoff: 56 },
+  { name: 'Straatvechter',meleeCd: 950,  block: 0.10, aggro: 0.65, react: 520, shootCd: 1900, jumpy: 0.20, standoff: 30 },
+  { name: 'Verdediger',   meleeCd: 850,  block: 0.45, aggro: 0.55, react: 460, shootCd: 1700, jumpy: 0.25, standoff: 34 },
+  { name: 'Jager',        meleeCd: 750,  block: 0.20, aggro: 0.95, react: 400, shootCd: 1500, jumpy: 0.30, standoff: 24 },
+  { name: 'Springer',     meleeCd: 760,  block: 0.20, aggro: 0.75, react: 380, shootCd: 1500, jumpy: 0.85, standoff: 28 },
+  { name: 'Schutter',     meleeCd: 820,  block: 0.25, aggro: 0.45, react: 380, shootCd: 800,  jumpy: 0.30, standoff: 72 },
+  { name: 'Razend',       meleeCd: 520,  block: 0.15, aggro: 1.00, react: 300, shootCd: 1300, jumpy: 0.40, standoff: 22 },
+  { name: 'Tacticus',     meleeCd: 600,  block: 0.55, aggro: 0.75, react: 300, shootCd: 1100, jumpy: 0.55, standoff: 32 },
+  { name: 'Meester',      meleeCd: 400,  block: 0.62, aggro: 1.00, react: 220, shootCd: 750,  jumpy: 0.75, standoff: 24 },
+];
 // dropsoorten + relatieve kans
 const SMASH_DROPS = [
   { kind: 'weapon', w: 34 },         // willekeurig melee-wapen
