@@ -1221,7 +1221,7 @@ const Game = {
   buildVersusPlatforms(map) {
     // platforms klonen met basis-positie (bx/by) zodat bewegende platforms kunnen oscilleren
     this.platforms = (map.platforms || []).map((p) => ({
-      x: p.x, y: p.y, w: p.w, bx: p.x, by: p.y, mv: p.mv || null, dx: 0, dy: 0,
+      x: p.x, y: p.y, w: p.w, bx: p.x, by: p.y, mv: p.mv || null, dx: 0, dy: 0, soft: p.soft || false,
     }));
   },
 
@@ -2022,11 +2022,23 @@ const Game = {
 
     // wolk-parallax voor de Sky-map (scherm-ruimte, beweegt licht mee)
     if (map.id === 'sky') {
-      ctx.fillStyle = 'rgba(255,255,255,0.55)';
-      for (let i = 0; i < 6; i++) {
-        const cx = ((i * 150 - this.vsCamX * 0.3) % (W + 140)) - 60;
-        const cy = 20 + (i % 3) * 50 - this.vsCamY * 0.25;
-        ctx.fillRect(cx, cy, 40, 9); ctx.fillRect(cx + 10, cy - 5, 24, 9);
+      // zon (rechtsboven, lichte parallax)
+      const sunX = W - 64 - this.vsCamX * 0.05, sunY = 42 - this.vsCamY * 0.05;
+      ctx.globalAlpha = 0.22; ctx.fillStyle = '#fff3c0'; ctx.beginPath(); ctx.arc(sunX, sunY, 34, 0, 6.2832); ctx.fill();
+      ctx.globalAlpha = 1; ctx.fillStyle = '#ffe27a'; ctx.beginPath(); ctx.arc(sunX, sunY, 17, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = '#fff6cf'; ctx.beginPath(); ctx.arc(sunX, sunY, 11, 0, 6.2832); ctx.fill();
+      // wolken (2 parallax-lagen)
+      const cloud = (cx, cy, sc, a) => { ctx.globalAlpha = a; ctx.fillStyle = '#ffffff'; ctx.fillRect(cx, cy, 40 * sc, 9 * sc); ctx.fillRect(cx + 10 * sc, cy - 5 * sc, 24 * sc, 9 * sc); ctx.fillRect(cx + 4 * sc, cy - 2 * sc, 30 * sc, 7 * sc); };
+      for (let i = 0; i < 4; i++) { const cx = ((i * 190 - this.vsCamX * 0.15) % (W + 220)) - 80; const cy = 30 + (i % 2) * 46 - this.vsCamY * 0.12; cloud(cx, cy, 1.4, 0.3); }   // ver
+      for (let i = 0; i < 6; i++) { const cx = ((i * 150 - this.vsCamX * 0.3) % (W + 140)) - 60; const cy = 22 + (i % 3) * 52 - this.vsCamY * 0.25; cloud(cx, cy, 1.0, 0.6); }    // dichterbij
+      ctx.globalAlpha = 1;
+      // vogels (klein, klapperend, schuiven traag)
+      ctx.strokeStyle = '#3a4760'; ctx.lineWidth = 1.4;
+      for (let i = 0; i < 5; i++) {
+        const bx = ((i * 95 + this.time * 0.018) % (W + 60)) - 30;
+        const by = 24 + (i * 19 % 46) - this.vsCamY * 0.1;
+        const fl = Math.sin(this.time / 160 + i) * 2.5;
+        ctx.beginPath(); ctx.moveTo(bx - 4, by + fl); ctx.lineTo(bx, by - 1); ctx.lineTo(bx + 4, by + fl); ctx.stroke();
       }
     }
 
@@ -2041,8 +2053,9 @@ const Game = {
     ctx.fillStyle = map.void || '#06090d'; ctx.fillRect(camX - 4, CONFIG.GROUND_Y - 2, W + 8, H + Math.abs(camY) + 320);
     ctx.globalAlpha = 0.5; ctx.fillStyle = '#04060a'; ctx.fillRect(camX - 4, CONFIG.GROUND_Y + 18, W + 8, H + Math.abs(camY) + 320); ctx.globalAlpha = 1;
 
-    // platforms (bewegende krijgen een pijltjes-hint)
+    // platforms (bewegende krijgen een pijltjes-hint; zachte wolken pluizig)
     for (const pf of this.platforms) {
+      if (pf.soft) { this.drawSoftCloud(ctx, pf); continue; }
       Sprites.drawPlatform(ctx, pf.x, pf.y, pf.w);
       if (pf.mv) { ctx.globalAlpha = 0.5; Sprites.px(ctx, '#ffe9a0', pf.x - 1, pf.y - 5, 2, 2); ctx.globalAlpha = 1; }
     }
@@ -2227,6 +2240,17 @@ const Game = {
     Sprites.px(ctx, '#c0392b', x - 3, y0, 6, y1 - y0);                    // dunne straal
     Sprites.px(ctx, '#ffd24a', x - 1, y0, 2, y1 - y0);                    // kern
     for (let i = 0; i < 3; i++) Sprites.px(ctx, '#ffe9a0', x - 2, y0 + ((this.time / 40 + i * 30) % (y1 - y0)), 4, 2);   // sprankels
+  },
+
+  // zachte wolk-platform (Sky): pluizig en doorschijnend (je zakt erdoorheen)
+  drawSoftCloud(ctx, pf) {
+    const x = pf.x, y = pf.y, w = pf.w;
+    const bob = Math.sin((this.time + x * 7) / 600) * 1.5;
+    ctx.globalAlpha = 0.85;
+    Sprites.px(ctx, '#f2f7ff', x - w / 2, y - 3 + bob, w, 8);
+    for (let i = -w / 2; i < w / 2 - 2; i += 9) Sprites.px(ctx, '#ffffff', x + i, y - 8 + bob, 13, 8);
+    ctx.globalAlpha = 0.35; Sprites.px(ctx, '#c9d8ec', x - w / 2, y + 4 + bob, w, 3);   // zachte onderkant
+    ctx.globalAlpha = 1;
   },
 
   drawRock(ctx, rk) {

@@ -474,8 +474,8 @@ const VERSUS_MAPS = [
     platforms: [
       { x: 110, y: 176, w: 74 }, { x: 610, y: 176, w: 74 },
       { x: 240, y: 130, w: 120 }, { x: 480, y: 130, w: 120 }, // middenrij: 2x zo groot
-      { x: 215, y: 82, w: 56 }, { x: 505, y: 82, w: 56 },
-      { x: 295, y: 34, w: 52 }, { x: 425, y: 34, w: 52 },
+      { x: 215, y: 82, w: 56, soft: true }, { x: 505, y: 82, w: 56, soft: true },   // zachte wolken
+      { x: 295, y: 34, w: 52, soft: true }, { x: 425, y: 34, w: 52, soft: true },   // zachte wolken
       { x: 360, y: -16, w: 128 },                             // top (midden): 2x zo groot
     ],
   },

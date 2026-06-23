@@ -165,9 +165,15 @@ class Player {
     // botsing met obstakels (auto's blokkeren staand, lage balken blokkeren tenzij je duikt)
     if (game.obstacles) this.resolveObstacles(game, prevX);
 
+    // in een zachte wolk (Sky)? -> drijfvermogen i.p.v. een vaste sprong
+    let inCloud = false;
+    if (game.platforms) for (const pf of game.platforms) {
+      if (pf.soft && Math.abs(this.x - pf.x) < pf.w / 2 + this.w / 2 && this.y > pf.y - 16 && this.y < pf.y + 12) { inCloud = true; break; }
+    }
+
     // springen (met dubbel-jump vanaf wereld 2)
     const jumpPressed = frozen ? false : (inputOverride ? inp.jumpPressed : Input.jumpPressed);
-    if (jumpPressed && !this.ducking && this.jumps > 0) {
+    if (jumpPressed && !this.ducking && this.jumps > 0 && !inCloud) {
       const air = !this.onGround;              // dit is de dubbel-jump (al in de lucht)
       this.vy = CONFIG.JUMP_VELOCITY * (air ? this.dblJumpMul : 1);
       this.onGround = false;
@@ -184,7 +190,12 @@ class Player {
     const wasGround = this.onGround;
     const fallSpeed = this.vy;               // valsnelheid bij frame-start (voor de stamp)
     this.onGround = false;
-    this.vy += CONFIG.GRAVITY * s;
+    if (inCloud) {
+      const target = inp.jump ? -1.4 : 0.7;          // springen = langzaam omhoog, anders langzaam zakken
+      this.vy += (target - this.vy) * Math.min(1, 0.2 * s);
+    } else {
+      this.vy += CONFIG.GRAVITY * s;
+    }
     this.y += this.vy * s;
     // op autodaken landen (eenrichtings-platform: alleen van bovenaf)
     if (this.vy >= 0 && game.obstacles) {
@@ -199,6 +210,7 @@ class Player {
     // op zwevende parkour-platforms landen (eenrichtings)
     if (this.vy >= 0 && game.platforms) {
       for (const pf of game.platforms) {
+        if (pf.soft) continue;                       // zachte wolken zijn niet vast
         if (Math.abs(this.x - pf.x) < pf.w / 2 + this.w / 2 && prevFeetY <= pf.y + 3 && this.y >= pf.y) {
           this.y = pf.y; this.vy = 0; this.onGround = true;
         }
@@ -208,8 +220,8 @@ class Player {
     if (!game.level.parkour && this.y >= CONFIG.GROUND_Y && !game.overPit(this.x)) {
       this.y = CONFIG.GROUND_Y; this.vy = 0; this.onGround = true;
     }
-    // bij landing de sprongen weer opladen
-    if (this.onGround) this.jumps = this.maxJumps;
+    // bij landing (of in een wolk) de sprongen weer opladen
+    if (this.onGround || inCloud) this.jumps = this.maxJumps;
 
     // Just: STAMP bij een harde landing -> schade rondom
     if (this.groundPound && !wasGround && this.onGround && fallSpeed > 3.5 && game.time >= this._poundCd) {
