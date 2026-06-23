@@ -41,25 +41,30 @@ const Sprites = {
     const torsoTop = legTop - torsoH;
     const headTop = torsoTop - headH;
 
-    // --- benen (vloeiende loop-animatie) ---
-    // walkPhase is een doorlopende fase (radialen); sin() geeft een soepele schaarbeweging
-    let swF = 0, swB = 0, liftF = 0, liftB = 0;
-    if (!pose.airborne && !duck) {
-      const ph = pose.walkPhase || 0;
-      const amp = (small || tall) ? 2 : 3;                  // pas-amplitude
-      const s = Math.sin(ph);
-      swF = Math.round(s * amp);                            // voorbeen
-      swB = -swF;                                           // achterbeen tegengesteld -> stappen
-      liftF = Math.max(0, Math.round(s * 2));               // voet die naar voren gaat tilt iets op
-      liftB = Math.max(0, Math.round(-s * 2));
+    // --- benen: pendelbeweging vanuit de heup (om en om voor/achter, zoals Minecraft) ---
+    const amp = small ? 3 : 4;                              // hoe ver de voet uitslaat
+    let offA = 0, offB = 0;                                 // horizontale uitslag van de voet
+    if (duck) {
+      offA = offB = 0;                                      // gehurkt: benen recht
+    } else if (pose.airborne) {
+      offA = amp * dir; offB = -amp * dir;                  // sprong: vaste spreidstand (één voor, één achter)
+    } else {
+      const s = Math.sin(pose.walkPhase || 0);
+      offA = Math.round(amp * s) * dir;                     // been A
+      offB = -Math.round(amp * s) * dir;                    // been B tegengesteld
     }
-    const drawLeg = (baseX, sw, lift) => {
-      const lx = baseX + sw * dir;                          // stap mee in de loopdrichting
-      this.px(ctx, pal.pants, lx, legTop - lift, legW, legH);
-      this.px(ctx, pal.shoe, lx, footY - 2 - lift, legW + 1, 2);
+    // teken een been schuin: heup (boven, vast) -> voet (onder, verschoven) = pendel
+    const drawLeg = (hipX, foot) => {
+      const rows = Math.max(2, legH);
+      for (let i = 0; i < rows; i++) {
+        const x = Math.round(hipX + foot * (i / (rows - 1)));
+        this.px(ctx, pal.pants, x, legTop + i, legW, 1);
+      }
+      this.px(ctx, pal.shoe, Math.round(hipX + foot), footY - 2, legW + 1, 2);
     };
-    drawLeg(cx - (legW + 1), swB, liftB);                   // achterbeen
-    drawLeg(cx + 1, swF, liftF);                            // voorbeen
+    const hipX = cx - Math.floor(legW / 2);                 // beide benen draaien vanuit dezelfde heup
+    drawLeg(hipX, offB);                                    // achterbeen
+    drawLeg(hipX, offA);                                    // voorbeen
 
     // --- torso (shirt) ---
     this.px(ctx, pal.shirt, cx - bh, torsoTop, bh * 2, torsoH);
