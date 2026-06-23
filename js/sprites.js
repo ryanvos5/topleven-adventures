@@ -60,7 +60,9 @@ const Sprites = {
         const x = Math.round(hipX + foot * (i / (rows - 1)));
         this.px(ctx, pal.pants, x, legTop + i, legW, 1);
       }
-      this.px(ctx, pal.shoe, Math.round(hipX + foot), footY - 2, legW + 1, 2);
+      // schoen: de teen (1px extra) wijst in de kijkrichting
+      const sx = Math.round(hipX + foot) - (dir < 0 ? 1 : 0);
+      this.px(ctx, pal.shoe, sx, footY - 2, legW + 1, 2);
     };
     const hipX = cx - Math.floor(legW / 2);                 // beide benen draaien vanuit dezelfde heup
     drawLeg(hipX, offB);                                    // achterbeen
