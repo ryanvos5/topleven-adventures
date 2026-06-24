@@ -582,7 +582,7 @@ const UI = {
   openBotSetup() {
     this.leaveLobby();
     this._botSetup = true;
-    this._myVote = { map: VERSUS_MAPS[0].id, mode: 'melee' };
+    this._myVote = { map: VERSUS_MAPS[0].id, mode: 'smash' };
     document.getElementById('versus-lobby').classList.add('hidden');
     document.getElementById('versus-result').classList.add('hidden');
     document.getElementById('versus-wait').classList.remove('hidden');
@@ -614,14 +614,14 @@ const UI = {
     this._botSetup = false;
     this._vsStarted = true;
     document.querySelector('.vs-wait-label').classList.remove('hidden');
-    const v = this._myVote || { map: (Game.vsMap && Game.vsMap.id) || VERSUS_MAPS[0].id, mode: Game.vsMode || 'melee' };
-    Game.startVersus('host', { mapId: v.map, mode: v.mode, bot: true, diff: this._botDiff || 5 });
+    const v = this._myVote || { map: (Game.vsMap && Game.vsMap.id) || VERSUS_MAPS[0].id };
+    Game.startVersus('host', { mapId: v.map, mode: 'smash', bot: true, diff: this._botDiff || 5 });
   },
 
   // in een kamer: toon code, wacht op tegenstander
   _enterRoom(code) {
     this._vsStarted = false; this._peer = null; this._myReady = false;
-    this._myVote = { map: VERSUS_MAPS[0].id, mode: 'melee' };
+    this._myVote = { map: VERSUS_MAPS[0].id, mode: 'smash' };
     document.getElementById('versus-msg').textContent = '';
     document.getElementById('versus-lobby').classList.add('hidden');
     document.getElementById('versus-wait').classList.remove('hidden');
@@ -728,7 +728,7 @@ const UI = {
   resolveAndBegin() {
     const mine = this._myVote, peer = this._peer || mine;
     const map = (mine.map === peer.map) ? mine.map : (Math.random() < 0.5 ? mine.map : peer.map);
-    const mode = (mine.mode === peer.mode) ? mine.mode : (Math.random() < 0.5 ? mine.mode : peer.mode);
+    const mode = 'smash';                                   // online is altijd Power Smash
     if (window.Net) Net.versusSend('begin', { map, mode });
     this._beginMatch(map, mode);
   },
@@ -786,7 +786,7 @@ const UI = {
     }
   },
 
-  showVersusResult(won, myScore, oppScore, xpGained, isBot) {
+  showVersusResult(won, myScore, oppScore, xpGained, isBot, coinsEarned) {
     const rb = document.getElementById('vs-round-banner'); if (rb) rb.classList.add('hidden');
     document.getElementById('versus-hud').classList.add('hidden');
     document.body.classList.remove('in-game');
@@ -799,11 +799,12 @@ const UI = {
     if (isBot) {
       xpEl.classList.remove('hidden');
       xpEl.textContent = '🤖 Oefenpotje tegen de bot — geen XP';
-    } else if (xpGained) {
+    } else {
       xpEl.classList.remove('hidden');
-      xpEl.textContent = '+' + xpGained + ' XP  ·  Level ' + playerLevel(Storage.data.xp || 0) +
+      xpEl.innerHTML = '+' + (xpGained || 0) + ' XP  ·  +' + (coinsEarned || 0) + ' ● munten<br>' +
+        'Level ' + playerLevel(Storage.data.xp || 0) +
         (window.Net && Net.isLoggedIn() ? '' : '  (log in om mee te tellen)');
-    } else { xpEl.classList.add('hidden'); }
+    }
     // rematch-knop voorbereiden
     this._rematchMine = false; this._rematchPeer = false; this._vsStarted = false; this._isBotResult = !!isBot;
     const rbtn = document.getElementById('btn-vs-rematch');

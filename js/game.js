@@ -1380,11 +1380,17 @@ const Game = {
   // ---- POWER SMASH: vuurknop, drops, pickups ----
   smashFire() {
     const p = this.player;
-    if (!p.dead && Input.state.attack && this.time >= (p._fireCd || 0)) {
-      if (p.fireballs > 0) { p.fireballs--; p._fireCd = this.time + 420; this.spawnVersusProjectile(p, 'fire'); }
-      else if (p.smashRockets > 0) { p.smashRockets--; p._fireCd = this.time + 850; this.spawnVersusProjectile(p, 'rocket'); if (p.smashRockets <= 0) p.rangedId = null; }
+    if (!p.dead && Input.state.attack) {
+      if (p.fireballs > 0 || p.smashRockets > 0) {        // vuurwapen opgepakt -> vuren
+        if (this.time >= (p._fireCd || 0)) {
+          if (p.fireballs > 0) { p.fireballs--; p._fireCd = this.time + 420; this.spawnVersusProjectile(p, 'fire'); }
+          else { p.smashRockets--; p._fireCd = this.time + 850; this.spawnVersusProjectile(p, 'rocket'); if (p.smashRockets <= 0) p.rangedId = null; }
+        }
+      } else {
+        Input.state.melee = true;                          // alleen melee -> vuurknop slaat ook
+      }
     }
-    Input.state.attack = false;   // vuurknop doet GEEN melee in smash (melee = aparte knop)
+    Input.state.attack = false;
   },
 
   spawnVersusProjectile(shooter, kind) {
@@ -2059,18 +2065,17 @@ const Game = {
     }
     // online: kanaal OPEN houden zodat een rematch mogelijk is (kanaal sluit pas bij menu/lobby)
     // tegen de bot: GEEN XP/wins. Echt duel: XP + wins (sync't naar de leaderboard).
-    let gained = 0;
+    let gained = 0, coinsEarned = 0;
     if (!isBot) {
-      const smashWin = won && this.vsMode === 'smash';
-      gained = smashWin ? 100 : (won ? XP_WIN : XP_LOSS);     // Power Smash winnen = 100 XP
-      gained += (this._comboXp || 0);                          // + verdiende combo-XP
+      gained = (won ? 100 : XP_LOSS) + (this._comboXp || 0);   // winst 100 XP + verdiende combo-XP
+      coinsEarned = won ? 75 : 20;                              // winnaar 75 munten, verliezer 20
       Storage.data.xp = (Storage.data.xp || 0) + gained;
-      if (smashWin) Storage.data.coins = (Storage.data.coins || 0) + 50;   // + 50 munten
+      Storage.data.coins = (Storage.data.coins || 0) + coinsEarned;
       if (won) Storage.data.mpWins = (Storage.data.mpWins || 0) + 1;
       else Storage.data.mpLosses = (Storage.data.mpLosses || 0) + 1;
       Storage.save();
     }
-    UI.showVersusResult(won, this.vs ? this.vs.myScore : 0, this.vs ? this.vs.oppScore : 0, gained, isBot);
+    UI.showVersusResult(won, this.vs ? this.vs.myScore : 0, this.vs ? this.vs.oppScore : 0, gained, isBot, coinsEarned);
   },
 
   quitVersus() {
