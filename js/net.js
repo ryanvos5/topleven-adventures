@@ -298,7 +298,7 @@ const Net = {
     const L = { channel: ch, cbs: cbs || {}, id, nick, hbTimer: null, pruneTimer: null };
     this.lobbyPeers = {};
     ch.on('broadcast', { event: 'chat' }, (m) => { if (L.cbs.onChat) L.cbs.onChat(m.payload); });
-    ch.on('broadcast', { event: 'here' }, (m) => { const p = m.payload; if (p && p.id) { this.lobbyPeers[p.id] = { nick: p.nick, t: Date.now() }; this._emitPeers(L); } });
+    ch.on('broadcast', { event: 'here' }, (m) => { const p = m.payload; if (p && p.id) { this.lobbyPeers[p.id] = { nick: p.nick, t: Date.now(), guest: p.g === 1 }; this._emitPeers(L); } });
     ch.on('broadcast', { event: 'lbye' }, (m) => { if (m.payload && m.payload.id) { delete this.lobbyPeers[m.payload.id]; this._emitPeers(L); } });
     ch.on('broadcast', { event: 'invite' }, (m) => { if (m.payload && m.payload.to === id && L.cbs.onInvite) L.cbs.onInvite(m.payload); });
     await new Promise((resolve, reject) => {
@@ -310,7 +310,7 @@ const Net = {
       setTimeout(() => { if (!done) { done = true; reject(new Error('Time-out bij de chat.')); } }, 8000);
     });
     this.lobby = L;
-    const beat = () => this.lobbySend('here', { id: L.id, nick: L.nick });   // leest live id/nick
+    const beat = () => this.lobbySend('here', { id: L.id, nick: L.nick, g: this.isLoggedIn() ? 0 : 1 });   // leest live id/nick + gast-vlag
     beat();
     L.hbTimer = setInterval(beat, 4000);                 // heartbeat: ik ben online
     L.pruneTimer = setInterval(() => this._prunePeers(L), 3000);
@@ -319,8 +319,8 @@ const Net = {
   },
 
   _emitPeers(L) {
-    const list = [{ id: L.id, nick: L.nick, me: true }];
-    for (const pid in this.lobbyPeers) list.push({ id: pid, nick: this.lobbyPeers[pid].nick, me: false });
+    const list = [{ id: L.id, nick: L.nick, me: true, guest: !this.isLoggedIn() }];
+    for (const pid in this.lobbyPeers) list.push({ id: pid, nick: this.lobbyPeers[pid].nick, me: false, guest: !!this.lobbyPeers[pid].guest });
     if (L.cbs.onPeers) L.cbs.onPeers(list);
   },
   _prunePeers(L) {
@@ -336,7 +336,7 @@ const Net = {
     if (L.id === newId && L.nick === newNick) return;
     if (L.id !== newId) { try { L.channel.send({ type: 'broadcast', event: 'lbye', payload: { id: L.id } }); } catch (e) {} }
     L.id = newId; L.nick = newNick;
-    this.lobbySend('here', { id: L.id, nick: L.nick });
+    this.lobbySend('here', { id: L.id, nick: L.nick, g: this.isLoggedIn() ? 0 : 1 });
     this._emitPeers(L);   // eigen chip meteen bijwerken
   },
 

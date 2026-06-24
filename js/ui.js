@@ -355,7 +355,7 @@ const UI = {
     if (!btn) return;
     let dot = document.getElementById('chat-badge');
     if (!dot) { dot = document.createElement('span'); dot.id = 'chat-badge'; dot.className = 'chat-badge'; btn.appendChild(dot); }
-    const others = (this._peers || []).filter((p) => !p.me).length;
+    const others = (this._peers || []).filter((p) => !p.me && !p.guest).length;   // gasten niet meetellen
     if (others > 0) { dot.textContent = others; dot.classList.add('on'); }
     else { dot.textContent = ''; dot.classList.remove('on'); }
   },
@@ -420,6 +420,7 @@ const UI = {
     if (!el) return;
     el.innerHTML = '';
     list.forEach((p) => {
+      if (p.guest && !p.me) return;            // gasten (niet-ingelogd) niet tonen in de lijst
       const chip = document.createElement('span');
       chip.className = 'chat-chip' + (p.me ? ' me' : '');
       chip.textContent = p.nick + (p.me ? ' (jij)' : '');
