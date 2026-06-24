@@ -641,15 +641,18 @@ const UI = {
   },
 
   renderMapVote() {
-    const list = document.getElementById('vs-map-list');
-    list.innerHTML = '';
-    VERSUS_MAPS.forEach((m) => {
-      const b = document.createElement('button');
-      b.className = 'vs-map-btn' + (this._myVote.map === m.id ? ' picked' : '');
-      b.dataset.map = m.id;
-      b.innerHTML = '<span class="vs-map-name">' + m.name + '</span><span class="vs-map-votes" data-mv="' + m.id + '"></span>';
-      b.onclick = () => this.setVoteMap(m.id);
-      list.appendChild(b);
+    ['vs-map-list', 'vs-result-map-list'].forEach((listId) => {
+      const list = document.getElementById(listId);
+      if (!list) return;
+      list.innerHTML = '';
+      VERSUS_MAPS.forEach((m) => {
+        const b = document.createElement('button');
+        b.className = 'vs-map-btn' + (this._myVote.map === m.id ? ' picked' : '');
+        b.dataset.map = m.id;
+        b.innerHTML = '<span class="vs-map-name">' + m.name + '</span><span class="vs-map-votes" data-mv="' + m.id + '"></span>';
+        b.onclick = () => this.setVoteMap(m.id);
+        list.appendChild(b);
+      });
     });
   },
 
@@ -672,31 +675,30 @@ const UI = {
   },
 
   broadcastLobby() {
-    if (window.Net) Net.versusSend('lobby', { map: this._myVote.map, mode: this._myVote.mode, ready: !!this._myReady });
+    if (window.Net && Net.versus) Net.versusSend('lobby', { map: this._myVote.map, mode: this._myVote.mode, ready: !!this._myReady });
   },
   onLobbyUpdate(p) {
     this._peer = { map: p.map, mode: p.mode, ready: !!p.ready };
+    // op het uitslagscherm: alleen de stemmen bijwerken, NIET terug naar de lobby springen
+    if (!document.getElementById('versus-result').classList.contains('hidden')) { this.refreshLobby(); return; }
     // tegenstander aanwezig -> zorg dat de opts zichtbaar zijn
     if (document.getElementById('vs-lobby-opts').classList.contains('hidden')) this._onVersusMatch();
     this.refreshLobby(); this.checkBothReady();
   },
 
   refreshLobby() {
-    // map-stemmen tonen
+    // map-stemmen tonen (in beide lijsten: lobby + uitslag)
     VERSUS_MAPS.forEach((m) => {
-      const el = document.querySelector('[data-mv="' + m.id + '"]');
-      if (!el) return;
       let n = 0; if (this._myVote.map === m.id) n++; if (this._peer && this._peer.map === m.id) n++;
-      el.textContent = n ? '●'.repeat(n) : '';
+      document.querySelectorAll('[data-mv="' + m.id + '"]').forEach((el) => { el.textContent = n ? '●'.repeat(n) : ''; });
     });
     document.querySelectorAll('.vs-map-btn').forEach((b) => b.classList.toggle('picked', b.dataset.map === this._myVote.map));
     document.querySelectorAll('.vs-mode-btn').forEach((b) => b.classList.toggle('active', b.dataset.mode === this._myVote.mode));
     const ready = document.getElementById('btn-vs-ready');
-    ready.textContent = this._myReady ? '✔ READY (klik om te annuleren)' : 'READY';
-    ready.classList.toggle('on', this._myReady);
+    if (ready) { ready.textContent = this._myReady ? '✔ READY (klik om te annuleren)' : 'READY'; ready.classList.toggle('on', this._myReady); }
     const st = document.getElementById('vs-ready-status');
     const peerReady = this._peer && this._peer.ready;
-    st.textContent = 'Jij: ' + (this._myReady ? 'klaar' : 'kiezen…') + '   •   Tegenstander: ' + (this._peer ? (peerReady ? 'klaar' : 'kiezen…') : '—');
+    if (st) st.textContent = 'Jij: ' + (this._myReady ? 'klaar' : 'kiezen…') + '   •   Tegenstander: ' + (this._peer ? (peerReady ? 'klaar' : 'kiezen…') : '—');
   },
 
   checkBothReady() {
@@ -813,13 +815,24 @@ const UI = {
     this._rematchMine = false; this._rematchPeer = false; this._vsStarted = false; this._isBotResult = !!isBot;
     const rbtn = document.getElementById('btn-vs-rematch');
     const rs = document.getElementById('vs-rematch-status');
+    const voteBox = document.getElementById('vs-result-vote');
     if (peerLeft) {
       // tegenstander heeft de match verlaten -> geen rematch mogelijk
       rbtn.disabled = true; rbtn.classList.add('hidden');
       rs.textContent = '🏃 Tegenstander heeft de match verlaten.';
+      if (voteBox) voteBox.classList.add('hidden');
     } else {
       rbtn.disabled = false; rbtn.textContent = '🔁 REMATCH'; rbtn.classList.remove('hidden');
       rs.textContent = isBot ? '' : 'Beiden moeten op rematch drukken.';
+      // map-stemmen voor de volgende pot: standaard de huidige map
+      const curMap = (Game.vsMap && Game.vsMap.id) || VERSUS_MAPS[0].id;
+      this._myVote = { map: curMap, mode: 'smash' };
+      this._myReady = false;
+      this._peer = isBot ? null : { map: curMap, mode: 'smash', ready: false };
+      this.renderMapVote();
+      this.refreshLobby();
+      if (voteBox) voteBox.classList.remove('hidden');
+      if (!isBot) this.broadcastLobby();      // deel mijn (standaard) keuze met de tegenstander
     }
 
     document.getElementById('versus-result').classList.remove('hidden');
@@ -840,6 +853,7 @@ const UI = {
       return;
     }
     this._rematchMine = true;
+    this.broadcastLobby();                 // mijn map-stem zeker meesturen
     Net.versusSend('rematch', {});
     const rb = document.getElementById('btn-vs-rematch');
     rb.disabled = true; rb.textContent = '✔ Wacht op tegenstander…';
@@ -855,10 +869,13 @@ const UI = {
 
   checkRematch() {
     if (!this._rematchMine || !this._rematchPeer) return;
-    // de host bepaalt en stuurt 'begin' (zelfde map + modus); beiden starten
+    // de host bepaalt de map uit de stemmen en stuurt 'begin'; beiden starten
     if (this._vsRole === 'host') {
-      const map = (Game.vsMap && Game.vsMap.id) || VERSUS_MAPS[0].id;
-      const mode = Game.vsMode || 'melee';
+      const cur = (Game.vsMap && Game.vsMap.id) || VERSUS_MAPS[0].id;
+      const mine = (this._myVote && this._myVote.map) || cur;
+      const peer = (this._peer && this._peer.map) || mine;
+      const map = (mine === peer) ? mine : (Math.random() < 0.5 ? mine : peer);   // oneens -> loting
+      const mode = 'smash';
       if (window.Net) Net.versusSend('begin', { map, mode });
       this._beginMatch(map, mode);
     } else {

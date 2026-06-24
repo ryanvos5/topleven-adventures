@@ -467,6 +467,8 @@ body.is-touch #hud { justify-content: flex-start; gap: 8px; }
 }
 .vs-mode-btn.active { border-color: var(--accent); background: #1c2a1c; color: #fff; }
 #btn-vs-ready { margin-top: 12px; }
+.vs-result-vote { margin: 10px 0 4px; }
+.vs-vote-title { font-size: 12px; color: var(--text-dim); letter-spacing: 1px; margin-bottom: 6px; }
 #vs-ready-status { margin-top: 14px; }      /* niet meer half door de START-knop */
 .vs-mode-note { color: var(--accent, #f2c94c); font-weight: bold; letter-spacing: 0; }
 #btn-vs-ready.on { background: linear-gradient(180deg, #3ad06a, #1e8c3a); border-color: #176b2c; }
