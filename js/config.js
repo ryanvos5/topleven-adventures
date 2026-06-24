@@ -169,7 +169,7 @@ const CHARACTERS = {
     desc: 'Dik & klein, traag maar sterk (+30 HP, +20% melee). Stamp bij de landing schade in de buurt.'
   },
   timo: {
-    id: 'timo', name: 'Timo', cost: 900,
+    id: 'timo', name: 'Timo', cost: 900, lvl: 6,
     maxHp: 90, speedMul: 1.05, meleeMul: 1.0, build: 'small', hair: 'natural',
     extraJump: true,
     palette: {
