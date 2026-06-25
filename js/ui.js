@@ -771,7 +771,35 @@ const UI = {
     document.getElementById('versus-hud').classList.remove('hidden');
   },
 
+  // touch-knoppen tonen het pixel-icoon van het actieve wapen/powerup (i.p.v. emoji)
+  updateTouchIcons() {
+    const p = Game.player; if (!p) return;
+    const meleeId = (p.swingWeapon && Game.time < (p.swingUntil || 0)) ? p.swingWeapon : (p.meleeId || 'bat');
+    let fire;
+    if (p.giant) fire = 'fist';                                     // reus kan niet vuren
+    else if (p.fireballs > 0) fire = 'fireball';
+    else if (p.smashRockets > 0) fire = 'rocket';
+    else if (p.cannon > 0) fire = 'cannon';
+    else if (p.gunAmmo > 0 && p.rangedId === 'ak47') fire = 'ak47';
+    else if (p.rangedId) fire = p.rangedId;                         // campagne/arena vuurwapen
+    else fire = meleeId;                                            // geen vuurwapen -> vuurknop slaat ook
+    this._drawTbtnIcon('tbtn-melee-ic', meleeId);
+    this._drawTbtnIcon('tbtn-fire-ic', fire);
+  },
+  _drawTbtnIcon(id, kind) {
+    const cv = document.getElementById(id); if (!cv) return;
+    if (cv._tok === kind) return; cv._tok = kind;                   // alleen hertekenen als 't verandert
+    const ctx = cv.getContext('2d'); ctx.clearRect(0, 0, cv.width, cv.height);
+    const P = (c, x, y, w, h) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); };
+    if (kind === 'fireball') { P('#ff7a2a', 9, 7, 14, 16); P('#ffd24a', 13, 12, 6, 9); return; }
+    if (kind === 'cannon') { P('#0e0e0e', 8, 9, 16, 15); P('#3a3a3a', 8, 9, 16, 3); P('#777', 14, 14, 3, 3); P('#6a4a2a', 15, 4, 2, 3); P('#ff8a3a', 15, 1, 2, 3); return; }
+    if (kind === 'fist') { P('#3a7a4a', 9, 9, 14, 13); P('#2f5e38', 9, 9, 14, 3); P('#7affa0', 12, 12, 3, 3); return; }
+    const wid = (typeof WEAPONS !== 'undefined' && WEAPONS[kind]) ? kind : 'bat';
+    ctx.save(); const s = 0.6; ctx.translate(15 - 25 * s, 16 - 23.5 * s); Sprites.drawWeaponIcon(ctx, wid, s); ctx.restore();
+  },
+
   updateVersusHUD(v) {
+    this.updateTouchIcons();
     const me = document.getElementById('vs-score-me');
     const them = document.getElementById('vs-score-them');
     if (me) me.textContent = v.myScore;
@@ -1184,6 +1212,7 @@ const UI = {
 
   // ---------- HUD (elke frame) ----------
   updateHUD(game) {
+    this.updateTouchIcons();
     const lv = game.level;
     let prog;
     if (lv.arena) {

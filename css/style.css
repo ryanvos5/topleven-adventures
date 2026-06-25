@@ -294,6 +294,7 @@ body.is-touch #hud { justify-content: flex-start; gap: 8px; }
   -webkit-touch-callout: none;
 }
 .tbtn.pressed { background: rgba(106,190,48,0.5); transform: scale(0.94); }
+.tbtn-ic { width: 62%; height: 62%; image-rendering: pixelated; pointer-events: none; }
 /* links/rechts (loopknoppen) groter */
 .touch-left .tbtn { width: 90px; height: 90px; font-size: 40px; }
 .tbtn-fire {
@@ -338,7 +339,7 @@ body.is-touch #hud { justify-content: flex-start; gap: 8px; }
 }
 
 /* globale drijvende battlemap-achtergrond achter alle menu's */
-#bg-layer { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #7fc0e8; }
+#bg-layer { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: linear-gradient(180deg, #7fc0e8 0%, #a9d0ea 52%, #8db86a 56%, #7aa658 100%); }
 body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (canvas dekt af) */
 .bg-vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 42%, transparent 52%, rgba(0,0,0,.42)); }
 
