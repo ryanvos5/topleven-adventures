@@ -776,6 +776,15 @@ const UI = {
     const setShield = (el, amt) => { if (!el) return; const on = amt > 0; el.classList.toggle('hidden', !on); if (on) el.firstElementChild.style.width = Math.max(0, Math.min(100, (amt / (typeof SMASH_SHIELD !== 'undefined' ? SMASH_SHIELD : 50)) * 100)) + '%'; };
     if (Game.player) setShield(shMe, Game.player.shieldHp || 0);
     if (v.remote) setShield(shThem, v.remote.shieldHp || 0);
+    // guard-meter (eigen speler): zichtbaar als 'ie niet vol is; rood als 'ie gebroken is
+    const gMe = document.getElementById('vs-guard-me');
+    if (gMe && Game.player) {
+      const gmax = (typeof GUARD_MAX !== 'undefined') ? GUARD_MAX : 2200;
+      const frac = Math.max(0, Math.min(1, (Game.player.guard || 0) / gmax));
+      gMe.classList.toggle('hidden', frac >= 0.999);
+      gMe.firstElementChild.style.width = (frac * 100) + '%';
+      gMe.classList.toggle('broken', !!Game.player._guardBroken);
+    }
     const cd = document.getElementById('vs-countdown');
     if (cd) {
       if (v.countdown > 0) { cd.classList.remove('hidden'); cd.textContent = Math.ceil(v.countdown / 1000); }

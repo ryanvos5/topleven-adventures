@@ -417,6 +417,13 @@ const SMASH_ROCK_FLAT = 2000;        // 2s plat (niet bewegen)
 const SMASH_SHIELD = 50;             // shield-powerup: +50 hp als blauw balkje (Pirate + Sky)
 const SMASH_ROCK_SPREAD = 55;        // spreiding rond de tegenstander
 
+// bukken/blokken: parry (perfecte timing) + sterker maar breekbaar blok
+const PARRY_WINDOW = 220;            // ms na blok-start = perfecte parry (100% blok + counter)
+const GUARD_MAX = 2200;             // blok-uithoudingsvermogen (ms aan blokken)
+const GUARD_HIT_COST = 520;        // extra verbruik per geblokte treffer
+const GUARD_BREAK_STUN = 950;       // verdoving als je guard breekt
+const GUARD_REGEN = 1.3;           // herstel-snelheid als je niet blokt
+
 // combo's: opeenvolgende treffers binnen het tijdvenster -> hoger (x1..x5), meer schade + XP
 const COMBO_MAX = 5;
 const COMBO_WINDOW = 1500;           // ms om de combo door te zetten

@@ -562,6 +562,11 @@ body.is-touch #hud { justify-content: flex-start; gap: 8px; }
   width: 84px; height: 5px; margin-bottom: 2px; background: #11151e; border: 1px solid #000; border-radius: 3px; overflow: hidden;
 }
 .vs-shield-fill { height: 100%; width: 100%; background: linear-gradient(180deg, #7fc8ff, #2f7ad0); transition: width 0.12s linear; }
+.vs-guard {
+  width: 84px; height: 4px; margin-top: 2px; background: #11151e; border: 1px solid #000; border-radius: 3px; overflow: hidden;
+}
+.vs-guard-fill { height: 100%; width: 100%; background: linear-gradient(180deg, #ffe27a, #d8a32e); transition: width 0.1s linear; }
+.vs-guard.broken .vs-guard-fill { background: linear-gradient(180deg, #ff6a4a, #b32e22); }
 #btn-vs-quit {
   position: absolute; right: max(10px, env(safe-area-inset-right)); top: 4px;
   pointer-events: auto; width: 34px; height: 34px; border-radius: 8px;

@@ -33,6 +33,9 @@ class Player {
     this._shieldUp = false;
     this._now = 0;
     this.ducking = false;
+    // blokken (versus): guard-meter + parry-timing
+    this.guard = (typeof GUARD_MAX !== 'undefined') ? GUARD_MAX : 2200;
+    this._guardBroken = false; this._guardBrokenUntil = 0; this._blockStart = 0;
     this.walkPhase = 0;
     this.walkTimer = 0;
     this.lastAttack = -9999;
@@ -91,8 +94,25 @@ class Player {
     if (inp.left && !inp.right) this.dir = -1;
     else if (inp.right && !inp.left) this.dir = 1;
 
-    // duiken (alleen op de grond)
-    this.ducking = inp.duck && this.onGround;
+    // duiken (alleen op de grond) = blokken in versus
+    const wasDucking = this.ducking;
+    this.ducking = inp.duck && this.onGround && !this._guardBroken;
+    if (this.ducking && !wasDucking) this._blockStart = game.time;
+    // guard-meter (alleen in versus): blokken kost uithoudingsvermogen en breekt als het op is
+    if (game.level && game.level.versus) {
+      if (this._guardBroken && game.time >= (this._guardBrokenUntil || 0)) this._guardBroken = false;
+      if (this.ducking && !this._guardBroken) {
+        this.guard -= dt;
+        if (this.guard <= 0) {
+          this.guard = 0; this._guardBroken = true; this._guardBrokenUntil = game.time + GUARD_BREAK_STUN;
+          this.stunUntil = Math.max(this.stunUntil || 0, game.time + GUARD_BREAK_STUN);
+          this.ducking = false;
+          if (game.onGuardBreak) game.onGuardBreak(this);
+        }
+      } else if (!this.ducking) {
+        this.guard = Math.min(GUARD_MAX, this.guard + dt * GUARD_REGEN);
+      }
+    }
 
     // actieve power-ups
     this._rageActive = this.hasBuff('rage', game.time);

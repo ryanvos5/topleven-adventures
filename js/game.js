@@ -411,6 +411,20 @@ const Game = {
     for (let i = 0; i < 5; i++)
       this.particles.push(new Particle(x, y, (Math.random() - 0.7) * 3, (Math.random() - 0.5) * 2.5, Math.random() < 0.5 ? '#cfd6df' : '#9aa3ad', 220, 2));
   },
+  // perfecte parry: felle witte/gouden flits in een ring
+  spawnParryFlash(x, y) {
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2;
+      this.particles.push(new Particle(x, y, Math.cos(a) * 3.2, Math.sin(a) * 3.2, (i % 2 ? '#fff7c8' : '#ffe27a'), 300, 2));
+    }
+    this._parryFx = { x, y, t: this.time };
+  },
+  // guard breekt: rode/grijze scherf-burst
+  onGuardBreak(e) {
+    for (let i = 0; i < 12; i++)
+      this.particles.push(new Particle(e.x, e.y - 12, (Math.random() - 0.5) * 3.5, -Math.random() * 3, Math.random() < 0.5 ? '#ff7a5a' : '#9aa3ad', 360, 2));
+    this.shake = Math.max(this.shake, 6);
+  },
   spawnMeleeSwing(player) {
     const x = player.x + player.dir * 18, y = player.y - 16;
     for (let i = 0; i < 4; i++)
@@ -1217,6 +1231,7 @@ const Game = {
       Net.setVersusCallbacks({
         onState: (s) => this.onVersusState(s),
         onHit: (p) => this.onVersusHit(p),
+        onParry: (p) => this.onVersusParry(p),
         onFell: () => this.onVersusFell(),
         onBurn: () => this.onVersusBurn(),
         onShot: (p) => this.onVersusShot(p),
@@ -2168,12 +2183,25 @@ const Game = {
   applyHitToBot(dir, power, vy, dmg) {
     const b = this.bot;
     if (!b || b.respawnInvuln > 0 || b.dead) return;
+    const blocking = b.ducking && b.onGround && !b._guardBroken;
+    const parry = blocking && (this.time - (b._blockStart || 0)) <= PARRY_WINDOW;
+    if (parry) {
+      // bot parriet -> de speler (aanvaller) stuitert terug + verdoofd
+      b.knockVx = 0; b.guard = Math.min(GUARD_MAX, b.guard + 400);
+      this.spawnParryFlash(b.x, b.y - 14); this.shake = Math.max(this.shake, 6);
+      const me = this.player;
+      if (me && !me.dead && me.respawnInvuln <= 0) { me.knockVx = -dir * 20; me.vy = -4.5; me.onGround = false; me.stunUntil = this.time + 650; me.combo = 0; }
+      return;
+    }
     b.combo = 0; b.comboUntil = 0;                    // geraakt worden verbreekt de combo
-    const blocking = b.ducking && b.onGround;
-    b.knockVx = dir * power * (blocking ? 0.15 : 1);
+    b.knockVx = dir * power * (blocking ? 0.10 : 1);
     if (!blocking) { b.vy = vy; b.onGround = false; }
-    if (dmg) b.takeDamage(Math.round(dmg * (blocking ? 0.4 : 1)), 0, this, 0);
-    if (blocking) this.spawnArmorSpark(b.x + b.dir * 10, b.y - 12);
+    if (dmg) b.takeDamage(Math.round(dmg * (blocking ? 0.25 : 1)), 0, this, 0);
+    if (blocking) {
+      this.spawnArmorSpark(b.x + b.dir * 10, b.y - 12);
+      b.guard -= GUARD_HIT_COST;
+      if (b.guard <= 0) { b.guard = 0; b._guardBroken = true; b._guardBrokenUntil = this.time + GUARD_BREAK_STUN; b.stunUntil = Math.max(b.stunUntil || 0, this.time + GUARD_BREAK_STUN); this.onGuardBreak(b); }
+    }
     this.shake = Math.max(this.shake, blocking ? 3 : 7);
   },
 
@@ -2183,6 +2211,7 @@ const Game = {
     b.x = sp.x; b.y = sp.y; b.dir = sp.dir; b.vy = 0; b.knockVx = 0;
     b.onGround = true; b.dead = false; b.respawnInvuln = 1300; b.hp = b.maxHp; b.burnUntil = 0;
     b.swingWeapon = null; b.swingUntil = 0; b.stunUntil = 0; b.flatUntil = 0; b._beamSafeUntil = 0; b.combo = 0; b.comboUntil = 0; b.vine = null; b._caged = false;
+    b.guard = GUARD_MAX; b._guardBroken = false; b._blockStart = 0;
     if (b.giant) { b.giant = false; if (b._baseMaxHp) b.maxHp = b._baseMaxHp; b.hp = b.maxHp; }
     if (this.vsMode === 'smash') { b.meleeId = b.baseMelee || 'bat'; b.weaponId = b.meleeId; b.fireballs = 0; b.smashRockets = 0; b.cannon = 0; b.shieldHp = 0; b._weaponUntil = 0; b.gunAmmo = 0; }
     this.vs.remote.alive = true;
@@ -2319,13 +2348,38 @@ const Game = {
   onVersusHit(payload) {
     const p = this.player;
     if (p.respawnInvuln > 0 || p.dead) return;       // net gespawnd = even onkwetsbaar
+    const blocking = p.ducking && p.onGround && !p._guardBroken;   // bukken = blok
+    const parry = blocking && (this.time - (p._blockStart || 0)) <= PARRY_WINDOW;   // net op tijd = parry
+    if (parry) {
+      // 100% geblokt + de aanvaller stuitert terug en is even verdoofd
+      p.knockVx = 0; p.guard = Math.min(GUARD_MAX, p.guard + 400);
+      this.spawnParryFlash(p.x, p.y - 14); this.shake = Math.max(this.shake, 6);
+      if (this.vsBot && this.bot && !this.bot.dead) {
+        const kd = this.bot.x >= p.x ? 1 : -1;
+        this.bot.knockVx = kd * 20; this.bot.vy = -4.5; this.bot.onGround = false;
+        this.bot.stunUntil = this.time + 650; this.bot.combo = 0;
+      } else if (window.Net) Net.versusSend('parry', { dir: payload.dir || 1 });
+      return;
+    }
     p.combo = 0; p.comboUntil = 0;                    // geraakt worden verbreekt je combo
-    const blocking = p.ducking && p.onGround;          // bukken = blok
-    p.knockVx = (payload.dir || 1) * (payload.power || 15) * (blocking ? 0.15 : 1);
+    p.knockVx = (payload.dir || 1) * (payload.power || 15) * (blocking ? 0.10 : 1);
     if (!blocking) { p.vy = payload.vy || -5.5; p.onGround = false; }
-    if (payload.dmg) p.takeDamage(Math.round(payload.dmg * (blocking ? 0.4 : 1)));
-    if (blocking) this.spawnArmorSpark(p.x + p.dir * 10, p.y - 12);
+    if (payload.dmg) p.takeDamage(Math.round(payload.dmg * (blocking ? 0.25 : 1)));
+    if (blocking) {
+      this.spawnArmorSpark(p.x + p.dir * 10, p.y - 12);
+      p.guard -= GUARD_HIT_COST;
+      if (p.guard <= 0) { p.guard = 0; p._guardBroken = true; p._guardBrokenUntil = this.time + GUARD_BREAK_STUN; p.stunUntil = Math.max(p.stunUntil || 0, this.time + GUARD_BREAK_STUN); this.onGuardBreak(p); }
+    }
     this.shake = Math.max(this.shake, blocking ? 3 : 7);
+  },
+
+  // de aanvaller hoort dat z'n klap geparried is -> zelf terugstuiteren + verdoofd
+  onVersusParry(payload) {
+    const me = this.player;
+    if (!me || me.dead) return;
+    me.knockVx = -(payload && payload.dir ? payload.dir : 1) * 20; me.vy = -4.5; me.onGround = false;
+    me.stunUntil = this.time + 650; me.combo = 0;
+    this.spawnParryFlash(me.x, me.y - 14); this.shake = Math.max(this.shake, 5);
   },
 
   localFell() {
@@ -2345,6 +2399,7 @@ const Game = {
     this.player.hp = this.player.maxHp; this.player.burnUntil = 0;   // fris (ook na burn-dood)
     this.player.stunUntil = 0; this.player.flatUntil = 0; this.player._beamSafeUntil = 0;
     this.player.combo = 0; this.player.comboUntil = 0; this.player.vine = null; this.player._caged = false;
+    this.player.guard = GUARD_MAX; this.player._guardBroken = false; this.player._blockStart = 0;
     this.player.swingWeapon = null; this.player.swingUntil = 0;       // geen lingerende mep-animatie
     if (this.player.giant) { this.player.giant = false; if (this.player._baseMaxHp) this.player.maxHp = this.player._baseMaxHp; }  // reus eindigt bij rondewissel
     this.player.hp = this.player.maxHp;

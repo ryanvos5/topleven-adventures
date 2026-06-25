@@ -248,6 +248,7 @@ const Net = {
     ch.on('broadcast', { event: 'gorilla' }, (m) => { if (v.cbs.onGorilla) v.cbs.onGorilla(m.payload); });
     ch.on('broadcast', { event: 'gorhit' }, (m) => { if (v.cbs.onGorhit) v.cbs.onGorhit(m.payload); });
     ch.on('broadcast', { event: 'monkey' }, (m) => { if (v.cbs.onMonkey) v.cbs.onMonkey(m.payload); });
+    ch.on('broadcast', { event: 'parry' }, (m) => { if (v.cbs.onParry) v.cbs.onParry(m.payload); });
     ch.on('broadcast', { event: 'bye' }, () => { if (v.cbs.onPeerLeft) v.cbs.onPeerLeft(); });
     await new Promise((resolve, reject) => {
       let done = false;
