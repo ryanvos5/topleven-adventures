@@ -623,12 +623,12 @@ const VERSUS_MAPS = [
   {
     // Beach: strand met zee + golven op de achtergrond. Af en toe vloed: water stijgt over de map
     // en de golven nemen je mee. Powerup: strandbal (stuitert, harde knockback, ontploft na 15s).
-    id: 'beach', name: 'Beach', sky: ['#8ad0f0', '#cde7f7'], void: '#1c4a5e', plat: 'sand', sand: true, beach: true, w: 360,
-    spawnL: { x: 110, y: 150 }, spawnR: { x: 250, y: 150 },
+    id: 'beach', name: 'Beach', sky: ['#8ad0f0', '#cde7f7'], void: '#1c4a5e', plat: 'sand', sand: true, beach: true, w: 360, fallY: 214,
+    spawnL: { x: 120, y: 150 }, spawnR: { x: 240, y: 150 },
     platforms: [
-      { x: 180, y: 150, w: 360 },                  // het strand (hele ondergrond)
-      { x: 66, y: 110, w: 60 }, { x: 294, y: 110, w: 60 },   // houten vlonders links/rechts
-      { x: 180, y: 74, w: 78 },                    // hoog plankier
+      { x: 180, y: 150, w: 232 },                  // het strand (smaller -> je kunt er aan de zijkanten afvallen)
+      { x: 74, y: 112, w: 56 }, { x: 286, y: 112, w: 56 },   // houten vlonders links/rechts (boven het water)
+      { x: 180, y: 76, w: 78 },                    // hoog plankier
     ],
   },
 ];

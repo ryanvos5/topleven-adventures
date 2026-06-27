@@ -1611,7 +1611,7 @@ const Game = {
   // ===== BEACH: getij (vloed) =====
   beachWaterY() {
     const v = this.tide; if (!v) return 9999;
-    return 158 - v.level * 42;   // waterhoogte stijgt met het niveau (strand op y150)
+    return 164 - v.level * 22;   // lager water: laag ~164, vol ~142 (strand op y150)
   },
   _tidePhase(s) {
     const v = this.tide; v.state = s;
@@ -1725,17 +1725,32 @@ const Game = {
   },
   drawBeachBg(ctx) {
     const W = this.vsMapW, gy = CONFIG.GROUND_Y, t = this.time;
-    // zee op de achtergrond (boven het strand)
-    ctx.fillStyle = '#3f9fd0'; ctx.fillRect(0, gy - 34, W, 22);
-    ctx.fillStyle = '#5fb6e0'; ctx.fillRect(0, gy - 34, W, 8);
-    // golflijnen die bewegen
+    // zon
+    ctx.fillStyle = '#ffe79a'; ctx.beginPath(); ctx.arc(W - 52, 34, 15, 0, Math.PI * 2); ctx.fill();
+    // vogels in de lucht (kleine bewegende V'tjes)
+    ctx.strokeStyle = '#34506a'; ctx.lineWidth = 1.4;
+    for (let k = 0; k < 4; k++) {
+      const bx = ((k * 110 + t * 0.018) % (W + 60)) - 30, by = 26 + (k % 2) * 18 + Math.sin(t / 260 + k) * 2, fl = 3 + Math.sin(t / 90 + k) * 1.5;
+      ctx.beginPath(); ctx.moveTo(bx - 5, by + fl); ctx.lineTo(bx, by); ctx.lineTo(bx + 5, by + fl); ctx.stroke();
+    }
+    // zee (lager: horizon net onder de strand-hoogte)
+    const horizon = gy - 8;
+    ctx.fillStyle = '#3f9fd0'; ctx.fillRect(0, horizon, W, gy + 70 - horizon);
+    ctx.fillStyle = '#56b0dd'; ctx.fillRect(0, horizon, W, 5);
+    // eilandjes in de verte (op de horizon, achter de grond)
+    const island = (ix, iw, ih) => {
+      ctx.fillStyle = '#caa860'; ctx.beginPath(); ctx.moveTo(ix - iw, horizon + 1); ctx.quadraticCurveTo(ix, horizon - ih, ix + iw, horizon + 1); ctx.fill();
+      ctx.fillStyle = '#3a7a4a'; ctx.beginPath(); ctx.moveTo(ix - iw * 0.55, horizon - ih * 0.35); ctx.quadraticCurveTo(ix, horizon - ih, ix + iw * 0.55, horizon - ih * 0.35); ctx.fill();
+      Sprites.px(ctx, '#6b4a2a', ix - 1, horizon - ih - 4, 2, 5);              // palmstam
+      Sprites.px(ctx, '#3a8a4a', ix - 5, horizon - ih - 6, 11, 3);            // palmblad
+    };
+    island(64, 22, 13); island(196, 28, 17); island(300, 20, 11);
+    // bewegende golflijnen op de zee
     for (let r = 0; r < 3; r++) {
-      ctx.globalAlpha = 0.5 - r * 0.12;
-      for (let x = -8; x < W + 8; x += 14) { const wob = Math.round(Math.sin(t / 300 + x * 0.08 + r) * 2); Sprites.px(ctx, '#cdeaf7', x + ((t * (0.2 + r * 0.1)) % 14), gy - 30 + r * 5 + wob, 7, 2); }
+      ctx.globalAlpha = 0.45 - r * 0.1;
+      for (let x = -8; x < W + 8; x += 16) { const wob = Math.round(Math.sin(t / 300 + x * 0.08 + r) * 2); Sprites.px(ctx, '#cdeaf7', x + ((t * (0.2 + r * 0.1)) % 16), horizon + 6 + r * 6 + wob, 8, 2); }
     }
     ctx.globalAlpha = 1;
-    // zon
-    ctx.fillStyle = '#ffe79a'; ctx.beginPath(); ctx.arc(W - 50, 36, 16, 0, Math.PI * 2); ctx.fill();
   },
 
   updateSmash(dt) {
