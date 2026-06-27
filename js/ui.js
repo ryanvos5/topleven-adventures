@@ -65,6 +65,17 @@ const UI = {
     // ---- instellingen (overlay met account / update / nieuw spel) ----
     $('btn-settings').onclick = () => document.getElementById('settings-screen').classList.remove('hidden');
     $('btn-settings-close').onclick = () => document.getElementById('settings-screen').classList.add('hidden');
+    // geluid aan/uit
+    const sb = $('btn-sound');
+    if (sb) {
+      const upd = () => { sb.textContent = 'Geluid: ' + (window.Sfx && Sfx.enabled ? 'Aan' : 'Uit'); };
+      upd();
+      sb.onclick = () => { if (window.Sfx) Sfx.setEnabled(!Sfx.enabled); upd(); };
+    }
+    // klikgeluid op menu-knoppen
+    document.addEventListener('pointerdown', (e) => {
+      if (window.Sfx && e.target && e.target.closest && e.target.closest('.stone-btn,.stone-tile,.stone-icon,.big-btn,.shop-tab,.world-tab,.back-btn')) Sfx.play('click');
+    });
 
     // ---- account (inloggen / registreren) ----
     this.authMode = 'login';
@@ -964,7 +975,7 @@ const UI = {
 
     // muntentellers bijwerken
     this.el.menuCoins.textContent = Storage.data.coins;
-    if (name === 'menu') { this.updateArenaButton(); this.refreshAuthUI(); this.ensurePresence(); }
+    if (name === 'menu') { this.updateArenaButton(); this.refreshAuthUI(); this.ensurePresence(); if (window.Sfx) Sfx.music('menu'); }
     else if (name === 'game') { this.leavePresence(); }   // tijdens het spelen niet online in de lobby
   },
 

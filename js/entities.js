@@ -237,11 +237,13 @@ class Player {
         this.onGround = false;
         this.jumps--;
         this.jumping = true;     // variabele spronghoogte: actief
+        if (window.Sfx && this === game.player) Sfx.play('jump');
       } else if (this.extraJumpLeft > 0 && this.maxJumps >= 2) {
         this.vy = CONFIG.JUMP_VELOCITY * 0.6;   // Timo: extra, KLEINERE sprong
         this.onGround = false;
         this.extraJumpLeft--;
         this.jumping = true;
+        if (window.Sfx && this === game.player) Sfx.play('jump');
       }
     }
     // variabele spronghoogte: knop vroeg loslaten = sprong inkorten (lager springen)

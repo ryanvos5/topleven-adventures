@@ -113,6 +113,7 @@ const Game = {
   // (de dag-poging is al verbruikt door UI.startArena — account of lokale fallback)
   startArena() {
     this.worldId = 0;
+    if (window.Sfx) Sfx.music('arena');
     this.level = ARENA_LEVEL;
     UI.viewWorld = 1;
     this.player = new Player(Storage.data.equippedMelee, Storage.data.equippedRanged, Storage.data.equippedCharacter);
@@ -1150,6 +1151,7 @@ const Game = {
     const mode = (opts.mode === 'both') ? 'both' : (opts.mode === 'smash') ? 'smash' : 'melee';
     this.vsMap = map; this.vsMode = mode;
     this.vsMapW = map.w || CONFIG.VIEW_W;
+    if (window.Sfx) Sfx.music(map.id);                 // map-thema-muziek
     this.vsFallY = map.fallY || FALL_DEATH_Y;
     this.vsCamX = 0; this.vsCamY = 0;
     this.worldId = -1;
@@ -1506,6 +1508,7 @@ const Game = {
     this.bullets.push(bl);
     this.spawnMuzzleFlash(p.x + dir * 14, p.y - 16, dir);
     this.shake = Math.max(this.shake, 5);
+    if (window.Sfx) Sfx.play('rocket');
   },
 
   // AK47-kogel (Jungle): snel, rechtdoor
@@ -1515,6 +1518,7 @@ const Game = {
     bl.kind = 'gun'; bl.hitDmg = 13; bl.power = 7; bl.vy = 0; bl.life = 0;
     this.bullets.push(bl);
     this.spawnMuzzleFlash(p.x + dir * 14, p.y - 16, dir);
+    if (window.Sfx) Sfx.play('shoot');
   },
 
   spawnVersusProjectile(shooter, kind) {
@@ -1524,6 +1528,7 @@ const Game = {
     if (kind === 'fire') { bl.hitDmg = 22; bl.power = 14; } else { bl.hitDmg = 40; bl.power = 26; }
     this.bullets.push(bl);
     this.spawnMuzzleFlash(shooter.x + dir * 14, shooter.y - 16, dir);
+    if (window.Sfx && shooter === this.player) Sfx.play(kind === 'rocket' ? 'rocket' : 'shoot');
   },
 
   // ===== GEVECHTSHELI =====
@@ -1558,6 +1563,7 @@ const Game = {
     bl.kind = 'gun'; bl.hitDmg = 7; bl.power = 5; bl.vy = 0; bl.life = 0;
     this.bullets.push(bl);
     this.spawnMuzzleFlash(p.x + dir * 18, p.y - 10, dir);
+    if (window.Sfx) Sfx.play('shoot');
   },
   // botst de heli (box rond p) tegen een platform?
   heliHits(x, y) {
@@ -1645,6 +1651,7 @@ const Game = {
   spawnBall(shooter, owner) {
     const dir = shooter.dir;
     this.ball = { mine: owner === 'me', owner, x: shooter.x + dir * 14, y: shooter.y - 16, vx: dir * 5.5, vy: -3, born: this.time, _cd: 0, _net: 0, grace: this.time + 250 };
+    if (window.Sfx) Sfx.play('shoot');
     if (owner === 'me' && window.Net && !this.vsBot) Net.versusSend('ball', { x: Math.round(this.ball.x), y: Math.round(this.ball.y), vx: +this.ball.vx.toFixed(2), vy: +this.ball.vy.toFixed(2) });
   },
   onVersusBall(p) {
@@ -1656,6 +1663,7 @@ const Game = {
     const b = this.ball; if (!b) return;
     for (let i = 0; i < 16; i++) this.particles.push(new Particle(b.x, b.y, (Math.random() - 0.5) * 4.5, (Math.random() - 0.5) * 4.5, (i % 2 ? '#ff5a3a' : '#ffd24a'), 420, 3));
     this.shake = Math.max(this.shake, 6);
+    if (window.Sfx) Sfx.play('explos');
     this.ball = null;
   },
   updateBall(dt) {
@@ -2214,6 +2222,7 @@ const Game = {
   },
 
   applyDrop(pl, d) {
+    if (window.Sfx && pl === this.player) Sfx.play('pickup');
     for (let i = 0; i < 8; i++) this.particles.push(new Particle(d.x, d.y, (Math.random() - 0.5) * 2, -Math.random() * 2, '#ffe27a', 340, 2));
     // een ander vuurwapen pakken vervangt de AK47
     if (d.kind === 'fireball' || d.kind === 'rocket' || d.kind === 'cannon' || d.kind === 'giant') { pl.gunAmmo = 0; if (pl.rangedId === 'ak47') pl.rangedId = null; }
@@ -2311,6 +2320,7 @@ const Game = {
         p._lastComboXp = this.vsBot ? 0 : cx;
         if (!this.vsBot) this._comboXp = (this._comboXp || 0) + cx;
         this.spawnBlood(r.x, r.y - 16);
+        if (window.Sfx) Sfx.play('hit');
         this.shake = Math.max(this.shake, 6);
       }
       // mep raakt ook de kooi-gorilla (Jungle)
@@ -2601,6 +2611,7 @@ const Game = {
   onVersusHit(payload) {
     const p = this.player;
     if (p.respawnInvuln > 0 || p.dead) return;       // net gespawnd = even onkwetsbaar
+    if (window.Sfx) Sfx.play('hit');
     const blocking = p.ducking && p.onGround && !p._guardBroken;   // bukken = blok
     const parry = blocking && (this.time - (p._blockStart || 0)) <= PARRY_WINDOW;   // net op tijd = parry
     if (parry) {
@@ -2756,6 +2767,7 @@ const Game = {
     const winnerName = won
       ? ((window.Net && Net.isLoggedIn && Net.isLoggedIn()) ? Net.nickname() : 'Jij')
       : (isBot ? 'Bot' : 'Tegenstander');
+    if (window.Sfx) Sfx.play(won ? 'win' : 'lose');
     UI.showWinCelebration(winnerName, won);
     const self = this;
     setTimeout(function () {

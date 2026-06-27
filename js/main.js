@@ -6,6 +6,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // eenmalig voortgang herstellen via een ?restore=... link (ook handig op iOS)
   try { if (Storage.applyRestoreFromURL()) setTimeout(() => alert('✅ Voortgang hersteld!'), 300); } catch (e) {}
   try { Net.init(); } catch (e) { console.warn('Net.init', e); }
+  try { Sfx.init(); } catch (e) {}
   Input.init();
   UI.init();
   Game.init(document.getElementById('game-canvas'));
