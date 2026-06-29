@@ -260,6 +260,22 @@ const Sprites = {
         P('#fff3b0', cx - hh, top - 6, w, 1);
         P('#ffe27a', cx - hh - 1, top - 5, 2, 2); P('#ffe27a', cx + hh - 1, top - 5, 2, 2);
         break;
+      case 'leafcrown':
+        P('#2f7a3a', cx - hh - 1, top - 1, w + 2, 2);                   // band
+        P('#3a9a4a', cx - hh - 2, top - 4, 3, 4); P('#3a9a4a', cx - 2, top - 6, 4, 6); P('#3a9a4a', cx + hh - 1, top - 4, 3, 4);  // blaadjes
+        P('#2f7a3a', cx - 1, top - 5, 2, 4);
+        break;
+      case 'tikimask':
+        P('#6b4a2a', cx - hh - 1, top - 2, w + 2, hh + 4);             // houten masker over het gezicht
+        P('#8a5e36', cx - hh - 1, top - 2, w + 2, 2);
+        P('#1a1a1a', cx - hh + 1, top + 1, 2, 2); P('#1a1a1a', cx + hh - 3, top + 1, 2, 2);  // ogen
+        P('#d23a2a', cx - 1, top - 1, 2, 2); P('#f2c94c', cx - hh - 1, top - 4, w + 2, 1);   // versiering
+        break;
+      case 'bananahat':
+        P('#f2c94c', cx - hh, top - 5, w, 3);                          // banaan-boog
+        P('#e0b030', cx - hh, top - 3, w, 2);
+        P('#3a2a14', cx - hh, top - 2, 2, 2); P('#3a2a14', cx + hh - 2, top - 5, 2, 2);      // uiteinden
+        break;
     }
   },
 

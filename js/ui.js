@@ -13,6 +13,7 @@ const UI = {
     this.el = {
       hud: $('hud'), touch: $('touch-controls'), pause: $('pause-btn'),
       menu: $('menu-screen'), level: $('level-screen'), shop: $('shop-screen'),
+      journey: $('journey-screen'),
       win: $('win-screen'), lose: $('lose-screen'),
       progressFill: $('progress-fill'), progressPlayer: $('progress-player'),
       levelName: $('level-name'), healthFill: $('health-fill'),
@@ -34,8 +35,9 @@ const UI = {
     $('btn-shop').onclick = () => this.openShop();
     $('btn-win-shop').onclick = () => this.openShop();
     document.querySelectorAll('.shop-tab').forEach((b) => { b.onclick = () => { this._shopTab = b.dataset.tab; this.renderShop(); }; });
-    $('btn-arena').onclick = () => this.startArena();
-    $('btn-arena-again').onclick = () => this.startArena();
+    $('btn-journey').onclick = () => this.openJourney();
+    $('btn-journey-story-go').onclick = () => this.startJourneyFromStory();
+    const aa = $('btn-arena-again'); if (aa) aa.onclick = () => this.show('menu');   // oude arena-knop (mode is weg)
     $('btn-next').onclick = () => Game.nextLevel();
     $('btn-retry').onclick = () => Game.retryLevel();
 
@@ -186,22 +188,85 @@ const UI = {
     Game.startArena();
   },
 
-  // tekst van de Knock-out-menuknop bijwerken (resterende pogingen)
+  // Journey-tegel bijwerken (voortgang)
   updateArenaButton() {
-    const c = document.getElementById('arena-count');
-    const tile = document.getElementById('btn-arena');
+    const c = document.getElementById('journey-prog');
     if (!c) return;
-    if (window.Net && Net.ready && Net.isLoggedIn()) {
-      if (tile) tile.classList.remove('locked');
-      c.textContent = '…×';
-      Net.arenaPlaysLeft().then((n) => { if (n != null) c.textContent = n + '×'; }).catch(() => {});
-    } else if (window.Net && Net.ready) {
-      if (tile) tile.classList.add('locked');
-      c.textContent = 'Log in';
-    } else {
-      if (tile) tile.classList.remove('locked');
-      c.textContent = Storage.arenaPlaysLeft() + '×';
+    const total = (JOURNEY[1].levels || []).length;
+    const done = Math.min(total, Storage.data.journey1 || 0);
+    c.textContent = done >= total ? 'Wereld 1 ✓' : ('Lvl ' + (done + 1) + '/' + total);
+  },
+
+  // ---------- JOURNEY (singleplayer) ----------
+  openJourney() { this.renderJourney(); this.show('journey'); },
+  renderJourney() {
+    const grid = document.getElementById('journey-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    const levels = JOURNEY[1].levels;
+    levels.forEach((lv, i) => {
+      const n = i + 1;
+      const cleared = Storage.journeyCleared(n);
+      const open = Storage.journeyUnlocked(n);
+      const cell = document.createElement('button');
+      cell.className = 'level-cell' + (cleared ? ' cleared' : '') + (open ? '' : ' locked');
+      cell.innerHTML = '<span class="lvl-badge">' + (lv.boss ? 'BAAS' : ('Lvl ' + n)) + '</span><span class="num">' + (lv.boss ? '👑' : n) + '</span><span class="stars">' + (cleared ? '★' : (open ? '' : '🔒')) + '</span>';
+      if (open) cell.onclick = () => this.pickJourneyLevel(n);
+      grid.appendChild(cell);
+    });
+  },
+  pickJourneyLevel(n) {
+    // verhaal-intro alleen vóór het allereerste potje (level 1, nog niks gehaald)
+    if (n === 1 && (Storage.data.journey1 || 0) === 0) {
+      this._pendingJourney = 1;
+      const txt = document.getElementById('journey-story-text');
+      if (txt) txt.textContent = 'Je schip is vergaan… en je spoelt aan op een onbewoond eiland. ' +
+        'Net als je bijkomt, grijpen wilde MENSAPEN je vast en sleuren je het oerwoud in. ' +
+        'Vecht je een weg door 15 levels — versla hun krijgers en uiteindelijk de GORILLA KING — en ontsnap van het eiland!';
+      document.getElementById('journey-story').classList.remove('hidden');
+      return;
     }
+    this.startJourneyLevel(n);
+  },
+  startJourneyFromStory() {
+    document.getElementById('journey-story').classList.add('hidden');
+    this.startJourneyLevel(this._pendingJourney || 1);
+  },
+  startJourneyLevel(n) {
+    document.getElementById('versus-result').classList.add('hidden');
+    this.showVersus();                  // juiste HUD/touch-setup, alle schermen weg
+    Game.startJourney(n);
+  },
+  showJourneyResult(won, idx, unlocks) {
+    const levels = JOURNEY[1].levels, total = levels.length, hasNext = won && idx < total;
+    this.el.touch.classList.add('hidden'); document.body.classList.remove('in-game');
+    document.getElementById('versus-hud').classList.add('hidden');
+    const t = document.getElementById('vs-result-title');
+    t.textContent = won ? (idx >= total ? 'EILAND VERSLAGEN! 🏆' : 'LEVEL GEHAALD!') : 'VERLOREN';
+    t.className = 'screen-title ' + (won ? 'win' : 'lose');
+    document.getElementById('vs-result-score').textContent = (levels[idx - 1] ? levels[idx - 1].name : ('Level ' + idx));
+    const xpEl = document.getElementById('vs-result-xp');
+    xpEl.classList.remove('hidden');
+    let msg = won ? 'Level ' + idx + ' gehaald!' : 'Probeer het opnieuw.';
+    if (unlocks && unlocks.length) msg += '<br>🎉 Vrijgespeeld: ' + unlocks.map((u) => u.name).join(', ');
+    xpEl.innerHTML = msg;
+    const voteBox = document.getElementById('vs-result-vote'); if (voteBox) voteBox.classList.add('hidden');
+    const rs = document.getElementById('vs-rematch-status'); if (rs) rs.textContent = '';
+    const rbtn = document.getElementById('btn-vs-rematch');
+    rbtn.classList.remove('hidden'); rbtn.disabled = false;
+    rbtn.textContent = won ? (hasNext ? '▶ VOLGENDE LEVEL' : '✓ KLAAR') : '↻ OPNIEUW';
+    rbtn.onclick = () => {
+      document.getElementById('versus-result').classList.add('hidden');
+      if (won && hasNext) this.startJourneyLevel(idx + 1);
+      else if (!won) this.startJourneyLevel(idx);
+      else { Game.journey = null; this.openJourney(); }
+    };
+    const again = document.getElementById('btn-vs-again');
+    again.textContent = '🗺 WERELDKAART';
+    again.onclick = () => { document.getElementById('versus-result').classList.add('hidden'); Game.journey = null; if (window.Net) Net.leaveVersus(); this.openJourney(); };
+    document.getElementById('btn-vs-menu').onclick = () => { document.getElementById('versus-result').classList.add('hidden'); Game.journey = null; this.show('menu'); };
+    document.getElementById('versus-result').classList.remove('hidden');
+    document.getElementById('versus-screen').classList.add('hidden');
   },
 
   showArenaOver(stats) {
@@ -775,7 +840,7 @@ const UI = {
   },
 
   showVersus() {
-    ['menu', 'level', 'shop', 'arena', 'win', 'lose', 'versus', 'leaderboard', 'chat'].forEach((s) =>
+    ['menu', 'level', 'shop', 'journey', 'arena', 'win', 'lose', 'versus', 'leaderboard', 'chat'].forEach((s) =>
       this.el[s].classList.add('hidden'));
     document.body.classList.add('in-game');
     this.el.hud.classList.add('hidden');
@@ -865,6 +930,10 @@ const UI = {
 
   showVersusResult(won, myScore, oppScore, xpGained, isBot, coinsEarned, peerLeft) {
     const vw = document.getElementById('vs-win'); if (vw) vw.classList.add('hidden');
+    // knop-bindingen herstellen (Journey kan ze hebben overschreven)
+    document.getElementById('btn-vs-rematch').onclick = () => this.doRematch();
+    const ag = document.getElementById('btn-vs-again'); ag.textContent = '🏠 LOBBY'; ag.onclick = () => { document.getElementById('versus-result').classList.add('hidden'); this.openVersusLobby(); };
+    document.getElementById('btn-vs-menu').onclick = () => { document.getElementById('versus-result').classList.add('hidden'); this.leaveLobby(); this.show('menu'); };
     const rb = document.getElementById('vs-round-banner'); if (rb) rb.classList.add('hidden');
     document.getElementById('versus-hud').classList.add('hidden');
     document.body.classList.remove('in-game');
@@ -959,7 +1028,7 @@ const UI = {
   },
 
   show(name) {
-    ['menu', 'level', 'shop', 'arena', 'win', 'lose', 'versus', 'leaderboard', 'chat'].forEach((s) => {
+    ['menu', 'level', 'shop', 'journey', 'arena', 'win', 'lose', 'versus', 'leaderboard', 'chat'].forEach((s) => {
       this.el[s].classList.toggle('hidden', s !== name);
     });
     const inGame = (name === 'game');
@@ -1173,6 +1242,8 @@ const UI = {
       } else if (owned) {
         btn.classList.add('equip'); btn.textContent = 'UITRUSTEN';
         btn.onclick = () => { Storage.equipCharacter(cid); this.renderShop(); };
+      } else if (c.journeyOnly) {
+        card.classList.add('locked'); btn.classList.add('cant'); btn.textContent = '🔒 Journey';
       } else if (myLvl < (c.lvl || 0)) {
         card.classList.add('locked'); btn.classList.add('cant'); btn.textContent = '🔒 Level ' + c.lvl;
       } else if (Storage.data.coins >= c.cost) {
@@ -1223,6 +1294,8 @@ const UI = {
       } else if (owned) {
         btn.classList.add('equip'); btn.textContent = hid === 'none' ? 'AF' : 'OPZETTEN';
         btn.onclick = () => { Storage.equipHat(hid); this.renderShop(); };
+      } else if (h.journeyOnly) {
+        card.classList.add('locked'); btn.classList.add('cant'); btn.textContent = '🔒 Journey';
       } else if (myLvl < (h.lvl || 0)) {
         card.classList.add('locked'); btn.classList.add('cant'); btn.textContent = '🔒 Level ' + h.lvl;
       } else if (Storage.data.coins >= h.cost) {

@@ -1144,8 +1144,20 @@ const Game = {
   },
 
   // ============ 1 vs 1 VERSUS ============
+  // Journey-level starten (singleplayer tegen een bot, Power Smash)
+  startJourney(idx) {
+    const world = JOURNEY[1]; if (!world) return;
+    const lv = world.levels[idx - 1]; if (!lv) return;
+    this.journey = { world: 1, idx, lv };
+    this.startVersus('host', { mapId: lv.map, mode: 'smash', bot: true, diff: lv.diff, journey: true, journeyDrops: (lv.drops || []), boss: !!lv.boss });
+    this.journey = { world: 1, idx, lv };   // startVersus reset 'm; opnieuw zetten
+  },
+
   startVersus(role, opts) {
     opts = opts || {};
+    this.journeyDrops = opts.journeyDrops || null;     // Journey: extra powerup-pool per level
+    this._bossBot = !!opts.boss;                        // Journey-eindbaas (Gorilla King)
+    if (!opts.journey) this.journey = null;            // alleen Journey-context houden bij een Journey-potje
     if (window.Net && Net.lobby) Net.lobbyLeave();   // niet meer "online in de lobby" tijdens een potje
     const map = VERSUS_MAPS.find((m) => m.id === opts.mapId) || VERSUS_MAPS[0];
     const mode = (opts.mode === 'both') ? 'both' : (opts.mode === 'smash') ? 'smash' : 'melee';
@@ -1221,8 +1233,8 @@ const Game = {
     this.botLevel = lvl;
     this.botCfg = BOT_PROFILES[lvl - 1];
     if (this.vsBot) {
-      const ids = CHARACTER_ORDER.slice();
-      const botChar = ids[Math.floor(Math.random() * ids.length)] || 'ryan';
+      const ids = CHARACTER_ORDER.filter((id) => !CHARACTERS[id].journeyOnly);   // bot pakt geen Journey-only karakters
+      const botChar = opts.boss ? 'kong' : (ids[Math.floor(Math.random() * ids.length)] || 'ryan');
       const melees = ['bat', 'machete', 'sword', 'axe', 'mace', 'katana'];
       const botMelee = mode === 'smash' ? ((CHARACTERS[botChar] && CHARACTERS[botChar].startMelee) || 'bat') : melees[Math.floor(Math.random() * melees.length)];
       const guns = ['pistol', 'uzi', 'ak47'];
@@ -1233,6 +1245,7 @@ const Game = {
       b._think = 0; b._jumpCd = 0; b._shootCd = 0; b._blockUntil = 0; b._rangedId = botRanged;
       b.baseMelee = botMelee; b.fireballs = 0; b.smashRockets = 0; b._weaponUntil = 0; b._fireCd = 0;
       b.cannon = 0; b.shieldHp = 0; b.gunAmmo = 0; b.giant = false; b._baseMaxHp = b.maxHp; b._caged = false; b.heli = false; b.heliMinigun = 0; b.heliRockets = 0; b.beachball = 0;
+      if (opts.boss) { b.maxHp = 220; b.hp = 220; b._baseMaxHp = 220; }   // Gorilla King: extra taai
       this.bot = b;
       this.vs.remote.charId = botChar;
     } else if (window.Net) {
@@ -2219,16 +2232,21 @@ const Game = {
   spawnDrop() {
     const pool = SMASH_DROPS.slice();
     const mid = this.vsMap && this.vsMap.id;
-    if (mid === 'cave' || mid === 'sky') pool.push({ kind: 'lightning', w: 8 });   // bliksem op Cave + Sky
-    if (mid === 'cave') pool.push({ kind: 'rock', w: 8 });                          // steen alleen op Cave
-    if (mid === 'pirate') pool.push({ kind: 'cannon', w: 9 });                      // kanonskogel alleen op Pirate Ship
-    if (mid === 'pirate' || mid === 'sky') pool.push({ kind: 'shield', w: 9 });     // shield op Pirate + Sky
-    if (mid === 'sky' || mid === 'lava') pool.push({ kind: 'heli', w: 6 });          // gevechtsheli op Sky + Volcano
-    if (mid === 'beach') pool.push({ kind: 'beachball', w: 10 });                     // strandbal op Beach
-    if (mid === 'jungle') { pool.push({ kind: 'giant', w: 6 }); pool.push({ kind: 'ak47', w: 9 }); }  // Giant + AK47 op Jungle
-    if (mid === 'dohyo') {                                                          // Dohyo: ALLE power-ups
-      pool.push({ kind: 'lightning', w: 8 }); pool.push({ kind: 'rock', w: 8 }); pool.push({ kind: 'cannon', w: 9 });
-      pool.push({ kind: 'shield', w: 9 }); pool.push({ kind: 'giant', w: 6 }); pool.push({ kind: 'ak47', w: 9 });
+    if (this.journeyDrops) {
+      // Journey: de powerups van dit level (groeit per level)
+      for (const k of this.journeyDrops) pool.push({ kind: k, w: 9 });
+    } else {
+      if (mid === 'cave' || mid === 'sky') pool.push({ kind: 'lightning', w: 8 });   // bliksem op Cave + Sky
+      if (mid === 'cave') pool.push({ kind: 'rock', w: 8 });                          // steen alleen op Cave
+      if (mid === 'pirate') pool.push({ kind: 'cannon', w: 9 });                      // kanonskogel alleen op Pirate Ship
+      if (mid === 'pirate' || mid === 'sky') pool.push({ kind: 'shield', w: 9 });     // shield op Pirate + Sky
+      if (mid === 'sky' || mid === 'lava') pool.push({ kind: 'heli', w: 6 });          // gevechtsheli op Sky + Volcano
+      if (mid === 'beach') pool.push({ kind: 'beachball', w: 10 });                     // strandbal op Beach
+      if (mid === 'jungle') { pool.push({ kind: 'giant', w: 6 }); pool.push({ kind: 'ak47', w: 9 }); }  // Giant + AK47 op Jungle
+      if (mid === 'dohyo') {                                                          // Dohyo: ALLE power-ups
+        pool.push({ kind: 'lightning', w: 8 }); pool.push({ kind: 'rock', w: 8 }); pool.push({ kind: 'cannon', w: 9 });
+        pool.push({ kind: 'shield', w: 9 }); pool.push({ kind: 'giant', w: 6 }); pool.push({ kind: 'ak47', w: 9 });
+      }
     }
     let tot = 0; for (const d of pool) tot += d.w;
     let r = Math.random() * tot, kind = 'health';
@@ -2759,6 +2777,22 @@ const Game = {
     if (this.vs) this.vs.over = true;
     this.state = 'versusOver';
     const isBot = this.vsBot;
+    // ----- JOURNEY: eigen afhandeling (level halen, unlocks, eigen uitslag) -----
+    if (this.journey) {
+      const jr = this.journey, idx = jr.idx;
+      let unlocks = [];
+      if (won) {
+        const first = !Storage.journeyCleared(idx);
+        unlocks = Storage.clearJourneyLevel(idx);
+        const coins = (jr.lv && jr.lv.boss) ? 150 : 40, xp = (jr.lv && jr.lv.boss) ? 60 : 20;
+        if (first) { Storage.data.coins = (Storage.data.coins || 0) + coins; Storage.data.xp = (Storage.data.xp || 0) + xp; Storage.save(); }
+      }
+      if (window.Sfx) Sfx.play(won ? 'win' : 'lose');
+      const self = this, name = won ? 'JIJ' : ((jr.lv && jr.lv.boss) ? 'GORILLA KING' : 'BOT');
+      UI.showWinCelebration(name, won);
+      setTimeout(function () { if (self.state === 'versusOver') UI.showJourneyResult(won, idx, unlocks); }, 2600);
+      return;
+    }
     // betrouwbaar de uitslag naar de tegenstander sturen (paar keer tegen pakketverlies)
     if (!isBot && window.Net && this.vs) {
       const role = this.vs.role;
@@ -2810,6 +2844,7 @@ const Game = {
   quitVersus() {
     if (window.Net) Net.leaveVersus();
     this.vsBot = false; this.bot = null;
+    this.journey = null; this.journeyDrops = null;
     this.state = 'menu';
     UI.show('menu');
   },

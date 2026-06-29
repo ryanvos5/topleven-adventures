@@ -17,8 +17,9 @@ const DEFAULT_SAVE = {
   equippedHat: 'none',
   // hoogst voltooide level per wereld: { "1": 0 } -> nog niets, level 1 speelbaar
   progress: { '1': 0 },
-  arenaBest: 0,                 // hoogste ronde in Zombie Knock-out
+  arenaBest: 0,                 // hoogste ronde in Zombie Knock-out (oude mode)
   arenaPlays: { date: '', count: 0 }, // dagelijkse speel-limiet
+  journey1: 0,                  // hoogst gehaalde Journey-level in wereld 1 (0 = nog niets)
   xp: 0,                        // ervaring uit multiplayer-duels (level = playerLevel(xp))
   mpWins: 0,                    // gewonnen 1v1-duels
   mpLosses: 0,                  // verloren 1v1-duels
@@ -41,6 +42,7 @@ const Storage = {
       if (typeof this.data.ammo !== 'number') this.data.ammo = STARTING_AMMO;
       if (typeof this.data.rockets !== 'number') this.data.rockets = 0;
       if (typeof this.data.arenaBest !== 'number') this.data.arenaBest = 0;
+      if (typeof this.data.journey1 !== 'number') this.data.journey1 = 0;
       if (typeof this.data.xp !== 'number') this.data.xp = 0;
       if (typeof this.data.mpWins !== 'number') this.data.mpWins = 0;
       if (typeof this.data.mpLosses !== 'number') this.data.mpLosses = 0;
@@ -74,6 +76,7 @@ const Storage = {
     d.ammo = Math.max(d.ammo || 0, cloud.ammo || 0);
     d.rockets = Math.max(d.rockets || 0, cloud.rockets || 0);
     d.arenaBest = Math.max(d.arenaBest || 0, cloud.arenaBest || 0);
+    d.journey1 = Math.max(d.journey1 || 0, cloud.journey1 || 0);
     d.xp = Math.max(d.xp || 0, cloud.xp || 0);
     d.mpWins = Math.max(d.mpWins || 0, cloud.mpWins || 0);
     d.mpLosses = Math.max(d.mpLosses || 0, cloud.mpLosses || 0);
@@ -183,6 +186,7 @@ const Storage = {
   buyCharacter(id) {
     const c = CHARACTERS[id];
     if (!c || this.ownsCharacter(id)) return false;
+    if (c.journeyOnly) return false;                                   // alleen via Journey vrij te spelen
     if (playerLevel(this.data.xp || 0) < (c.lvl || 0)) return false;   // nog niet vrijgespeeld
     if (!this.spendCoins(c.cost)) return false;
     this.data.ownedCharacters.push(id);
@@ -199,6 +203,7 @@ const Storage = {
   buyHat(id) {
     const h = HATS[id];
     if (!h || this.ownsHat(id)) return false;
+    if (h.journeyOnly) return false;                                   // alleen via Journey vrij te spelen
     if (playerLevel(this.data.xp || 0) < (h.lvl || 0)) return false;   // nog niet vrijgespeeld
     if (!this.spendCoins(h.cost)) return false;
     this.data.ownedHats.push(id);
@@ -210,7 +215,23 @@ const Storage = {
     this.data.equippedHat = id; this.save(); return true;
   },
 
-  // ---- arena (Zombie Knock-out) ----
+  // ---- Journey (singleplayer) ----
+  journeyCleared(level) { return (this.data.journey1 || 0) >= level; },                  // wereld 1
+  journeyUnlocked(level) { return level <= (this.data.journey1 || 0) + 1; },             // volgende is speelbaar
+  // markeer een level als gehaald + ken de unlocks toe; geeft een lijst met nieuwe items terug
+  clearJourneyLevel(level) {
+    const got = [];
+    if (level > (this.data.journey1 || 0)) this.data.journey1 = level;
+    const unl = (JOURNEY[1] && JOURNEY[1].unlocks && JOURNEY[1].unlocks[level]) || null;
+    if (unl) {
+      if (unl.char && !this.ownsCharacter(unl.char)) { this.data.ownedCharacters.push(unl.char); got.push({ type: 'char', id: unl.char, name: (CHARACTERS[unl.char] || {}).name }); }
+      if (unl.hat && !this.ownsHat(unl.hat)) { (this.data.ownedHats = this.data.ownedHats || ['none']).push(unl.hat); got.push({ type: 'hat', id: unl.hat, name: (HATS[unl.hat] || {}).name }); }
+    }
+    this.save();
+    return got;
+  },
+
+  // ---- arena (Zombie Knock-out, oude mode) ----
   todayStr() { try { return new Date().toISOString().slice(0, 10); } catch (e) { return 'x'; } },
   arenaPlaysLeft() {
     const d = this.todayStr();

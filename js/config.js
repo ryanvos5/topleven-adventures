@@ -231,8 +231,42 @@ const CHARACTERS = {
     },
     desc: 'Gebalanceerd, iets sneller. Start met een dagger.'
   },
+  // ---- Journey-only mensapen (alleen vrij te spelen in Journey, niet te koop) ----
+  bonzo: {
+    id: 'bonzo', name: 'Bonzo', cost: 0, journeyOnly: true,
+    maxHp: 80, speedMul: 1.15, meleeMul: 0.95, build: 'small', hair: 'natural', extraJump: true,
+    palette: {
+      hair: '#3a2a1c', hairDark: '#241810',
+      skin: '#8a5e38', skinDark: '#5e3f22',     // chimp-vacht
+      eye: '#2a1a0e',
+      shirt: '#5a4030', shirtDark: '#3a281c', pants: '#2a1c12', shoe: '#140d08',
+    },
+    desc: 'Chimp: snel & wendbaar, extra sprong. Alleen via Journey.'
+  },
+  koba: {
+    id: 'koba', name: 'Koba', cost: 0, journeyOnly: true,
+    maxHp: 135, speedMul: 0.94, meleeMul: 1.25, build: 'bulky', hair: 'bald',
+    palette: {
+      hair: '#7a3a1e', hairDark: '#54260f',
+      skin: '#a85e34', skinDark: '#7a421f',     // orang-oetan-rood
+      eye: '#3a1a0a',
+      shirt: '#6b3a1e', shirtDark: '#451f0e', pants: '#33200f', shoe: '#160d06',
+    },
+    desc: 'Bruut: fors & sterk (+25% melee). Alleen via Journey.'
+  },
+  kong: {
+    id: 'kong', name: 'Gorilla King', cost: 0, journeyOnly: true,
+    maxHp: 150, speedMul: 0.95, meleeMul: 1.3, build: 'bulky', hair: 'bald', autoRage: true, rageEvery: 14000,
+    palette: {
+      hair: '#2a2622', hairDark: '#15120f',
+      skin: '#3a342f', skinDark: '#262220',     // gorilla-zwart
+      eye: '#ffcf33',
+      shirt: '#3a342f', shirtDark: '#201d1a', pants: '#1a1816', shoe: '#0c0b0a',
+    },
+    desc: 'Gorillakoning: enorme kracht + rage. Versla hem in Journey om te unlocken.'
+  },
 };
-const CHARACTER_ORDER = ['ryan', 'jenze', 'tygo', 'vince', 'timo', 'just', 'ricky', 'yarno'];
+const CHARACTER_ORDER = ['ryan', 'jenze', 'tygo', 'vince', 'timo', 'just', 'ricky', 'yarno', 'bonzo', 'koba', 'kong'];
 const SHIELD_BLOCK_CD = 3000;   // ms cooldown nadat Tygo's schild een treffer blokt
 
 /* ---------- LEVELS (Wereld 1: Verlaten Stad) ----------
@@ -470,8 +504,41 @@ const HATS = {
   viking:    { name: 'Vikinghelm', cost: 650, lvl: 9,  desc: 'Met horens.' },
   crown:     { name: 'Kroon', cost: 900,      lvl: 10, desc: 'Voor de koning.' },
   halo:      { name: 'Halo', cost: 800,       lvl: 15, desc: 'Engelachtig.' },
+  // ---- Journey-unlock hoeden (eiland-thema, niet te koop) ----
+  leafcrown: { name: 'Bladerkroon', cost: 0, journeyOnly: true, desc: 'Eiland-kroon van bladeren. Via Journey.' },
+  tikimask:  { name: 'Tiki-masker', cost: 0, journeyOnly: true, desc: 'Houten stammenmasker. Via Journey.' },
+  bananahat: { name: 'Banaan', cost: 0, journeyOnly: true, desc: 'Een banaan op je hoofd. Via Journey.' },
 };
-const HAT_ORDER = ['none', 'cap', 'beanie', 'party', 'fedora', 'cowboy', 'chef', 'grad', 'tophat', 'propeller', 'wizard', 'viking', 'crown', 'halo'];
+const HAT_ORDER = ['none', 'cap', 'beanie', 'party', 'fedora', 'cowboy', 'chef', 'grad', 'tophat', 'propeller', 'wizard', 'viking', 'crown', 'halo', 'leafcrown', 'tikimask', 'bananahat'];
+
+// ============================================================
+// JOURNEY — singleplayer tegen bots. Elk level = 1v1 Power Smash.
+// Wereld 1: Onbewoond Eiland (mensapen). 15 levels, oplopend, eindbaas = Gorilla King.
+// ============================================================
+const JOURNEY = {
+  1: {
+    name: 'Onbewoond Eiland',
+    levels: [
+      { name: 'Aangespoeld',     map: 'beach',  diff: 1,  drops: [] },
+      { name: 'Strandwacht',     map: 'beach',  diff: 2,  drops: ['beachball'] },
+      { name: 'Het oerwoud in',  map: 'jungle', diff: 2,  drops: ['beachball'] },
+      { name: 'Apenstreken',     map: 'jungle', diff: 3,  drops: ['beachball', 'ak47'] },
+      { name: 'Vloedlijn',       map: 'beach',  diff: 4,  drops: ['beachball', 'shield'] },
+      { name: 'Lianenwoud',      map: 'jungle', diff: 4,  drops: ['ak47', 'shield', 'beachball'] },
+      { name: 'Verloren strand', map: 'beach',  diff: 5,  drops: ['beachball', 'shield', 'giant'] },
+      { name: 'Kooivallei',      map: 'jungle', diff: 6,  drops: ['ak47', 'giant', 'shield'] },
+      { name: 'Springvloed',     map: 'beach',  diff: 6,  drops: ['beachball', 'giant', 'shield'] },
+      { name: 'Apentempel',      map: 'jungle', diff: 7,  drops: ['ak47', 'giant', 'shield', 'dragon'] },
+      { name: 'Kokospaleis',     map: 'beach',  diff: 7,  drops: ['beachball', 'giant', 'shield', 'dragon'] },
+      { name: 'Diepe jungle',    map: 'jungle', diff: 8,  drops: ['ak47', 'giant', 'shield', 'dragon'] },
+      { name: 'Stormvloed',      map: 'beach',  diff: 9,  drops: ['beachball', 'giant', 'shield', 'dragon'] },
+      { name: 'Troon-jungle',    map: 'jungle', diff: 9,  drops: ['ak47', 'giant', 'shield', 'dragon'] },
+      { name: 'GORILLA KING',    map: 'jungle', diff: 10, drops: ['giant', 'shield', 'dragon'], boss: true },
+    ],
+    // beloningen bij het halen van een level
+    unlocks: { 3: { hat: 'leafcrown' }, 5: { char: 'bonzo' }, 8: { hat: 'tikimask' }, 10: { char: 'koba' }, 12: { hat: 'bananahat' }, 15: { char: 'kong' } },
+  },
+};
 
 /* ---------- BOT-MOEILIJKHEID (level 1..10) ----------
    Elk level heeft een eigen speelstijl. Velden:

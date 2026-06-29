@@ -11,9 +11,9 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#0d0f14" />
   <title>Tiny Power Smashers</title>
-  <link rel="icon" type="image/svg+xml" href="icon.svg?v=menu21" />
-  <link rel="apple-touch-icon" href="icon.svg?v=menu21" />
-  <link rel="stylesheet" href="css/style.css?v=menu21" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg?v=menu22" />
+  <link rel="apple-touch-icon" href="icon.svg?v=menu22" />
+  <link rel="stylesheet" href="css/style.css?v=menu22" />
 </head>
 <body>
   <div id="game-root">
@@ -50,7 +50,7 @@
     </div>
 
     <!-- ===== Splash bij opstarten (logo, fadet vanzelf weg) ===== -->
-    <div id="splash"><img src="logo.svg?v=menu21" alt="Tiny Power Smashers" /></div>
+    <div id="splash"><img src="logo.svg?v=menu22" alt="Tiny Power Smashers" /></div>
 
     <!-- ===== Canvas (de spelwereld) ===== -->
     <canvas id="game-canvas"></canvas>
@@ -111,7 +111,7 @@
     <div id="menu-screen" class="screen">
       <div class="menu-frame">
         <header class="menu-top">
-          <img class="menu-logo-img" src="logo.svg?v=menu21" alt="Tiny Power Smashers" />
+          <img class="menu-logo-img" src="logo.svg?v=menu22" alt="Tiny Power Smashers" />
           <div class="menu-hud">
             <span class="menu-coins-top">
               <svg class="px-icon" viewBox="0 0 8 8" width="16" height="16" shape-rendering="crispEdges"><rect x="2" y="1" width="4" height="6" fill="#caa12e"/><rect x="1" y="2" width="6" height="4" fill="#ffd24a"/><rect x="3" y="2" width="1" height="4" fill="#fff0a8"/></svg>
@@ -125,10 +125,10 @@
         </header>
 
         <main class="menu-tiles">
-          <button id="btn-arena" class="stone-tile">
+          <button id="btn-journey" class="stone-tile">
             <span class="tile-play">Play</span>
-            <span class="tile-name">Zombie Knock-out</span>
-            <span class="tile-sub" id="arena-count">3×</span>
+            <span class="tile-name">Journey</span>
+            <span class="tile-sub" id="journey-prog">Wereld 1</span>
           </button>
           <button id="btn-versus" class="stone-tile">
             <span class="tile-play">Play</span>
@@ -167,6 +167,27 @@
         <button id="btn-update" class="big-btn secondary">↻ Update (verse versie)</button>
         <button id="btn-newgame" class="text-btn">Nieuw spel (wis voortgang)</button>
         <button id="btn-settings-close" class="big-btn">Sluiten</button>
+      </div>
+    </div>
+
+    <!-- ===== Journey: levelkaart (wereld 1) ===== -->
+    <div id="journey-screen" class="screen hidden">
+      <div class="screen-inner">
+        <h2 class="screen-title">JOURNEY</h2>
+        <p class="screen-sub" id="journey-world">Wereld 1 — Onbewoond Eiland</p>
+        <div id="journey-grid" class="level-grid"></div>
+        <button class="back-btn" data-back="menu">◀ TERUG</button>
+      </div>
+    </div>
+
+    <!-- ===== Journey: verhaal-intro ===== -->
+    <div id="journey-story" class="overlay hidden">
+      <div class="overlay-box">
+        <h2 class="screen-title">ONBEWOOND EILAND</h2>
+        <p id="journey-story-text" class="auth-sub"></p>
+        <div class="menu-buttons">
+          <button id="btn-journey-story-go" class="big-btn">START</button>
+        </div>
       </div>
     </div>
 
@@ -413,15 +434,15 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-  <script src="js/config.js?v=menu21"></script>
-  <script src="js/storage.js?v=menu21"></script>
-  <script src="js/audio.js?v=menu21"></script>
-  <script src="js/net.js?v=menu21"></script>
-  <script src="js/input.js?v=menu21"></script>
-  <script src="js/sprites.js?v=menu21"></script>
-  <script src="js/entities.js?v=menu21"></script>
-  <script src="js/ui.js?v=menu21"></script>
-  <script src="js/game.js?v=menu21"></script>
-  <script src="js/main.js?v=menu21"></script>
+  <script src="js/config.js?v=menu22"></script>
+  <script src="js/storage.js?v=menu22"></script>
+  <script src="js/audio.js?v=menu22"></script>
+  <script src="js/net.js?v=menu22"></script>
+  <script src="js/input.js?v=menu22"></script>
+  <script src="js/sprites.js?v=menu22"></script>
+  <script src="js/entities.js?v=menu22"></script>
+  <script src="js/ui.js?v=menu22"></script>
+  <script src="js/game.js?v=menu22"></script>
+  <script src="js/main.js?v=menu22"></script>
 </body>
 </html>
