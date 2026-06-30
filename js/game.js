@@ -1663,7 +1663,7 @@ const Game = {
     const oppLive = !!(opp && (this.vsBot ? !opp.dead : opp.alive));
     const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-    const BIAS = 0.3, MX = 70, ZMIN = 0.6, ZMAX = 1.45;
+    const BIAS = 0.3, MX = 70, ZMIN = 0.6, ZMAX = 1.28;   // iets ruimer dichtbij (was 1.45)
     const DEAD_X = 70, SHIFT_X = 110, CAPW = W / (2 * ZMIN);   // binnen DEAD_X leunt/zoomt het beeld NIET
 
     // ---- HORIZONTAAL: blijf op jou; leun/zoom pas naar de tegenstander voorbij de deadzone ----
