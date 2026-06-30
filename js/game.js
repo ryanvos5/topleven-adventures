@@ -1183,17 +1183,33 @@ const Game = {
     if (typeof script === 'function') { onDone = script; script = 'intro'; }
     this._storyScript = script || 'intro';
     this._storyData = (this._storyScript !== 'intro') ? this._storyDef(this._storyScript) : null;
-    this._storyDone = onDone; this._storyElapsed = 0;
     this._storyChar = CHARACTERS[Storage.data.equippedCharacter] || CHARACTERS.ryan;
+    this._storySegs = this._buildStorySegs(this._storyScript);   // klik-gestuurde stukjes
+    this._storySeg = 0; this._storyElapsed = 0; this._storyClock = 0; this._storyFrozen = false;
+    this._storyDone = onDone;
     this.state = 'story';
     const el = document.getElementById('journey-story'); if (el) el.classList.remove('hidden');
+    this._showStoryNext(false);
     if (window.Sfx) Sfx.music(this._storyData && this._storyData.theme === 'jungle' ? 'jungle' : 'beach');
+  },
+  // het verhaal stopt na elke tekst en wacht op "Verder"; dit gaat naar het volgende stukje
+  storyNext() {
+    if (this.state !== 'story') return;
+    const segs = this._storySegs || [];
+    this._storySeg = (this._storySeg || 0) + 1;
+    this._storyElapsed = 0; this._storyFrozen = false; this._showStoryNext(false);
+    if (window.Sfx) Sfx.play('click');
+    if (this._storySeg >= segs.length) this.finishStory();
+  },
+  _showStoryNext(show) {
+    const b = document.getElementById('btn-journey-next'); if (b) b.classList.toggle('hidden', !show);
   },
   skipStory() { this.finishStory(); },
   finishStory() {
     if (this.state !== 'story') return;
     this.state = 'menu';
     const el = document.getElementById('journey-story'); if (el) el.classList.add('hidden');
+    this._showStoryNext(false); this._storyFrozen = false; this._storySeg = 0;
     const cb = this._storyDone; this._storyDone = null;
     if (cb) cb();
   },
@@ -1226,57 +1242,65 @@ const Game = {
     ctx.fillStyle = '#e3c882'; ctx.fillRect(0, gy, W, H - gy); ctx.fillStyle = '#caa860'; ctx.fillRect(0, gy + 6, W, H - gy - 6);
     ctx.fillStyle = '#ffe79a'; ctx.beginPath(); ctx.arc(W - 46, 30, 14, 0, 6.2832); ctx.fill();
   },
+  // de cutscene is opgedeeld in stukjes: animatie speelt, bevriest aan het eind,
+  // toont de tekst + "Verder"-knop; pas na een klik gaat het volgende stukje spelen.
   renderStory() {
-    const t = this._storyElapsed || 0;
-    if (this._storyScript && this._storyScript !== 'intro') { this._storyBg(t, this._storyData ? this._storyData.theme : 'beach'); this._renderClash(t); }
-    else { this._storyBg(t, 'beach'); this._renderIntro(t); }
+    const segs = this._storySegs; if (!segs || !segs.length) { this.finishStory(); return; }
+    const i = this._storySeg || 0; if (i >= segs.length) { this.finishStory(); return; }
+    const seg = segs[i];
+    if (!this._storyFrozen && (this._storyElapsed || 0) >= seg.dur) { this._storyFrozen = true; this._storyElapsed = seg.dur; this._showStoryNext(true); }
+    const t = Math.min(this._storyElapsed || 0, seg.dur);
+    this._storyBg(this._storyClock || 0, seg.theme);   // achtergrond (golven) loopt door, ook tijdens bevriezen
+    seg.draw(t);
+    const cap = document.getElementById('journey-cap'); if (cap) cap.textContent = seg.cap;
   },
-  _renderIntro(t) {
-    const ctx = this.ctx, W = CONFIG.VIEW_W, gy = CONFIG.GROUND_Y;
+  // bouwt de stukjes (met tekst, duur en teken-functie) voor een verhaal-script
+  _buildStorySegs(script) {
+    const W = CONFIG.VIEW_W, gy = CONFIG.GROUND_Y;
     const ch = this._storyChar || CHARACTERS.ryan, pose0 = { build: ch.build, hair: ch.hair };
-    const cap = document.getElementById('journey-cap');
-    if (t < 2600) {                                   // op een vlot komt de speler aandrijven
-      const prog = Math.min(1, t / 2400), px = 36 + prog * (W * 0.5 - 36), py = gy - 6 + Math.sin(t / 200) * 1.5;
-      Sprites.px(ctx, '#6b4a2a', px - 13, py + 4, 26, 4); Sprites.px(ctx, '#8a5e36', px - 13, py + 4, 26, 1);
-      Sprites.drawCharacter(ctx, Math.round(px), Math.round(py), 1, ch.palette, Object.assign({ ducking: true, weapon: null }, pose0));
-      if (cap) cap.textContent = 'Je schip is vergaan… je drijft af op open zee.';
-    } else if (t < 5200) {                            // speler ligt op het strand; 2 apen rennen aan
-      const px = W * 0.5;
-      Sprites.drawCharacter(ctx, Math.round(px), Math.round(gy - 2), 1, ch.palette, Object.assign({ ducking: true, weapon: null }, pose0));
-      const ap = Math.min(1, (t - 2600) / 2300), ax = W + 24 - ap * (W * 0.5 - 26 + 24);
-      this._storyApe(ctx, ax, gy - 2, -1, t / 70); this._storyApe(ctx, ax + 24, gy - 2, -1, t / 70 + 2);
-      if (cap) cap.textContent = 'Je spoelt aan op een onbewoond eiland… maar je bent niet alleen.';
-    } else if (t < 8000) {                            // apen slepen de speler weg
-      const drag = Math.min(1, (t - 5200) / 2600), px = W * 0.5 + drag * (W * 0.5 + 30);
-      Sprites.drawCharacter(ctx, Math.round(px), Math.round(gy - 2), -1, ch.palette, Object.assign({ airborne: true, weapon: null }, pose0));
-      this._storyApe(ctx, px + 16, gy - 2, -1, t / 60); this._storyApe(ctx, px + 36, gy - 2, -1, t / 60 + 2);
-      for (let i = 0; i < 3; i++) Sprites.px(ctx, '#d8c9a0', px - 12 - i * 7, gy - 2 - (i % 2) * 2, 3, 3);
-      if (cap) cap.textContent = 'Wilde MENSAPEN grijpen je en sleuren je het oerwoud in!';
-    } else { this.finishStory(); }
-  },
-  // confrontatie-cutscene: speler loopt op, tegenstander-aap komt opdagen, face-off
-  _renderClash(t) {
-    const ctx = this.ctx, W = CONFIG.VIEW_W, gy = CONFIG.GROUND_Y;
-    const sc = this._storyData; if (!sc) { this.finishStory(); return; }
-    const ch = this._storyChar || CHARACTERS.ryan, pose0 = { build: ch.build, hair: ch.hair };
-    const cap = document.getElementById('journey-cap');
+    const clk = () => this._storyClock || 0;
+    if (script === 'intro') {
+      return [
+        { theme: 'beach', dur: 2400, cap: 'Je schip is vergaan… je drijft af op open zee.', draw: (t) => {
+          const ctx = this.ctx, prog = Math.min(1, t / 2400), px = 36 + prog * (W * 0.5 - 36), py = gy - 6 + Math.sin(clk() / 200) * 1.5;
+          Sprites.px(ctx, '#6b4a2a', px - 13, py + 4, 26, 4); Sprites.px(ctx, '#8a5e36', px - 13, py + 4, 26, 1);
+          Sprites.drawCharacter(ctx, Math.round(px), Math.round(py), 1, ch.palette, Object.assign({ ducking: true, weapon: null }, pose0));
+        } },
+        { theme: 'beach', dur: 2300, cap: 'Je spoelt aan op een onbewoond eiland… maar je bent niet alleen.', draw: (t) => {
+          const ctx = this.ctx, px = W * 0.5;
+          Sprites.drawCharacter(ctx, Math.round(px), Math.round(gy - 2), 1, ch.palette, Object.assign({ ducking: true, weapon: null }, pose0));
+          const ap = Math.min(1, t / 2300), ax = W + 24 - ap * (W * 0.5 - 26 + 24);
+          this._storyApe(ctx, ax, gy - 2, -1, clk() / 70); this._storyApe(ctx, ax + 24, gy - 2, -1, clk() / 70 + 2);
+        } },
+        { theme: 'beach', dur: 2600, cap: 'Wilde MENSAPEN grijpen je en sleuren je het oerwoud in!', draw: (t) => {
+          const ctx = this.ctx, drag = Math.min(1, t / 2600), px = W * 0.5 + drag * (W * 0.5 + 30);
+          Sprites.drawCharacter(ctx, Math.round(px), Math.round(gy - 2), -1, ch.palette, Object.assign({ airborne: true, weapon: null }, pose0));
+          this._storyApe(ctx, px + 16, gy - 2, -1, clk() / 60); this._storyApe(ctx, px + 36, gy - 2, -1, clk() / 60 + 2);
+          for (let k = 0; k < 3; k++) Sprites.px(ctx, '#d8c9a0', px - 12 - k * 7, gy - 2 - (k % 2) * 2, 3, 3);
+        } },
+      ];
+    }
+    const sc = this._storyData; if (!sc) return [];
     const px = Math.round(W * 0.30), fxT = W * 0.68;
-    if (t < 2400) {                                   // speler loopt het beeld in
-      const prog = Math.min(1, t / 2200), x = -20 + prog * (px + 20);
-      Sprites.drawCharacter(ctx, Math.round(x), gy - 2, 1, ch.palette, Object.assign({ walkPhase: t / 70, weapon: null }, pose0));
-      if (cap) cap.textContent = sc.caps[0];
-    } else if (t < 5000) {                            // tegenstander-aap komt van rechts opzetten
-      Sprites.drawCharacter(ctx, px, gy - 2, 1, ch.palette, Object.assign({ weapon: null }, pose0));
-      const prog = Math.min(1, (t - 2400) / 2300), fx = (W + 34) + prog * (fxT - (W + 34));
-      this._storyFighter(ctx, sc.foe, fx, gy - 2, -1, t / 64, sc.scale);
-      if (cap) cap.textContent = sc.caps[1];
-    } else if (t < 7600) {                            // face-off: aap stampt/bonkt op de borst
-      Sprites.drawCharacter(ctx, px, gy - 2, 1, ch.palette, Object.assign({ weapon: null }, pose0));
-      const bob = Math.abs(Math.sin((t - 5000) / 110)) * 2.5;
-      this._storyFighter(ctx, sc.foe, fxT, gy - 2 - bob, -1, 0, sc.scale);
-      for (let i = 0; i < 3; i++) { const a = (t / 70 + i) % 3; Sprites.px(ctx, '#ffffff', Math.round(fxT - 12 - a * 4), gy - 22 - i * 3, 2, 2); }
-      if (cap) cap.textContent = sc.caps[2];
-    } else { this.finishStory(); }
+    return [
+      { theme: sc.theme, dur: 2200, cap: sc.caps[0], draw: (t) => {
+        const ctx = this.ctx, prog = Math.min(1, t / 2200), x = -20 + prog * (px + 20);
+        Sprites.drawCharacter(ctx, Math.round(x), gy - 2, 1, ch.palette, Object.assign({ walkPhase: clk() / 70, weapon: null }, pose0));
+      } },
+      { theme: sc.theme, dur: 2300, cap: sc.caps[1], draw: (t) => {
+        const ctx = this.ctx;
+        Sprites.drawCharacter(ctx, px, gy - 2, 1, ch.palette, Object.assign({ weapon: null }, pose0));
+        const prog = Math.min(1, t / 2300), fx = (W + 34) + prog * (fxT - (W + 34));
+        this._storyFighter(ctx, sc.foe, fx, gy - 2, -1, clk() / 64, sc.scale);
+      } },
+      { theme: sc.theme, dur: 1400, cap: sc.caps[2], draw: () => {
+        const ctx = this.ctx, c = clk();
+        Sprites.drawCharacter(ctx, px, gy - 2, 1, ch.palette, Object.assign({ weapon: null }, pose0));
+        const bob = Math.abs(Math.sin(c / 110)) * 2.5;
+        this._storyFighter(ctx, sc.foe, fxT, gy - 2 - bob, -1, 0, sc.scale);
+        for (let k = 0; k < 3; k++) { const a = (c / 70 + k) % 3; Sprites.px(ctx, '#ffffff', Math.round(fxT - 12 - a * 4), gy - 22 - k * 3, 2, 2); }
+      } },
+    ];
   },
 
   startVersus(role, opts) {
@@ -3721,7 +3745,11 @@ const Game = {
     if (this.state === 'playing') this.update(dt);
     if (['playing', 'paused'].includes(this.state)) this.render();
     if (this.state === 'versus') { this.updateVersus(dt); this.renderVersus(); }
-    if (this.state === 'story') { this._storyElapsed = (this._storyElapsed || 0) + dt; this.renderStory(); }
+    if (this.state === 'story') {
+      this._storyClock = (this._storyClock || 0) + dt;                                   // ambient (golven) loopt door
+      if (!this._storyFrozen) this._storyElapsed = (this._storyElapsed || 0) + dt;       // segment-animatie; bevriest aan het eind
+      this.renderStory();
+    }
 
     Input.endFrame();
     requestAnimationFrame((t) => this.loop(t));

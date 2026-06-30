@@ -915,6 +915,17 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
   background: linear-gradient(180deg, #3a2018, #221009); border: 2px solid #7a4a30; border-bottom: 3px solid #120804;
   border-radius: 7px; padding: 7px 14px;
 }
+.journey-next {
+  position: absolute; left: 50%; bottom: 4%; transform: translateX(-50%);
+  pointer-events: auto; cursor: pointer;
+  font-family: var(--pixel-font); font-weight: 900; letter-spacing: 1px; font-size: clamp(14px, 2.6vw, 18px);
+  color: #1b2236; background: linear-gradient(180deg, #ffe27a, #ffc23a);
+  border: 0; border-bottom: 4px solid #b8860b; border-radius: 10px; padding: 9px 26px;
+  box-shadow: 0 0 14px rgba(255,200,80,.5); animation: nextPulse 1s ease-in-out infinite alternate;
+}
+.journey-next.hidden { display: none; }
+@keyframes nextPulse { from { transform: translateX(-50%) scale(1); } to { transform: translateX(-50%) scale(1.06); } }
+@media (prefers-reduced-motion: reduce) { .journey-next { animation: none !important; } }
 
 /* ====== Win-celebratie (kort, vóór het uitslagscherm) ====== */
 .vs-win {

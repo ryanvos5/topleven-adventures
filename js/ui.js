@@ -37,6 +37,7 @@ const UI = {
     document.querySelectorAll('.shop-tab').forEach((b) => { b.onclick = () => { this._shopTab = b.dataset.tab; this.renderShop(); }; });
     $('btn-journey').onclick = () => this.openJourney();
     $('btn-journey-skip').onclick = () => Game.skipStory();
+    $('btn-journey-next').onclick = () => Game.storyNext();
     const aa = $('btn-arena-again'); if (aa) aa.onclick = () => this.show('menu');   // oude arena-knop (mode is weg)
     $('btn-next').onclick = () => Game.nextLevel();
     $('btn-retry').onclick = () => Game.retryLevel();
