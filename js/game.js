@@ -1427,6 +1427,12 @@ const Game = {
       b.cannon = 0; b.shieldHp = 0; b.gunAmmo = 0; b.giant = false; b._baseMaxHp = b.maxHp; b._caged = false; b.heli = false; b.heliMinigun = 0; b.heliRockets = 0; b.beachball = 0;
       b.beachball = 0; b.coco = 0; b.boomerang = 0; b.dart = 0;
       if (opts.boss) { b.maxHp = 220; b.hp = 220; b._baseMaxHp = 220; }   // Gorilla King: extra taai
+      // matchmaking-bot (Lv 10..20): boven Lv 10 iets meer HP + klap-schade
+      if (opts.mmLevel && opts.mmLevel > 10) {
+        const over = opts.mmLevel - 10;                 // 1..10
+        b.maxHp = Math.round(b.maxHp * (1 + over * 0.06)); b.hp = b.maxHp; b._baseMaxHp = b.maxHp;
+        b.meleeMul = (b.meleeMul || 1) * (1 + over * 0.03);
+      }
       this.bot = b;
       this.vs.remote.charId = botChar;
     } else if (window.Net) {

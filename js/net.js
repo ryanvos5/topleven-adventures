@@ -212,6 +212,46 @@ const Net = {
     return this._versusJoin(code.toUpperCase().trim(), 'guest', cbs);
   },
 
+  // ---- random matchmaking: zoek een willekeurige tegenstander via een gedeeld kanaal ----
+  _mmCode(a, b) {
+    const s = [a, b].sort().join('|'); let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return 'MM' + h.toString(36).toUpperCase().slice(0, 6);
+  },
+  // begin te zoeken. cbs = versus-callbacks (onMatch vuurt zodra er verbonden is).
+  findMatch(cbs) {
+    if (!this.ready) return false;
+    this.cancelMatchmaking(); this.leaveVersus();
+    const myId = (this.user && this.user.id) || ('gast-' + Math.floor(Math.random() * 1e9));
+    const ch = this.sb.channel('smash-mm', { config: { broadcast: { self: false } } });
+    const mm = { ch, myId, paired: false, seek: null };
+    this._mm = mm;
+    const pairWith = (otherId) => {
+      if (mm.paired || !otherId || otherId === myId) return;
+      mm.paired = true;
+      if (mm.seek) { clearInterval(mm.seek); mm.seek = null; }
+      try { ch.unsubscribe(); } catch (e) {}
+      this._mm = null;
+      const host = (myId < otherId) ? myId : otherId;
+      const code = this._mmCode(myId, otherId);
+      this._versusJoin(code, myId === host ? 'host' : 'guest', cbs).catch(() => {});   // fout = UI valt na 8s terug op bot
+    };
+    ch.on('broadcast', { event: 'seek' }, (m) => { const o = m.payload && m.payload.id; if (o && o !== myId) { try { ch.send({ type: 'broadcast', event: 'seek', payload: { id: myId } }); } catch (e) {} pairWith(o); } });
+    ch.subscribe((status) => {
+      if (status === 'SUBSCRIBED' && this._mm === mm) {
+        const seek = () => { if (!mm.paired) { try { ch.send({ type: 'broadcast', event: 'seek', payload: { id: myId } }); } catch (e) {} } };
+        seek(); mm.seek = setInterval(seek, 700);
+      }
+    });
+    return true;
+  },
+  cancelMatchmaking() {
+    const mm = this._mm; this._mm = null;
+    if (!mm) return;
+    if (mm.seek) clearInterval(mm.seek);
+    try { mm.ch.unsubscribe(); } catch (e) {}
+  },
+
   async _versusJoin(code, role, cbs) {
     if (!this.ready) throw new Error('Geen verbinding met de server.');
     this.leaveVersus();

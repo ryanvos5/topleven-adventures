@@ -479,6 +479,16 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
   50%     { box-shadow: inset 0 0 12px rgba(0,0,0,.5), 0 0 18px rgba(255,210,80,.95); }
 }
 
+/* ===== Matchmaking-scherm ===== */
+#versus-mm { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 18px 0 8px; }
+#versus-mm.hidden { display: none; }
+.mm-spinner { width: 54px; height: 54px; border-radius: 50%; border: 5px solid rgba(255,140,50,.22); border-top-color: #ff8a3a; animation: mmspin 0.9s linear infinite; }
+@keyframes mmspin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .mm-spinner { animation: none !important; } }
+.mm-title { font-family: var(--pixel-font); font-weight: 900; font-size: clamp(15px, 3vw, 22px); color: #ffe27a; text-shadow: 2px 2px 0 #000; margin: 0; }
+.mm-sub { font-size: 13px; color: var(--text-dim); margin: 0; }
+#btn-mm-friends { margin-top: 2px; }
+
 /* lava knop-stijl (geanimeerd: gloeiende lava die stroomt + pulseert) */
 .stone-btn, .stone-tile, .stone-icon {
   position: relative; overflow: hidden;

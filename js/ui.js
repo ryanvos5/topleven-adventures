@@ -119,7 +119,9 @@ const UI = {
     });
 
     // ---- 1 vs 1 online ----
-    $('btn-versus').onclick = () => this.openVersusLobby();
+    $('btn-versus').onclick = () => this.startMatchmaking();
+    $('btn-mm-cancel').onclick = () => this.cancelMatchmaking();
+    $('btn-mm-friends').onclick = () => { this._stopMatchmaking(); if (window.Net) Net.leaveVersus(); this.openVersusLobby(); };
     $('btn-vs-host').onclick = () => this.versusHost();
     $('btn-vs-join').onclick = () => this.versusJoin();
     $('btn-vs-bot').onclick = () => this.openBotSetup();
@@ -721,6 +723,64 @@ const UI = {
   _esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; },
 
   // ---- 1 VS 1 LOBBY / SPEL ----
+  // ---- MATCHMAKING: 8s zoeken naar een online tegenstander, anders een sterke bot ----
+  startMatchmaking() {
+    this.leaveLobby();
+    this._botSetup = false; this._vsStarted = false; this._peer = null; this._myReady = false;
+    this._vsRole = 'host';
+    document.getElementById('versus-lobby').classList.add('hidden');
+    document.getElementById('versus-wait').classList.add('hidden');
+    document.getElementById('versus-result').classList.add('hidden');
+    document.getElementById('versus-mm').classList.remove('hidden');
+    this.show('versus');
+    this._mmSearching = true;
+    let left = 8; const cnt = document.getElementById('mm-count'); if (cnt) cnt.textContent = left;
+    if (this._mmIv) clearInterval(this._mmIv);
+    this._mmIv = setInterval(() => {
+      left--; if (cnt) cnt.textContent = Math.max(0, left);
+      if (left <= 0) { clearInterval(this._mmIv); this._mmIv = 0; this.matchmakingToBot(); }
+    }, 1000);
+    if (window.Net && Net.ready && Net.findMatch) Net.findMatch(this._versusCbs());   // online zoeken (onMatch -> lobby)
+  },
+  _stopMatchmaking() {
+    this._mmSearching = false;
+    if (this._mmIv) { clearInterval(this._mmIv); this._mmIv = 0; }
+    if (window.Net && Net.cancelMatchmaking) Net.cancelMatchmaking();
+  },
+  cancelMatchmaking() { this._stopMatchmaking(); if (window.Net) Net.leaveVersus(); this.show('menu'); },
+  // online tegenstander gevonden -> normale map-vote-lobby (zonder kamercode)
+  _matchmakingConnected() {
+    this._stopMatchmaking();
+    document.getElementById('versus-mm').classList.add('hidden');
+    this._vsStarted = false; this._myReady = false;
+    this._myVote = { map: VERSUS_MAPS[0].id, mode: 'smash' };
+    document.getElementById('versus-wait').classList.remove('hidden');
+    document.querySelector('.vs-wait-label').classList.add('hidden');   // geen code bij matchmaking
+    document.getElementById('vs-bot-diff').classList.add('hidden');
+    const rb = document.getElementById('btn-vs-ready'); rb.textContent = 'READY'; rb.classList.remove('on');
+  },
+  // geen online tegenstander binnen 8s -> lobby met map-keuze tegen een sterke bot
+  matchmakingToBot() {
+    this._stopMatchmaking();
+    if (window.Net) Net.leaveVersus();   // eventuele half-open verbinding opruimen
+    document.getElementById('versus-mm').classList.add('hidden');
+    this._botSetup = true;
+    this._botDiff = 10;
+    this._mmBotLevel = 10 + Math.floor(Math.random() * 11);   // Bot Lv 10..20
+    this._myVote = { map: VERSUS_MAPS[0].id, mode: 'smash' };
+    document.getElementById('versus-lobby').classList.add('hidden');
+    document.getElementById('versus-result').classList.add('hidden');
+    document.getElementById('versus-wait').classList.remove('hidden');
+    document.querySelector('.vs-wait-label').classList.add('hidden');
+    document.getElementById('vs-peer-status').textContent = '🤖 Geen online speler gevonden — Bot Lv ' + this._mmBotLevel;
+    document.getElementById('vs-lobby-opts').classList.remove('hidden');
+    this.renderMapVote();
+    document.getElementById('vs-bot-diff').classList.add('hidden');
+    const rb = document.getElementById('btn-vs-ready'); rb.textContent = '▶ START'; rb.classList.remove('on');
+    document.getElementById('vs-ready-status').textContent = 'Kies je map — de bot speelt op jouw map.';
+    this.show('versus');
+  },
+
   openVersusLobby() {
     this.leaveLobby();
     document.getElementById('versus-lobby').classList.remove('hidden');
@@ -815,7 +875,7 @@ const UI = {
     this._vsStarted = true;
     document.querySelector('.vs-wait-label').classList.remove('hidden');
     const v = this._myVote || { map: (Game.vsMap && Game.vsMap.id) || VERSUS_MAPS[0].id };
-    Game.startVersus('host', { mapId: v.map, mode: 'smash', bot: true, diff: this._botDiff || 5 });
+    Game.startVersus('host', { mapId: v.map, mode: 'smash', bot: true, diff: this._botDiff || 5, mmLevel: this._mmBotLevel || 0 });
   },
 
   // in een kamer: toon code, wacht op tegenstander
@@ -825,6 +885,7 @@ const UI = {
     document.getElementById('versus-msg').textContent = '';
     document.getElementById('versus-lobby').classList.add('hidden');
     document.getElementById('versus-wait').classList.remove('hidden');
+    document.querySelector('.vs-wait-label').classList.remove('hidden');
     document.getElementById('vs-room-code').textContent = code;
     document.getElementById('vs-peer-status').textContent = 'Wachten op tegenstander…';
     document.getElementById('vs-lobby-opts').classList.add('hidden');
@@ -832,6 +893,7 @@ const UI = {
 
   // tegenstander aanwezig -> open de vote-lobby (NIET meteen starten)
   _onVersusMatch() {
+    if (this._mmSearching) this._matchmakingConnected();   // via matchmaking: mm-scherm weg, lobby tonen
     if (window.Net && Net.lobby) Net.lobbyLeave();   // chat niet meer nodig tijdens het potje
     document.getElementById('vs-peer-status').textContent = '✅ Tegenstander aanwezig!';
     const bd = document.getElementById('vs-bot-diff'); if (bd) bd.classList.add('hidden');   // alleen bij bot
