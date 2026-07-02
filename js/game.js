@@ -1334,6 +1334,7 @@ const Game = {
     this._mmBot = !!opts.mmLevel;                       // matchmaking-bot: echte inzet (XP/munten/kisten als online)
     this._quakeUntil = 0; this._selfQuakeUntil = 0;    // aardbeving-ability reset
     this.abilityFx = [];                                // magische ring-effecten
+    this.zapFx = null;                                   // Ryan zap-dash bliksemboog
     this.vsPaused = false;                              // verse pot is nooit gepauzeerd
     if (!opts.journey) this.journey = null;            // alleen Journey-context houden bij een Journey-potje
     if (window.Net && Net.lobby) Net.lobbyLeave();   // niet meer "online in de lobby" tijdens een potje
@@ -1503,6 +1504,7 @@ const Game = {
     if (!this.vs) return;
     this.time += dt;
     if (this.abilityFx && this.abilityFx.length) this.abilityFx = this.abilityFx.filter((f) => this.time - f.born < f.dur);
+    if (this.zapFx && this.time - this.zapFx.born >= this.zapFx.dur) this.zapFx = null;
     this.dtScale = Math.min(3, dt / 16.6667);
     const v = this.vs;
 
@@ -2639,11 +2641,20 @@ const Game = {
     const opp = this.vsBot ? this.bot : (this.vs ? this.vs.remote : null);
     if (!opp) return;
     const dir = (opp.x >= p.x) ? 1 : -1; p.dir = dir;
+    const x0 = p.x;                                     // start van de dash
     const target = opp.x - dir * 22;
     const nx = Math.max(8, Math.min(this.vsMapW - 8, target));
-    // zap-spoor
-    for (let i = 0; i <= 8; i++) { const tx = p.x + (nx - p.x) * (i / 8); this.particles.push(new Particle(tx, p.y - 14, 0, 0, i % 2 ? '#bfe6ff' : '#ffe27a', 260, 2)); }
+    // zap-spoor: elektrische vonken langs het pad
+    const n = 12;
+    for (let i = 0; i <= n; i++) {
+      const tx = x0 + (nx - x0) * (i / n), ty = p.y - 14 + (Math.random() - 0.5) * 10;
+      this.particles.push(new Particle(tx, ty, (Math.random() - 0.5) * 1.5, (Math.random() - 0.5) * 1.5, i % 2 ? '#bfe6ff' : '#ffffff', 240 + Math.random() * 120, 2));
+    }
+    for (let i = 0; i < 6; i++) this.particles.push(new Particle(nx, p.y - 14, (Math.random() - 0.5) * 4, -Math.random() * 3, i % 2 ? '#7fd4ff' : '#fff7c2', 320, 3));
+    // lingering bliksemboog van start -> eind (getekend in renderVersus)
+    this.zapFx = { x0, y0: x0 === nx ? p.y - 14 : p.y - 14, x1: nx, y1: p.y - 14, born: this.time, dur: 240 };
     p.x = nx; p.knockVx = dir * 6;
+    if (window.Sfx) Sfx.play('zap');
     this.shake = Math.max(this.shake, 6);
     // raak de tegenstander als 'ie binnen bereik is
     if (Math.abs(opp.x - p.x) < 40 && Math.abs((opp.y || p.y) - p.y) < 40) {
@@ -3440,6 +3451,29 @@ const Game = {
     if (map.jungle2 && this.jungleCage) this.drawCage(ctx);  // kooi-tralies vóór de spelers
     if (this.ball) this.drawBall(ctx);                       // strandbal
     if (map.beach && this.tide) this.drawTideWater(ctx);     // vloed-water over de spelers
+    // Ryan zap-dash: bliksemboog van start -> eind
+    if (this.zapFx) {
+      const z = this.zapFx, t = (this.time - z.born) / z.dur;
+      if (t >= 0 && t < 1) {
+        const a = 1 - t, dx = z.x1 - z.x0, dy = z.y1 - z.y0, len = Math.hypot(dx, dy) || 1;
+        const nxp = -dy / len, nyp = dx / len;                 // loodrecht op het pad
+        const segs = 9;
+        // 2 lagen: dikke gloed + felle kern
+        for (let pass = 0; pass < 2; pass++) {
+          ctx.strokeStyle = pass ? '#ffffff' : '#7fd4ff';
+          ctx.lineWidth = pass ? 1.4 : 3.2;
+          ctx.globalAlpha = a * (pass ? 1 : 0.55);
+          ctx.beginPath(); ctx.moveTo(z.x0, z.y0);
+          for (let i = 1; i < segs; i++) {
+            const f = i / segs;
+            const zig = (i % 2 ? 1 : -1) * (4 + Math.random() * 5) * Math.sin(f * Math.PI);
+            ctx.lineTo(z.x0 + dx * f + nxp * zig, z.y0 + dy * f + nyp * zig);
+          }
+          ctx.lineTo(z.x1, z.y1); ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      }
+    }
     // ability-effect: magische ring + sprankels rond de speler die 'm inzette
     if (this.abilityFx) for (const fx of this.abilityFx) {
       const t = (this.time - fx.born) / fx.dur; if (t < 0 || t >= 1) continue;
