@@ -1388,7 +1388,7 @@ const UI = {
       const pu = SHOP_POWERUPS[id]; if (!pu) return;
       if (mode === 'shop' && pu.chestOnly) return;              // kist-only power-ups niet te koop
       const count = Storage.powerupCount(id);
-      if (mode === 'inventory' && pu.chestOnly && count <= 0) return;   // pas tonen als je 'm hebt
+      if (mode === 'inventory' && pu.chestOnly && count <= 0 && !Storage.inLoadout(id)) return;   // pas tonen als je 'm hebt (of 'm nog in je loadout zit om uit te trekken)
       const card = document.createElement('div');
       card.className = 'shop-card powerup-card' + (count > 0 ? ' owned' : '');
       const inLo = Storage.inLoadout(id);
@@ -1405,8 +1405,8 @@ const UI = {
         btn.textContent = 'KOOP — ' + pu.cost + ' ●';
         btn.onclick = () => { if (Storage.buyPowerup(id)) this.renderShop(); };
       } else {                              // inventaris: loadout-toggle
-        if (count <= 0) { card.classList.add('locked'); btn.classList.add('cant'); btn.textContent = 'Koop in shop'; }
-        else if (inLo) { btn.classList.add('equipped'); btn.textContent = '✓ IN LOADOUT'; card.classList.add('in-loadout'); btn.onclick = () => { Storage.toggleLoadout(id); this.renderInventory(); }; }
+        if (inLo) { btn.classList.add('equipped'); btn.textContent = count > 0 ? '✓ IN LOADOUT' : '✕ UIT LOADOUT'; card.classList.add('in-loadout'); if (count <= 0) card.classList.add('depleted'); btn.onclick = () => { Storage.toggleLoadout(id); this.renderInventory(); }; }
+        else if (count <= 0) { card.classList.add('locked'); btn.classList.add('cant'); btn.textContent = 'Koop in shop'; }
         else { btn.classList.add('equip'); btn.textContent = 'KIES'; btn.onclick = () => { if (!Storage.toggleLoadout(id)) this.flashLoadoutFull(); this.renderInventory(); }; }
       }
       card.appendChild(btn);
