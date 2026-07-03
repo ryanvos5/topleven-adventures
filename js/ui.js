@@ -105,11 +105,16 @@ const UI = {
     $('btn-auth-submit').onclick = () => this.submitAuth();
     this.refreshAuthUI();
 
-    // ---- lobby chat ----
-    $('btn-chat').onclick = () => this.openChat();
-    $('btn-chat-back').onclick = () => { this.closeChat(); this.show('menu'); };
-    $('chat-send').onclick = () => this.sendChat();
-    $('chat-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') this.sendChat(); });
+    // ---- vrienden (Friends) ----
+    $('btn-chat').onclick = () => this.openFriends();
+    $('btn-chat-back').onclick = () => { this.closeFriends(); this.show('menu'); };
+    document.querySelectorAll('#friends-tabs .shop-tab').forEach((b) => { b.onclick = () => this.setFriendsTab(b.dataset.ftab); });
+    $('friend-add-btn').onclick = () => this.friendAdd();
+    $('friend-add-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') this.friendAdd(); });
+    $('btn-convo-back').onclick = () => this.closeConvo();
+    $('convo-send').onclick = () => this.sendConvo();
+    $('convo-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') this.sendConvo(); });
+    $('btn-convo-challenge').onclick = () => { if (this._convo) this.inviteFromChat(this._convo.id, this._convo.nick); };
     $('btn-invite-accept').onclick = () => this.acceptChatInvite();
     $('btn-invite-ignore').onclick = () => { document.getElementById('invite-screen').classList.add('hidden'); this._chatInvite = null; };
 
@@ -125,7 +130,6 @@ const UI = {
     // ---- 1 vs 1 online ----
     $('btn-versus').onclick = () => this.startMatchmaking();
     $('btn-mm-cancel').onclick = () => this.cancelMatchmaking();
-    $('btn-mm-friends').onclick = () => { this._stopMatchmaking(); if (window.Net) Net.leaveVersus(); this.openVersusLobby(); };
     $('btn-vs-host').onclick = () => this.versusHost();
     $('btn-vs-join').onclick = () => this.versusJoin();
     $('btn-vs-bot').onclick = () => this.openBotSetup();
@@ -616,102 +620,218 @@ const UI = {
     // wacht tot de server klaar is én de sessie/nickname geladen is (anders zou je als "Gast" verschijnen)
     if ((!Net.ready || !Net.authReady) && tries < 20) { setTimeout(() => this.ensurePresence(tries + 1), 400); return; }
     if (!Net.ready) return;
-    if (Net.lobby || this._presenceJoining) { this.refreshChatBadge(); return; }
+    if (Net.lobby || this._presenceJoining) { this.refreshChatBadge(); this.startDMInbox(); this.refreshFriendMeta(); return; }
     this._presenceJoining = true;
     Net.lobbyJoin({
-      onChat: (m) => { if (this._chatOpen) this.onChatMsg(m); },
-      onPeers: (list) => { this._peers = list; this.refreshChatBadge(); if (this._chatOpen) this.renderOnline(list); },
+      onPeers: (list) => { this._peers = list; this.refreshChatBadge(); if (this._friendsOpen) this.renderFriendsOnline(); },
       onInvite: (p) => this.onChatInvite(p),
-    }).then(() => { this._presenceJoining = false; this.refreshChatBadge(); })
+    }).then(() => { this._presenceJoining = false; this.refreshChatBadge(); this.startDMInbox(); this.refreshFriendMeta(); })
       .catch(() => { this._presenceJoining = false; });
   },
 
-  leavePresence() { if (window.Net) Net.lobbyLeave(); this._peers = []; this.refreshChatBadge(); },
+  leavePresence() { if (window.Net) { Net.lobbyLeave(); Net.unsubscribeDMs(); } this._peers = []; this.refreshChatBadge(); },
 
-  // groen puntje + aantal anderen online op de chat-knop
+  // DM-inbox (realtime): binnenkomende berichten -> live in het gesprek of anders een badge
+  startDMInbox() {
+    if (!window.Net || !Net.isLoggedIn() || Net._dmChannel) return;   // niet dubbel abonneren
+    Net.subscribeDMs((m) => {
+      if (this._convo && this._convo.id === m.sender) { this.addConvoLine(m.body, false); }
+      else { this._unreadDM = true; this.refreshChatBadge(); }
+    });
+  },
+  // aantal openstaande vriendschapsverzoeken ophalen (voor de badge)
+  async refreshFriendMeta() {
+    if (!window.Net || !Net.isLoggedIn()) { this._reqCount = 0; this.refreshChatBadge(); return; }
+    try {
+      const ov = await Net.friendsOverview();
+      this._reqCount = ov.filter((r) => r.kind === 'incoming').length;
+    } catch (e) { this._reqCount = 0; }
+    this.refreshChatBadge();
+  },
+
+  // badge op de Friends-knop: aantal openstaande verzoeken, anders een puntje bij een nieuw bericht
   refreshChatBadge() {
     const btn = document.getElementById('btn-chat');
     if (!btn) return;
     let dot = document.getElementById('chat-badge');
     if (!dot) { dot = document.createElement('span'); dot.id = 'chat-badge'; dot.className = 'chat-badge'; btn.appendChild(dot); }
-    const others = (this._peers || []).filter((p) => !p.me && !p.guest).length;   // gasten niet meetellen
-    if (others > 0) { dot.textContent = others; dot.classList.add('on'); }
+    const req = this._reqCount || 0;
+    if (req > 0) { dot.textContent = req; dot.classList.add('on'); }
+    else if (this._unreadDM) { dot.textContent = '•'; dot.classList.add('on'); }
     else { dot.textContent = ''; dot.classList.remove('on'); }
   },
 
-  openChat() {
-    this._chatOpen = true;
+  openFriends() {
+    this._friendsOpen = true;
+    this._unreadDM = false;
     this.show('chat');
-    document.getElementById('chat-messages').innerHTML = '';
-    document.getElementById('chat-online-list').innerHTML = '';
-    if (window.Net && Net.lobby) {
-      document.getElementById('chat-msg').textContent = '';
-      this.renderOnline(this._peers || []);
-      this.addChatLine(null, 'Welkom in de lobby! Wees aardig 🙂', true);
-    } else {
-      document.getElementById('chat-msg').textContent = 'Verbinden…';
-      this.ensurePresence();
-      // even wachten en dan tonen zodra verbonden
-      let n = 0;
-      const wait = () => {
-        if (window.Net && Net.lobby) {
-          document.getElementById('chat-msg').textContent = '';
-          this.renderOnline(this._peers || []);
-          this.addChatLine(null, 'Welkom in de lobby! Wees aardig 🙂', true);
-        } else if (n++ < 20 && this._chatOpen) { setTimeout(wait, 300); }
-        else if (this._chatOpen) { document.getElementById('chat-msg').textContent = '⚠ Geen verbinding met de server.'; }
-      };
-      setTimeout(wait, 300);
+    this.closeConvo(true);                        // begin altijd in de lijst-weergave
+    this.ensurePresence();                        // online-status + uitdagingen ontvangen
+    const loggedIn = window.Net && Net.isLoggedIn();
+    document.getElementById('friends-tabs').classList.toggle('hidden', !loggedIn);
+    document.getElementById('ftab-list').classList.toggle('hidden', !loggedIn);
+    document.getElementById('ftab-add').classList.add('hidden');
+    document.getElementById('friends-login-msg').classList.toggle('hidden', !!loggedIn);
+    if (!loggedIn) return;
+    this.setFriendsTab('list');
+    this.renderFriends();
+    this.refreshChatBadge();
+  },
+
+  closeFriends() { this._friendsOpen = false; this.closeConvo(true); },
+
+  setFriendsTab(tab) {
+    this._friendsTab = tab;
+    document.querySelectorAll('#friends-tabs .shop-tab').forEach((b) => b.classList.toggle('active', b.dataset.ftab === tab));
+    document.getElementById('ftab-list').classList.toggle('hidden', tab !== 'list');
+    document.getElementById('ftab-add').classList.toggle('hidden', tab !== 'add');
+    if (tab === 'add') { const i = document.getElementById('friend-add-input'); if (i) setTimeout(() => i.focus(), 60); }
+  },
+
+  async renderFriends() {
+    if (!window.Net || !Net.isLoggedIn()) return;
+    const emptyEl = document.getElementById('friends-empty');
+    emptyEl.textContent = 'Laden…';
+    let ov;
+    try { ov = await Net.friendsOverview(); }
+    catch (e) { emptyEl.textContent = '⚠ ' + (e.message || e); return; }
+    this._friends = ov;
+    this._reqCount = ov.filter((r) => r.kind === 'incoming').length;
+    this.refreshChatBadge();
+    this._paintFriends();
+  },
+
+  // vrienden tekenen vanuit de cache (geen netwerk) — ook gebruikt bij presence-updates
+  _paintFriends() {
+    const ov = this._friends || [];
+    const listEl = document.getElementById('friends-list');
+    const reqEl = document.getElementById('friends-requests');
+    const outEl = document.getElementById('friends-outgoing');
+    const emptyEl = document.getElementById('friends-empty');
+    if (!listEl) return;
+    listEl.innerHTML = ''; reqEl.innerHTML = ''; outEl.innerHTML = '';
+    const friends = ov.filter((r) => r.kind === 'friend');
+    const incoming = ov.filter((r) => r.kind === 'incoming');
+    const outgoing = ov.filter((r) => r.kind === 'outgoing');
+    if (incoming.length) {
+      const h = document.createElement('div'); h.className = 'friends-subhead'; h.textContent = 'Verzoeken';
+      reqEl.appendChild(h); incoming.forEach((r) => reqEl.appendChild(this._friendRow(r, 'incoming')));
+    }
+    const on = (id) => (window.Net && Net.isOnline(id)) ? 1 : 0;
+    friends.sort((a, b) => on(b.other_id) - on(a.other_id));      // online-vrienden bovenaan
+    friends.forEach((r) => listEl.appendChild(this._friendRow(r, 'friend')));
+    emptyEl.textContent = (friends.length || incoming.length) ? '' : 'Nog geen vrienden. Voeg er een toe via "Toevoegen".';
+    if (outgoing.length) {
+      const h = document.createElement('div'); h.className = 'friends-subhead'; h.textContent = 'Verzonden verzoeken';
+      outEl.appendChild(h); outgoing.forEach((r) => outEl.appendChild(this._friendRow(r, 'outgoing')));
     }
   },
 
-  closeChat() { this._chatOpen = false; },   // presence blijft aan voor de teller
+  renderFriendsOnline() { if (this._friendsOpen && !this._convo) this._paintFriends(); },
 
-  sendChat() {
-    const inp = document.getElementById('chat-input');
+  _friendRow(r, kind) {
+    const row = document.createElement('div'); row.className = 'friend-row';
+    const online = kind === 'friend' && window.Net && Net.isOnline(r.other_id);
+    const lvl = (typeof playerLevel === 'function') ? playerLevel(r.xp || 0) : 1;
+    row.innerHTML = '<span class="fr-dot ' + (online ? 'on' : '') + '"></span>' +
+      '<span class="fr-name">' + this._esc(r.nickname) + '</span>' +
+      '<span class="fr-lvl">Lvl ' + lvl + '</span>';
+    const actions = document.createElement('span'); actions.className = 'fr-actions';
+    const mk = (cls, txt, title, fn, disabled) => {
+      const b = document.createElement('button'); b.className = 'fr-btn ' + cls; b.textContent = txt;
+      b.title = title; if (disabled) b.disabled = true; b.onclick = fn; return b;
+    };
+    if (kind === 'friend') {
+      actions.appendChild(mk('challenge', '⚔', online ? 'Uitdagen' : 'Offline', () => this.inviteFromChat(r.other_id, r.nickname), !online));
+      actions.appendChild(mk('', '💬', 'Chatten', () => this.openConvo(r.other_id, r.nickname)));
+      actions.appendChild(mk('danger', '✕', 'Vriend verwijderen', () => this.removeFriend(r.other_id, r.nickname)));
+    } else if (kind === 'incoming') {
+      actions.appendChild(mk('accept', '✓', 'Accepteren', () => this.acceptReq(r.other_id)));
+      actions.appendChild(mk('danger', '✕', 'Weigeren', () => this.removeFriend(r.other_id, r.nickname, true)));
+    } else {
+      const w = document.createElement('span'); w.className = 'fr-pending'; w.textContent = 'wacht…'; actions.appendChild(w);
+      actions.appendChild(mk('danger', '✕', 'Intrekken', () => this.removeFriend(r.other_id, r.nickname, true)));
+    }
+    row.appendChild(actions);
+    return row;
+  },
+
+  async friendAdd() {
+    const inp = document.getElementById('friend-add-input');
+    const msg = document.getElementById('friend-add-msg');
+    const name = (inp.value || '').trim();
+    if (!name) return;
+    if (!window.Net || !Net.isLoggedIn()) { msg.textContent = 'Log eerst in.'; return; }
+    msg.textContent = 'Versturen…';
+    let res;
+    try { res = await Net.friendRequest(name); }
+    catch (e) { msg.textContent = '⚠ ' + (e.message || e); return; }
+    const texts = {
+      sent: '✅ Verzoek verstuurd naar ' + name + '.', now_friends: '🎉 Jullie zijn nu vrienden!',
+      already_sent: 'Je hebt al een verzoek gestuurd.', already_friends: 'Jullie zijn al vrienden.',
+      not_found: '⚠ Geen speler met die gebruikersnaam.', self: 'Je kunt jezelf niet toevoegen.',
+      not_logged_in: 'Log eerst in.',
+    };
+    msg.textContent = texts[res] || res;
+    if (res === 'sent' || res === 'now_friends') inp.value = '';
+    this.renderFriends();
+  },
+
+  async acceptReq(id) { try { await Net.friendAccept(id); } catch (e) {} this.renderFriends(); },
+  async removeFriend(id, nick, isReq) {
+    if (!confirm((nick ? nick + ' ' : '') + (isReq ? 'weigeren/intrekken?' : 'als vriend verwijderen?'))) return;
+    try { await Net.friendRemove(id); } catch (e) {}
+    if (this._convo && this._convo.id === id) this.closeConvo(true);
+    this.renderFriends();
+  },
+
+  // ---- DM-gesprek met 1 vriend (blijft opgeslagen) ----
+  async openConvo(id, nick) {
+    this._convo = { id: id, nick: nick };
+    document.getElementById('friends-main').classList.add('hidden');
+    document.getElementById('friends-convo').classList.remove('hidden');
+    document.getElementById('convo-name').textContent = nick;
+    const online = window.Net && Net.isOnline(id);
+    const ch = document.getElementById('btn-convo-challenge');
+    ch.disabled = !online; ch.textContent = online ? '⚔ Uitdagen' : '⚔ Offline';
+    const box = document.getElementById('convo-messages'); box.innerHTML = '';
+    document.getElementById('convo-msg').textContent = 'Laden…';
+    let msgs;
+    try { msgs = await Net.loadMessages(id); }
+    catch (e) { document.getElementById('convo-msg').textContent = '⚠ ' + (e.message || e); return; }
+    document.getElementById('convo-msg').textContent = '';
+    const me = Net.user && Net.user.id;
+    if (!msgs.length) this.addConvoLine('Nog geen berichten. Zeg hallo 👋', null);
+    else msgs.forEach((m) => this.addConvoLine(m.body, m.sender === me));
+    const inp = document.getElementById('convo-input'); if (inp) inp.focus();
+  },
+
+  closeConvo(silent) {
+    this._convo = null;
+    const c = document.getElementById('friends-convo'); if (c) c.classList.add('hidden');
+    const m = document.getElementById('friends-main'); if (m) m.classList.remove('hidden');
+    if (!silent && this._friendsOpen) this.renderFriends();
+  },
+
+  async sendConvo() {
+    if (!this._convo) return;
+    const inp = document.getElementById('convo-input');
     const text = (inp.value || '').trim();
     if (!text) return;
-    if (!window.Net || !Net.lobby) return;
-    const now = (window.Date && Date.now) ? Date.now() : 0;
-    if (now && this._lastChat && now - this._lastChat < 500) return;   // anti-spam
-    this._lastChat = now;
-    Net.lobbyChat(text);
-    this.addChatLine(Net.lobbyMyNick(), text, false, true);            // eigen bericht meteen tonen
     inp.value = '';
+    this.addConvoLine(text, true);                 // eigen bericht meteen tonen
+    try { await Net.sendMessage(this._convo.id, text); }
+    catch (e) { document.getElementById('convo-msg').textContent = '⚠ ' + (e.message || e); }
   },
 
-  onChatMsg(m) { if (m && m.text) this.addChatLine(m.nick, m.text, false, false); },
-
-  addChatLine(nick, text, system, me) {
-    const box = document.getElementById('chat-messages');
-    if (!box) return;
+  addConvoLine(text, me) {
+    const box = document.getElementById('convo-messages'); if (!box) return;
     const row = document.createElement('div');
-    row.className = 'chat-line' + (system ? ' sys' : '') + (me ? ' me' : '');
-    if (system) row.innerHTML = '<span class="chat-sys">' + this._esc(text) + '</span>';
-    else row.innerHTML = '<span class="chat-nick">' + this._esc(nick) + ':</span> ' + this._esc(text);
+    row.className = 'dm-line' + (me === true ? ' me' : (me === null ? ' sys' : ''));
+    row.innerHTML = '<span>' + this._esc(text) + '</span>';
     box.appendChild(row);
-    while (box.children.length > 60) box.removeChild(box.firstChild);
+    while (box.children.length > 200) box.removeChild(box.firstChild);
     box.scrollTop = box.scrollHeight;
-  },
-
-  renderOnline(list) {
-    const el = document.getElementById('chat-online-list');
-    if (!el) return;
-    el.innerHTML = '';
-    list.forEach((p) => {
-      if (p.guest && !p.me) return;            // gasten (niet-ingelogd) niet tonen in de lijst
-      const chip = document.createElement('span');
-      chip.className = 'chat-chip' + (p.me ? ' me' : '');
-      chip.textContent = p.nick + (p.me ? ' (jij)' : '');
-      if (!p.me) {
-        const inv = document.createElement('button');
-        inv.className = 'chat-invite-btn'; inv.textContent = '⚔';
-        inv.title = 'Uitnodigen voor 1v1';
-        inv.onclick = () => this.inviteFromChat(p.id, p.nick);
-        chip.appendChild(inv);
-      }
-      el.appendChild(chip);
-    });
   },
 
   // iemand uitnodigen vanuit de chat: maak een kamer + stuur de invite, ga naar de wachtruimte
@@ -737,7 +857,7 @@ const UI = {
     const p = this._chatInvite; this._chatInvite = null;
     document.getElementById('invite-screen').classList.add('hidden');
     if (!p) return;
-    this.closeChat();                       // chat verlaten, naar de versus-lobby
+    this.closeFriends();                    // vrienden-scherm verlaten, naar de versus-lobby
     this._vsRole = 'guest';
     this.openVersusLobby();
     const inp = document.getElementById('vs-code-input'); if (inp) inp.value = p.code;

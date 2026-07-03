@@ -11,9 +11,9 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#0d0f14" />
   <title>Tiny Power Smashers</title>
-  <link rel="icon" type="image/svg+xml" href="icon.svg?v=menu67" />
-  <link rel="apple-touch-icon" href="icon.svg?v=menu67" />
-  <link rel="stylesheet" href="css/style.css?v=menu67" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg?v=menu68" />
+  <link rel="apple-touch-icon" href="icon.svg?v=menu68" />
+  <link rel="stylesheet" href="css/style.css?v=menu68" />
 </head>
 <body>
   <div id="game-root">
@@ -44,7 +44,7 @@
     </div>
 
     <!-- ===== Splash bij opstarten (logo, fadet vanzelf weg) ===== -->
-    <div id="splash"><img src="logo.svg?v=menu67" alt="Tiny Power Smashers" /></div>
+    <div id="splash"><img src="logo.svg?v=menu68" alt="Tiny Power Smashers" /></div>
 
     <!-- ===== Canvas (de spelwereld) ===== -->
     <canvas id="game-canvas"></canvas>
@@ -106,7 +106,7 @@
     <div id="menu-screen" class="screen">
       <div class="menu-frame">
         <header class="menu-top">
-          <img class="menu-logo-img" src="logo.svg?v=menu67" alt="Tiny Power Smashers" />
+          <img class="menu-logo-img" src="logo.svg?v=menu68" alt="Tiny Power Smashers" />
           <div class="menu-hud">
             <span class="menu-coins-top">
               <svg class="px-icon" viewBox="0 0 8 8" width="16" height="16" shape-rendering="crispEdges"><rect x="2" y="1" width="4" height="6" fill="#caa12e"/><rect x="1" y="2" width="6" height="4" fill="#ffd24a"/><rect x="3" y="2" width="1" height="4" fill="#fff0a8"/></svg>
@@ -146,7 +146,7 @@
           <button id="btn-shop" class="stone-btn"><svg class="ic"><use href="#ic-cart"/></svg> Shop</button>
           <button id="btn-inventory" class="stone-btn"><svg class="ic"><use href="#ic-backpack"/></svg> Inventaris</button>
           <div class="menu-bottom-right">
-            <button id="btn-chat" class="stone-btn">Lobby Chat</button>
+            <button id="btn-chat" class="stone-btn"><svg class="ic"><use href="#ic-char"/></svg> Friends</button>
             <button id="btn-leaderboard" class="stone-btn">Leaderboard</button>
           </div>
         </footer>
@@ -266,18 +266,49 @@
       </div>
     </div>
 
-    <!-- ===== Lobby chat ===== -->
+    <!-- ===== Friends (vrienden, online, uitdagen, DM-chat) ===== -->
     <div id="chat-screen" class="screen hidden">
-      <div class="screen-inner chat-inner">
-        <h2 class="screen-title"><svg class="ic"><use href="#ic-chat"/></svg> LOBBY CHAT</h2>
-        <div class="chat-online"><span class="chat-online-label">Online:</span><span id="chat-online-list"></span></div>
-        <div id="chat-messages" class="chat-messages"></div>
-        <div class="chat-input-row">
-          <input id="chat-input" class="auth-input" type="text" maxlength="120" autocomplete="off" placeholder="Typ een bericht…" />
-          <button id="chat-send" class="big-btn">➤</button>
+      <div class="screen-inner friends-inner">
+        <!-- lijst-weergave -->
+        <div id="friends-main">
+          <h2 class="screen-title"><svg class="ic"><use href="#ic-char"/></svg> VRIENDEN</h2>
+          <div id="friends-tabs" class="shop-tabs">
+            <button class="shop-tab active" data-ftab="list">Vrienden</button>
+            <button class="shop-tab" data-ftab="add">Toevoegen</button>
+          </div>
+          <!-- tab: vriendenlijst -->
+          <div id="ftab-list">
+            <div id="friends-requests"></div>
+            <div id="friends-list" class="friends-list"></div>
+            <p id="friends-empty" class="screen-sub"></p>
+          </div>
+          <!-- tab: toevoegen -->
+          <div id="ftab-add" class="hidden">
+            <p class="screen-sub">Voeg een vriend toe met zijn gebruikersnaam.</p>
+            <div class="chat-input-row">
+              <input id="friend-add-input" class="auth-input" type="text" maxlength="24" autocomplete="off" placeholder="Gebruikersnaam…" />
+              <button id="friend-add-btn" class="big-btn">Sturen</button>
+            </div>
+            <p id="friend-add-msg" class="screen-sub"></p>
+            <div id="friends-outgoing" class="friends-list"></div>
+          </div>
+          <p id="friends-login-msg" class="screen-sub hidden">Log in via het menu (▸ account) om vrienden toe te voegen en te chatten.</p>
+          <button class="back-btn" id="btn-chat-back">◀ TERUG</button>
         </div>
-        <p id="chat-msg" class="screen-sub"></p>
-        <button class="back-btn" id="btn-chat-back">◀ TERUG</button>
+        <!-- gespreks-weergave (DM met 1 vriend) -->
+        <div id="friends-convo" class="hidden">
+          <div class="convo-head">
+            <button id="btn-convo-back" class="convo-back">◀</button>
+            <span id="convo-name" class="convo-name"></span>
+            <button id="btn-convo-challenge" class="convo-challenge">⚔ Uitdagen</button>
+          </div>
+          <div id="convo-messages" class="chat-messages"></div>
+          <div class="chat-input-row">
+            <input id="convo-input" class="auth-input" type="text" maxlength="500" autocomplete="off" placeholder="Bericht…" />
+            <button id="convo-send" class="big-btn">➤</button>
+          </div>
+          <p id="convo-msg" class="screen-sub"></p>
+        </div>
       </div>
     </div>
 
@@ -303,7 +334,6 @@
           <p class="mm-title">Zoeken naar tegenstander…</p>
           <p class="mm-sub">Nog <span id="mm-count">8</span>s — anders speel je tegen een sterke bot</p>
           <button id="btn-mm-cancel" class="big-btn secondary">Annuleren</button>
-          <button id="btn-mm-friends" class="text-btn">Privé kamer (code)</button>
         </div>
         <div id="versus-lobby">
           <button id="btn-vs-host" class="big-btn">KAMER MAKEN</button>
@@ -474,17 +504,17 @@
     </div>
   </div>
 
-  <script src="vendor/supabase.min.js?v=menu67"></script>
-  <script src="js/config.js?v=menu67"></script>
-  <script src="js/storage.js?v=menu67"></script>
-  <script src="js/audio.js?v=menu67"></script>
-  <script src="js/net.js?v=menu67"></script>
-  <script src="js/input.js?v=menu67"></script>
-  <script src="js/sprites.js?v=menu67"></script>
-  <script src="js/menubg.js?v=menu67"></script>
-  <script src="js/entities.js?v=menu67"></script>
-  <script src="js/ui.js?v=menu67"></script>
-  <script src="js/game.js?v=menu67"></script>
-  <script src="js/main.js?v=menu67"></script>
+  <script src="vendor/supabase.min.js?v=menu68"></script>
+  <script src="js/config.js?v=menu68"></script>
+  <script src="js/storage.js?v=menu68"></script>
+  <script src="js/audio.js?v=menu68"></script>
+  <script src="js/net.js?v=menu68"></script>
+  <script src="js/input.js?v=menu68"></script>
+  <script src="js/sprites.js?v=menu68"></script>
+  <script src="js/menubg.js?v=menu68"></script>
+  <script src="js/entities.js?v=menu68"></script>
+  <script src="js/ui.js?v=menu68"></script>
+  <script src="js/game.js?v=menu68"></script>
+  <script src="js/main.js?v=menu68"></script>
 </body>
 </html>

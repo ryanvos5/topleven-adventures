@@ -405,6 +405,72 @@ const Net = {
     this.lobby = null; this.lobbyPeers = {};
   },
 
+  // ============ VRIENDEN + DM-CHAT ============
+  _dmChannel: null,
+
+  async friendRequest(username) {
+    if (!this.user) throw new Error('Log eerst in om vrienden toe te voegen.');
+    const { data, error } = await this.sb.rpc('friend_request', { uname: (username || '').trim() });
+    if (error) throw error;
+    return data;   // 'sent' | 'now_friends' | 'already_sent' | 'already_friends' | 'not_found' | 'self'
+  },
+  async friendAccept(otherId) {
+    const { data, error } = await this.sb.rpc('friend_accept', { other: otherId });
+    if (error) throw error; return data;
+  },
+  async friendRemove(otherId) {
+    const { data, error } = await this.sb.rpc('friend_remove', { other: otherId });
+    if (error) throw error; return data;
+  },
+  async friendsOverview() {
+    if (!this.user) return [];
+    const { data, error } = await this.sb.rpc('friends_overview');
+    if (error) { console.warn('[Net] friendsOverview', error); return []; }
+    return data || [];
+  },
+
+  // DM's (blijven opgeslagen in game_messages)
+  async loadMessages(friendId, limit) {
+    if (!this.user) return [];
+    const me = this.user.id;
+    const { data, error } = await this.sb.from('game_messages')
+      .select('sender,recipient,body,created_at')
+      .or('and(sender.eq.' + me + ',recipient.eq.' + friendId + '),and(sender.eq.' + friendId + ',recipient.eq.' + me + ')')
+      .order('created_at', { ascending: true })
+      .limit(limit || 100);
+    if (error) { console.warn('[Net] loadMessages', error); return []; }
+    return data || [];
+  },
+  async sendMessage(friendId, body) {
+    if (!this.user) throw new Error('Niet ingelogd.');
+    const text = (body || '').trim().slice(0, 500);
+    if (!text) return null;
+    const { data, error } = await this.sb.from('game_messages')
+      .insert({ sender: this.user.id, recipient: friendId, body: text })
+      .select('sender,recipient,body,created_at').single();
+    if (error) throw error;
+    return data;
+  },
+  // realtime: binnenkomende DM's (voor de badge + live in het open gesprek)
+  subscribeDMs(onMessage) {
+    if (!this.user) return;
+    this.unsubscribeDMs();
+    const ch = this.sb.channel('dm-inbox-' + this.user.id)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'game_messages', filter: 'recipient=eq.' + this.user.id },
+        (payload) => { if (onMessage && payload && payload.new) onMessage(payload.new); });
+    ch.subscribe();
+    this._dmChannel = ch;
+  },
+  unsubscribeDMs() {
+    if (this._dmChannel) { try { this.sb.removeChannel(this._dmChannel); } catch (e) {} this._dmChannel = null; }
+  },
+  // is deze speler nu online? (via de lobby-presence)
+  isOnline(id) {
+    if (!id) return false;
+    if (id === this.lobbyMyId()) return true;
+    return !!this.lobbyPeers[id];
+  },
+
   leaveVersus() {
     if (this.versus) {
       if (this.versus.joinTimer) { clearInterval(this.versus.joinTimer); }

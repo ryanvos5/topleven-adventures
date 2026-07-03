@@ -975,6 +975,46 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
 .chat-input-row .auth-input { flex: 1; margin: 0; }
 .chat-input-row .big-btn { width: auto; padding: 0 18px; margin: 0; }
 
+/* ====== Friends (vrienden + DM-chat) ====== */
+.friends-inner { width: min(460px, 95%); display: flex; flex-direction: column; }
+#friends-main, #friends-convo { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; width: 100%; }
+#ftab-list { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+.friends-list { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.friends-subhead { text-align: left; font-size: 11px; letter-spacing: 1px; color: var(--text-dim); text-transform: uppercase; margin: 4px 0 2px; }
+.friend-row {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  background: #232b3a; border: 1px solid #313c50; border-radius: 10px; padding: 8px 10px;
+}
+.fr-dot { width: 9px; height: 9px; border-radius: 50%; background: #55606f; flex: 0 0 auto; }
+.fr-dot.on { background: #46d17a; box-shadow: 0 0 6px #46d17a; }
+.fr-name { font-weight: bold; color: #eaf1fb; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fr-lvl { font-size: 11px; color: #9fb0c4; margin-left: 2px; flex: 0 0 auto; }
+.fr-actions { margin-left: auto; display: flex; align-items: center; gap: 5px; flex: 0 0 auto; }
+.fr-pending { font-size: 11px; color: var(--text-dim); font-style: italic; }
+.fr-btn {
+  border: none; border-radius: 8px; cursor: pointer; font-weight: 900; font-size: 13px;
+  line-height: 1; padding: 6px 8px; background: #35415a; color: #dbe6f5;
+}
+.fr-btn.challenge { background: var(--gold, #f2c94c); color: #241a04; }
+.fr-btn.accept { background: #2f9e57; color: #06210f; }
+.fr-btn.danger { background: #7a2f2f; color: #ffd9d9; }
+.fr-btn:disabled { opacity: 0.4; cursor: default; }
+#friend-add-msg, #friends-empty, #friends-login-msg { text-align: left; }
+#friends-tabs { margin-bottom: 8px; }
+
+/* DM-gesprek */
+.convo-head { display: flex; align-items: center; gap: 8px; width: 100%; margin-bottom: 8px; }
+.convo-back { border: none; background: #35415a; color: #dbe6f5; border-radius: 8px; font-size: 16px; font-weight: 900; padding: 4px 11px; cursor: pointer; }
+.convo-name { font-weight: 900; font-size: 16px; color: #eaf1fb; flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.convo-challenge { border: none; background: var(--gold, #f2c94c); color: #241a04; border-radius: 8px; font-weight: 900; font-size: 12px; padding: 6px 10px; cursor: pointer; }
+.convo-challenge:disabled { opacity: 0.4; cursor: default; }
+.dm-line { margin: 3px 0; display: flex; }
+.dm-line span { display: inline-block; max-width: 78%; padding: 6px 10px; border-radius: 12px; background: #2a3446; color: #e7eefb; word-break: break-word; font-size: 13px; line-height: 1.4; }
+.dm-line.me { justify-content: flex-end; }
+.dm-line.me span { background: #2f6b45; color: #eafff1; }
+.dm-line.sys { justify-content: center; }
+.dm-line.sys span { background: transparent; color: var(--text-dim); font-style: italic; font-size: 12px; }
+
 /* ====== Wereld-tabs ====== */
 .world-tabs {
   display: flex;
