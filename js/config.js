@@ -381,6 +381,22 @@ const ZOMBIE_TYPES = {
     ammoDrop: 0, ammoDropChance: 0, knockback: true, knockResist: 0,
     healChance: 0, color: '#3a5a2a',
   },
+  // ---- JOURNEY (Mario-stijl): patrouilleren op een vaste plek, vallen je NIET aan; aanraking = schade ----
+  apeling: {              // gewone mensaap: heen en weer op grond of platform
+    id: 'apeling', hpMul: 0.8, speedMul: 0.85, dmg: 12, biteCd: 700,
+    reach: 16, patrol: true, journeyFoe: true, scale: 1.0, coin: 8,
+    ammoDrop: 0, ammoDropChance: 0, healChance: 0, color: '#6a4a2c',
+  },
+  boomape: {              // mensaap die af en toe een boemerang gooit
+    id: 'boomape', hpMul: 1.0, speedMul: 0.7, dmg: 12, biteCd: 700,
+    reach: 16, patrol: true, journeyFoe: true, boomerang: true, boomEvery: 2600, scale: 1.05, coin: 14,
+    ammoDrop: 0, ammoDropChance: 0, healChance: 0, color: '#5a3f28',
+  },
+  bird: {                 // tropische vogel: zweeft heen en weer, aanraken = schade
+    id: 'bird', hpMul: 0.5, speedMul: 1.1, dmg: 12, biteCd: 700,
+    reach: 14, patrol: true, journeyFoe: true, flying: true, scale: 1.0, coin: 10,
+    ammoDrop: 0, ammoDropChance: 0, healChance: 0, color: '#d2662e',
+  },
 };
 
 // munitie: beginvoorraad bij een nieuw spel (blijft daarna behouden tussen levels)

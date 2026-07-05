@@ -40,10 +40,11 @@ const UI = {
     $('btn-win-shop').onclick = () => this.openShop();
     document.querySelectorAll('.shop-tab').forEach((b) => { b.onclick = () => { this._shopTab = b.dataset.tab; this.renderShop(); }; });
     $('btn-journey').onclick = () => this.openJourney();
-    // ---- Journey CO-OP ----
-    $('btn-coop').onclick = () => document.getElementById('coop-panel').classList.toggle('hidden');
-    $('btn-coop-host').onclick = () => this.coopHost();
-    $('btn-coop-join').onclick = () => this.coopJoin();
+    // ---- Journey CO-OP (alleen met vrienden) ----
+    $('btn-coop').onclick = () => {
+      const pn = document.getElementById('coop-panel'); pn.classList.toggle('hidden');
+      if (!pn.classList.contains('hidden')) { this.ensurePresence(); this.renderCoopFriends(); }
+    };
     $('btn-inventory').onclick = () => this.openInventory();
     $('btn-inventory-back').onclick = () => this.show('menu');
     document.querySelectorAll('#inv-tabs .shop-tab').forEach((b) => { b.onclick = () => { this._invTab = b.dataset.invtab; this.renderInventory(); }; });
@@ -231,8 +232,8 @@ const UI = {
     const st = () => document.getElementById('coop-status');
     return {
       onMatch: (role) => {
-        this._coopRole = role;
-        if (st()) st().textContent = role === 'host' ? 'Verbonden! Kies hieronder een level om samen te spelen.' : 'Verbonden! Je maat kiest een level…';
+        this._coopRole = role; this._coopConnected = true;
+        if (st()) st().textContent = role === 'host' ? '✓ Verbonden! Kies een level om samen te spelen.' : '✓ Verbonden! Je maat kiest een level…';
       },
       onJStart: (p) => { if (p && p.n) this.beginCoopStage(p.n); },
       onJP: (p) => Game.onCoopP(p),
@@ -242,23 +243,35 @@ const UI = {
       onJWin: () => Game.onCoopWin(),
     };
   },
-  async coopHost() {
-    if (!window.Net || !Net.ready) { alert('Geen verbinding met de server.'); return; }
+  // online vrienden tonen met een "Uitnodigen"-knop
+  async renderCoopFriends() {
+    const box = document.getElementById('coop-friends'); if (!box) return;
+    if (!window.Net || !Net.isLoggedIn()) { box.innerHTML = '<p class="screen-sub">Log in (menu ▸ account) en voeg vrienden toe om samen te spelen.</p>'; return; }
+    box.innerHTML = '<p class="screen-sub">Laden…</p>';
+    let ov; try { ov = await Net.friendsOverview(); } catch (e) { box.innerHTML = '<p class="screen-sub">⚠ ' + (e.message || e) + '</p>'; return; }
+    const friends = ov.filter((r) => r.kind === 'friend');
+    box.innerHTML = '';
+    if (!friends.length) { box.innerHTML = '<p class="screen-sub">Nog geen vrienden. Voeg ze toe via de Friends-knop.</p>'; return; }
+    friends.sort((a, b) => (Net.isOnline(b.other_id) ? 1 : 0) - (Net.isOnline(a.other_id) ? 1 : 0));
+    friends.forEach((r) => {
+      const online = Net.isOnline(r.other_id);
+      const row = document.createElement('div'); row.className = 'friend-row';
+      row.innerHTML = '<span class="fr-dot ' + (online ? 'on' : '') + '"></span><span class="fr-name">' + this._esc(r.nickname) + '</span>';
+      const b = document.createElement('button'); b.className = 'fr-btn challenge'; b.textContent = online ? 'Uitnodigen' : 'Offline';
+      b.disabled = !online; b.onclick = () => this.coopInvite(r.other_id, r.nickname);
+      const act = document.createElement('span'); act.className = 'fr-actions'; act.appendChild(b); row.appendChild(act);
+      box.appendChild(row);
+    });
+  },
+  // een vriend uitnodigen voor co-op: maak een kamer + stuur een co-op-uitnodiging
+  async coopInvite(toId, toNick) {
     const st = document.getElementById('coop-status');
+    if (!window.Net || !Net.ready) { if (st) st.textContent = 'Geen verbinding met de server.'; return; }
     try {
       this._coopRole = 'host';
       const code = await Net.versusHost(this._coopCbs());
-      if (st) st.textContent = 'Kamercode: ' + code + ' — geef die aan je maat!';
-    } catch (e) { if (st) st.textContent = '' + (e.message || e); }
-  },
-  async coopJoin() {
-    const code = (document.getElementById('coop-code-input').value || '').trim().toUpperCase();
-    const st = document.getElementById('coop-status');
-    if (!window.Net || !Net.ready) { alert('Geen verbinding met de server.'); return; }
-    try {
-      this._coopRole = 'guest';
-      if (st) st.textContent = 'Meedoen…';
-      await Net.versusJoin(code, this._coopCbs());
+      Net.lobbyInvite(toId, code, true);                   // coop = true
+      if (st) st.textContent = 'Uitnodiging naar ' + toNick + ' gestuurd… wachten tot die meedoet.';
     } catch (e) { this._coopRole = null; if (st) st.textContent = '' + (e.message || e); }
   },
   beginCoopStage(n) {
@@ -269,7 +282,7 @@ const UI = {
     Game.startJourneyStage(n, this._coopRole || 'guest');
   },
   coopReset() {
-    this._coopRole = null;
+    this._coopRole = null; this._coopConnected = false;
     const st = document.getElementById('coop-status'); if (st) st.textContent = '';
     const pn = document.getElementById('coop-panel'); if (pn) pn.classList.add('hidden');
   },
@@ -294,6 +307,7 @@ const UI = {
     // CO-OP actief: de host kiest, allebei starten samen (zonder cutscene)
     if (this._coopRole && window.Net && Net.versus) {
       if (this._coopRole !== 'host') return;             // de gast wacht op de keuze van de host
+      if (!this._coopConnected) { const st = document.getElementById('coop-status'); if (st) st.textContent = 'Wacht tot je maat meedoet…'; return; }
       Net.versusSend('jstart', { n });
       this.beginCoopStage(n);
       return;
@@ -923,7 +937,7 @@ const UI = {
 
   onChatInvite(p) {
     this._chatInvite = p;
-    document.getElementById('invite-text').textContent = (p.from || 'Iemand') + ' nodigt je uit voor een 1v1!';
+    document.getElementById('invite-text').textContent = (p.from || 'Iemand') + (p.coop ? ' nodigt je uit voor CO-OP!' : ' nodigt je uit voor een 1v1!');
     document.getElementById('invite-screen').classList.remove('hidden');
   },
 
@@ -931,8 +945,16 @@ const UI = {
     const p = this._chatInvite; this._chatInvite = null;
     document.getElementById('invite-screen').classList.add('hidden');
     if (!p) return;
-    this.closeFriends();                    // vrienden-scherm verlaten, naar de versus-lobby
-    this._vsRole = 'guest';
+    this.closeFriends();
+    if (p.coop) {                           // CO-OP-uitnodiging: sluit aan als co-op-maat, wacht op de level-keuze van de host
+      this._coopRole = 'guest';
+      this.openJourney();
+      document.getElementById('coop-panel').classList.remove('hidden');
+      const st = document.getElementById('coop-status'); if (st) st.textContent = 'Meedoen…';
+      Net.versusJoin(p.code, this._coopCbs());
+      return;
+    }
+    this._vsRole = 'guest';                  // gewone 1v1-uitnodiging
     this.openVersusLobby();
     const inp = document.getElementById('vs-code-input'); if (inp) inp.value = p.code;
     this.versusJoin();

@@ -400,7 +400,7 @@ const Net = {
 
   lobbySend(event, payload) { if (this.lobby && this.lobby.channel) this.lobby.channel.send({ type: 'broadcast', event, payload }); },
   lobbyChat(text) { if (this.lobby) this.lobbySend('chat', { id: this.lobby.id, nick: this.lobby.nick, text: text }); },
-  lobbyInvite(toId, code) { if (this.lobby) this.lobbySend('invite', { to: toId, from: this.lobby.nick, fromId: this.lobby.id, code: code }); },
+  lobbyInvite(toId, code, coop) { if (this.lobby) this.lobbySend('invite', { to: toId, from: this.lobby.nick, fromId: this.lobby.id, code: code, coop: !!coop }); },
 
   lobbyLeave() {
     if (this.lobby) {

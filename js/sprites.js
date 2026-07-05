@@ -448,6 +448,8 @@ const Sprites = {
   },
   _drawZombieRaw(ctx, cx, footY, dir, z) {
     const id = (z && z.type) ? z.type.id : 'walker';
+    if (id === 'apeling' || id === 'boomape') return this.drawApeling(ctx, cx, footY, dir, z);
+    if (id === 'bird') return this.drawBird(ctx, cx, footY, dir, z);
     if (id === 'boss') return this.drawBoss(ctx, cx, footY, dir, z);
     if (id === 'ape') return this.drawApe(ctx, cx, footY, dir, z);
     if (id === 'balloon') return this.drawBalloon(ctx, cx, footY, dir, z);
@@ -609,6 +611,54 @@ const Sprites = {
       // gestrekt vooruit (slome zombiehouding)
       this.px(ctx, pal.skin, cx + (dir > 0 ? 4 : -10), torsoTop + 2, 6, 3);
     }
+  },
+
+  // Journey-mensaap (klein): patrouilleert; bruine vacht, lichte snuit. boomape houdt een boemerang vast.
+  drawApeling(ctx, cx, footY, dir, z) {
+    const ph = (z && z.walkPhase) || 0;
+    const swing = (ph === 1) ? 2 : (ph === 3) ? -2 : 0;
+    const boom = z && z.type && z.type.id === 'boomape';
+    const fur = boom ? '#5a3f28' : '#6a4a2c', furDk = '#3f2c18', belly = '#b98a5a';
+    const legTop = footY - 7, torsoTop = legTop - 10, headTop = torsoTop - 8;
+    // benen
+    this.px(ctx, furDk, cx - 4 - swing, footY - 3, 4, 3); this.px(ctx, furDk, cx + 1 + swing, footY - 3, 4, 3);
+    // armen (lang, aap-achtig)
+    this.px(ctx, fur, cx - 7, torsoTop + 1, 3, 8); this.px(ctx, fur, cx + 5, torsoTop + 1, 3, 8);
+    // lijf
+    this.px(ctx, fur, cx - 5, torsoTop, 10, 11); this.px(ctx, furDk, cx - 5, torsoTop, 2, 11);
+    this.px(ctx, belly, cx - 2, torsoTop + 3, 5, 6);                       // lichte buik
+    // kop
+    this.px(ctx, fur, cx - 5, headTop, 10, 8); this.px(ctx, furDk, cx - 5, headTop, 10, 2);
+    this.px(ctx, '#e8c8a0', cx - 3, headTop + 3, 6, 4);                    // snuit
+    this.px(ctx, '#1a0e06', cx + (dir > 0 ? 1 : -2), headTop + 3, 2, 2);   // oog
+    this.px(ctx, '#1a0e06', cx - 1, headTop + 5, 2, 1);                    // neusgaten
+    if (boom) { this.drawBoomerangHeld(ctx, cx + dir * 8, torsoTop + 3, dir); }
+  },
+  // vastgehouden / vliegende boemerang (hout, gebogen)
+  drawBoomerangHeld(ctx, x, y, dir) {
+    this.px(ctx, '#a8824a', x - 3, y, 6, 2); this.px(ctx, '#a8824a', x + dir * 2, y - 3, 2, 6);
+    this.px(ctx, '#caa860', x - 3, y, 3, 1);
+  },
+  drawBoomerangFly(ctx, x, y, spin) {
+    const f = Math.floor(spin) % 2;
+    this.px(ctx, '#8a6a30', x - 4, y - 1, 8, 2); this.px(ctx, '#8a6a30', x - 1, y - 4, 2, 8);
+    if (f) { this.px(ctx, '#caa860', x - 4, y - 4, 3, 3); this.px(ctx, '#caa860', x + 1, y + 1, 3, 3); }
+    else { this.px(ctx, '#caa860', x + 1, y - 4, 3, 3); this.px(ctx, '#caa860', x - 4, y + 1, 3, 3); }
+  },
+  // tropische vogel (Journey): zweeft heen en weer, klappert met de vleugels
+  drawBird(ctx, cx, cy, dir, z) {
+    const t = (z && z._t) || 0;
+    const flap = Math.round(Math.sin((z && z.walkPhase || 0) * 1.6 + cx) * 3);
+    const body = (z && z.type && z.type.color) || '#d2662e', wing = '#a8481e', belly = '#ffd24a';
+    ctx.save(); ctx.translate(Math.round(cx), Math.round(cy)); if (dir < 0) ctx.scale(-1, 1);
+    this.px(ctx, wing, -6, -2 - flap, 7, 3);              // vleugel (klappert)
+    this.px(ctx, body, -5, -2, 10, 6);                    // lijf
+    this.px(ctx, belly, -3, 1, 6, 2);                     // buik
+    this.px(ctx, body, 4, -4, 5, 5);                      // kop
+    this.px(ctx, '#ffe27a', 8, -2, 3, 2);                 // snavel
+    this.px(ctx, '#1a1a1a', 6, -3, 2, 2);                 // oog
+    this.px(ctx, wing, -8, 0, 4, 2);                      // staart
+    ctx.restore();
   },
 
   drawWalker(ctx, cx, footY, dir, z) {

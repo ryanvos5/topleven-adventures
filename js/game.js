@@ -121,9 +121,11 @@ const Game = {
     this._beginLevel(lv, 0);
     this.jStage = { idx: n, lv };
     this.levelWasCleared = Storage.journeyCleared(n);   // herhaling = geen kill-munten farmen
+    // Mario-stage: geen doorlopende spawns; vijanden staan vast op hun patrouille-plek
+    this.level = Object.assign({}, this.level, { zombieCount: 0, spawnEvery: 9e9, maxAlive: 0 });
+    this.spawnArmed = true;
     // CO-OP: host simuleert de zombies; de gast krijgt ze via sync (zelf niets spawnen)
     this.coop = coopRole ? { role: coopRole, partner: null, z: [], _pT: 0, _zT: 0, won: false } : null;
-    if (coopRole === 'guest') this.level = Object.assign({}, lv, { zombieCount: 0, spawnEvery: 9e9 });
     // Mario-regels
     this.player._marioTouch = true;                     // aanraking = helft HP (zie Player.takeDamage)
     this.player.maxJumps = 2; this.player.jumps = 2;    // dubbel-jump hoort bij het eiland
@@ -140,7 +142,60 @@ const Game = {
       if (Math.abs(x - this.jFlagX) < 70) x += 100;     // niet óp de vlag
       this.crates.push({ x, y: CONFIG.GROUND_Y - 34 - ((i % 2) ? 12 : 0), kind: kinds[(n * 3 + i * 7) % kinds.length], broken: false });
     }
+    // Mario-layout: zwevende platforms + patrouille-vijanden (deterministisch, zodat co-op gelijk is)
+    if (coopRole !== 'guest') this._buildJourneyLayout(lv, n);   // gast krijgt de vijanden via sync
+    else this.platforms = this._journeyPlatforms(lv, n);         // platforms tekent de gast zelf (identiek)
     if (window.Sfx) Sfx.music(lv.theme === 'beach' ? 'beach' : 'jungle');
+  },
+
+  // deterministische platform-lijst voor een Journey-level (Mario-blokken boven de grond)
+  _journeyPlatforms(lv, n) {
+    let seed = n * 2749 + 13;
+    const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+    const plats = [];
+    let x = 240;
+    while (x < lv.length - 220) {
+      const w = Math.round(42 + rnd() * 34);
+      const py = Math.round(CONFIG.GROUND_Y - (30 + rnd() * 56));           // 30..86 boven de grond (haalbaar met dubbel-jump)
+      plats.push({ x: Math.round(x), y: py, w });
+      x += w + 90 + Math.floor(rnd() * 120);
+    }
+    return plats;
+  },
+  // plaats platforms + patrouille-apen/vogels/boemerang-apen
+  _buildJourneyLayout(lv, n) {
+    this.platforms = this._journeyPlatforms(lv, n);
+    let seed = n * 6151 + 29;
+    const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+    const GY = CONFIG.GROUND_Y;
+    const place = (type, x, y, range, onPlat) => {
+      const z = new Zombie(x, this.level, type);
+      z.x = x; z.patrolL = Math.round(x - range); z.patrolR = Math.round(x + range);
+      z.y = y; z.patrolY = y; z.onGround = !type.flying; z.vy = 0; z.dir = rnd() < 0.5 ? -1 : 1;
+      this.zombies.push(z);
+    };
+    // 1) grond-apen op intervallen (soms boemerang-aap vanaf lvl 9)
+    const groundCount = Math.min(9, 3 + Math.floor(n / 1.7));
+    for (let i = 0; i < groundCount; i++) {
+      let x = Math.round(lv.length * (0.16 + (i + 0.5) * (0.74 / groundCount)) + (rnd() - 0.5) * 60);
+      if (Math.abs(x - this.jFlagX) < 60) x += 90;                          // niet op de vlag
+      x = Math.max(180, Math.min(lv.length - 140, x));
+      const boom = n >= 9 && rnd() < 0.34;
+      place(boom ? ZOMBIE_TYPES.boomape : ZOMBIE_TYPES.apeling, x, GY, 30 + Math.round(rnd() * 24), false);
+    }
+    // 2) apen op sommige platforms (patrouilleren binnen de plaat-breedte)
+    for (const pf of this.platforms) {
+      if (rnd() < 0.5 && pf.w >= 46) place(ZOMBIE_TYPES.apeling, pf.x, pf.y, Math.max(10, pf.w / 2 - 12), true);
+    }
+    // 3) vogels vanaf level 6 (zweven heen en weer, aanraken = schade)
+    if (n >= 6) {
+      const birds = 1 + Math.floor((n - 6) / 3);
+      for (let i = 0; i < birds; i++) {
+        const x = Math.round(lv.length * (0.3 + i * (0.5 / Math.max(1, birds))) + (rnd() - 0.5) * 80);
+        const y = 66 + Math.round(rnd() * 40);
+        place(ZOMBIE_TYPES.bird, Math.max(200, Math.min(lv.length - 160, x)), y, 60 + Math.round(rnd() * 50), false);
+      }
+    }
   },
 
   // vlag gehaald + kratten kapot slaan + finish/boss-overgang
@@ -1185,6 +1240,11 @@ const Game = {
         Sprites.px(ctx, theme.groundTop, gx, CONFIG.GROUND_Y + 16, 14, 2);    // strepen/tegels
         Sprites.px(ctx, '#00000033', gx + 7, CONFIG.GROUND_Y + 26, 2, 2);     // gruis
       }
+      // Journey (Mario): zwevende platforms (blad-stijl) boven de grond
+      if (this.jStage) for (const pf of this.platforms) {
+        if (pf.x + pf.w / 2 < this.cam.x - 12 || pf.x - pf.w / 2 > this.cam.x + W + 12) continue;
+        Sprites.drawPlatform(ctx, pf.x, pf.y, pf.w, this.level.theme === 'beach' ? 'sand' : 'wood');
+      }
       // straatlantaarns + lichtpoel
       for (const lp of this.backdrop.lamps) {
         if (lp.x < this.cam.x - 20 || lp.x > this.cam.x + W + 20) continue;
@@ -1328,7 +1388,7 @@ const Game = {
     // kogels
     for (const b of this.bullets) Sprites.drawBullet(ctx, b.x, b.y);
     // baas-projectielen (zuur)
-    for (const es of this.enemyShots) Sprites.drawEnemyShot(ctx, es.x, es.y, es.spin);
+    for (const es of this.enemyShots) { if (es.boom) Sprites.drawBoomerangFly(ctx, es.x, es.y, es.spin); else Sprites.drawEnemyShot(ctx, es.x, es.y, es.spin); }
     // raketten
     for (const rk of this.rocketShots) Sprites.drawRocket(ctx, rk.x, rk.y, rk.vx);
 

@@ -485,6 +485,9 @@ class Zombie {
       this.halfW = t.boss ? 22 : 11;
       this.reach = t.reach;
     }
+    // JOURNEY-patrouille: heen en weer tussen patrolL..patrolR (extern gezet bij plaatsing)
+    this.patrol = !!t.patrol;
+    if (this.patrol) { this.patrolL = x - 40; this.patrolR = x + 40; this.patrolY = this.y; this.dir = Math.random() < 0.5 ? -1 : 1; this.boomT = Math.random() * 1500; }
   }
 
   // is een treffer op positie (px,py) een kop-treffer? (alleen voor de baas)
@@ -560,6 +563,32 @@ class Zombie {
     const t = this.type;
 
     if (this.emerging > 0) this.emerging -= dt;
+
+    // ---- JOURNEY-PATROUILLE (mensapen/vogels): heen en weer, GEEN achtervolging; aanraking = schade ----
+    if (this.patrol) {
+      const s2 = game.dtScale;
+      this.dir = this.dir || 1;
+      this.x += this.dir * this.speed * s2;
+      if (this.x <= this.patrolL) { this.x = this.patrolL; this.dir = 1; }
+      else if (this.x >= this.patrolR) { this.x = this.patrolR; this.dir = -1; }
+      if (this.flying) this.y = this.patrolY + Math.sin(game.time / 380 + this.tint * 2) * 7;   // zweef-bob
+      // aanraking met de speler -> Mario-schade (helft HP, via 'touch')
+      if (!player.dead && player.respawnInvuln <= 0) {
+        const dxp = Math.abs(this.x - player.x);
+        const pTop = player.y - player.height, pBot = player.y;
+        const myTop = this.cy - this.halfH, myBot = this.cy + this.halfH;
+        if (dxp < this.halfW + player.w / 2 - 1 && pBot > myTop && pTop < myBot) player.takeDamage(t.dmg, 'touch');
+      }
+      // boemerang-aap gooit af en toe
+      if (t.boomerang) {
+        this.boomT += dt;
+        if (this.boomT >= (t.boomEvery || 2600)) { this.boomT = 0; this._throwBoomerang(game, player); }
+      }
+      this.walkTimer += dt;
+      if (this.walkTimer > 130) { this.walkTimer = 0; this.walkPhase = (this.walkPhase + 1) % 4; }
+      if (this.hitFlash > 0) this.hitFlash -= dt;
+      return;
+    }
 
     // de baas roept periodiek kleine zombies op + spuugt projectielen
     if (t.spawner) this.updateSpawner(dt, game);
@@ -757,6 +786,16 @@ class Zombie {
     return airHeight < 22;                          // hoger = je sprong eroverheen
   }
 
+  // boemerang-aap: gooit een terugkerende boemerang de kant van de speler op
+  _throwBoomerang(game, player) {
+    const dir = player.x < this.x ? -1 : 1;
+    this.dir = dir;
+    const sh = new EnemyShot(this.x + dir * 10, this.cy, dir * 3.2, this.type.dmg);
+    sh.boom = true; sh.aimed = true; sh.boomTurn = 720; sh.home = this.x;
+    game.enemyShots.push(sh);
+    if (window.Sfx) Sfx.play('swing');
+  }
+
   bite(game, player) {
     this.lastBite = game.time;
     if (!this.reachesVertically(player)) return;   // speler sprong eroverheen -> mis
@@ -905,6 +944,21 @@ class EnemyShot {
   }
   update(dt, game) {
     const s = game.dtScale;
+    // boemerang: vliegt uit, keert daarna om en zweeft terug naar de aap (spint snel)
+    if (this.boom) {
+      this.life += dt; this.spin += dt * 0.05;
+      if (this.life > this.boomTurn && !this._turned) { this._turned = true; this.vx = -this.vx; }
+      this.x += this.vx * s;
+      if (this.life > 2200 || this.x < 6 || this.x > game.level.length + 60) { this.alive = false; return; }
+      const p = game.player;
+      const hw = (p.hitHalfW != null) ? p.hitHalfW : 8;
+      if (p.respawnInvuln <= 0 && Math.abs(p.x - this.x) < hw + 4 && Math.abs((p.y - 16) - this.y) < 15) {
+        p.takeDamage(this.dmg, 'touch');                   // boemerang = zelfde Mario-straf (helft HP)
+        game.knockPlayer(Math.sign(this.vx) || 1, 7); game.spawnBlood(this.x, this.y);
+        this.alive = false;
+      }
+      return;
+    }
     this.x += this.vx * s;
     this.y += this.vyShot * s;
     this.life += dt; this.spin += dt * 0.02;
