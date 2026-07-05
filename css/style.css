@@ -1015,6 +1015,14 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
 .dm-line.sys { justify-content: center; }
 .dm-line.sys span { background: transparent; color: var(--text-dim); font-style: italic; font-size: 12px; }
 
+/* ====== Journey co-op ====== */
+#coop-bar { width: 100%; margin: 2px 0 8px; }
+#coop-panel { display: flex; flex-direction: column; gap: 8px; align-items: center; margin-top: 8px;
+  background: rgba(0,0,0,0.22); border: 1px solid #313c50; border-radius: 10px; padding: 12px; }
+#coop-panel .big-btn { margin: 0; }
+#coop-panel .vs-join-row { margin: 0; }
+#coop-status { margin: 0; min-height: 16px; }
+
 /* ====== Wereld-tabs ====== */
 .world-tabs {
   display: flex;

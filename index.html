@@ -11,9 +11,9 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#0d0f14" />
   <title>Tiny Power Smashers</title>
-  <link rel="icon" type="image/svg+xml" href="icon.svg?v=menu73" />
-  <link rel="apple-touch-icon" href="icon.svg?v=menu73" />
-  <link rel="stylesheet" href="css/style.css?v=menu73" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg?v=menu74" />
+  <link rel="apple-touch-icon" href="icon.svg?v=menu74" />
+  <link rel="stylesheet" href="css/style.css?v=menu74" />
 </head>
 <body>
   <div id="game-root">
@@ -67,7 +67,7 @@
     </div>
 
     <!-- ===== Splash bij opstarten (logo, fadet vanzelf weg) ===== -->
-    <div id="splash"><img src="logo.svg?v=menu73" alt="Tiny Power Smashers" /></div>
+    <div id="splash"><img src="logo.svg?v=menu74" alt="Tiny Power Smashers" /></div>
 
     <!-- ===== Canvas (de spelwereld) ===== -->
     <canvas id="game-canvas"></canvas>
@@ -129,7 +129,7 @@
     <div id="menu-screen" class="screen">
       <div class="menu-frame">
         <header class="menu-top">
-          <img class="menu-logo-img" src="logo.svg?v=menu73" alt="Tiny Power Smashers" />
+          <img class="menu-logo-img" src="logo.svg?v=menu74" alt="Tiny Power Smashers" />
           <div class="menu-hud">
             <span class="menu-coins-top">
               <svg class="px-icon" viewBox="0 0 8 8" width="16" height="16" shape-rendering="crispEdges"><rect x="2" y="1" width="4" height="6" fill="#caa12e"/><rect x="1" y="2" width="6" height="4" fill="#ffd24a"/><rect x="3" y="2" width="1" height="4" fill="#fff0a8"/></svg>
@@ -202,6 +202,18 @@
       <div class="screen-inner">
         <h2 class="screen-title">JOURNEY</h2>
         <p class="screen-sub" id="journey-world">Wereld 1 — Onbewoond Eiland</p>
+        <!-- CO-OP: samen levels spelen -->
+        <div id="coop-bar">
+          <button id="btn-coop" class="text-btn"><svg class="ic"><use href="#ic-char"/></svg> Samen spelen (co-op)</button>
+          <div id="coop-panel" class="hidden">
+            <button id="btn-coop-host" class="big-btn secondary">Kamer maken</button>
+            <div class="vs-join-row">
+              <input id="coop-code-input" class="auth-input" type="text" placeholder="CODE" maxlength="4" autocomplete="off" />
+              <button id="btn-coop-join" class="big-btn secondary">Meedoen</button>
+            </div>
+            <p id="coop-status" class="screen-sub"></p>
+          </div>
+        </div>
         <div id="journey-grid" class="level-grid"></div>
         <button class="back-btn" data-back="menu"><svg class="ic"><use href="#ic-arrow-l"/></svg> TERUG</button>
       </div>
@@ -527,17 +539,17 @@
     </div>
   </div>
 
-  <script src="vendor/supabase.min.js?v=menu73"></script>
-  <script src="js/config.js?v=menu73"></script>
-  <script src="js/storage.js?v=menu73"></script>
-  <script src="js/audio.js?v=menu73"></script>
-  <script src="js/net.js?v=menu73"></script>
-  <script src="js/input.js?v=menu73"></script>
-  <script src="js/sprites.js?v=menu73"></script>
-  <script src="js/menubg.js?v=menu73"></script>
-  <script src="js/entities.js?v=menu73"></script>
-  <script src="js/ui.js?v=menu73"></script>
-  <script src="js/game.js?v=menu73"></script>
-  <script src="js/main.js?v=menu73"></script>
+  <script src="vendor/supabase.min.js?v=menu74"></script>
+  <script src="js/config.js?v=menu74"></script>
+  <script src="js/storage.js?v=menu74"></script>
+  <script src="js/audio.js?v=menu74"></script>
+  <script src="js/net.js?v=menu74"></script>
+  <script src="js/input.js?v=menu74"></script>
+  <script src="js/sprites.js?v=menu74"></script>
+  <script src="js/menubg.js?v=menu74"></script>
+  <script src="js/entities.js?v=menu74"></script>
+  <script src="js/ui.js?v=menu74"></script>
+  <script src="js/game.js?v=menu74"></script>
+  <script src="js/main.js?v=menu74"></script>
 </body>
 </html>

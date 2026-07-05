@@ -291,6 +291,13 @@ const Net = {
     ch.on('broadcast', { event: 'gorhit' }, (m) => { if (v.cbs.onGorhit) v.cbs.onGorhit(m.payload); });
     ch.on('broadcast', { event: 'monkey' }, (m) => { if (v.cbs.onMonkey) v.cbs.onMonkey(m.payload); });
     ch.on('broadcast', { event: 'ape' }, (m) => { if (v.cbs.onApe) v.cbs.onApe(m.payload); });
+    // ---- Journey CO-OP (zelfde kamer-kanaal): level-start, speler/zombie-sync, hits, kratten, finish ----
+    ch.on('broadcast', { event: 'jstart' }, (m) => { if (v.cbs.onJStart) v.cbs.onJStart(m.payload); });
+    ch.on('broadcast', { event: 'jp' }, (m) => { if (v.cbs.onJP) v.cbs.onJP(m.payload); });
+    ch.on('broadcast', { event: 'jz' }, (m) => { if (v.cbs.onJZ) v.cbs.onJZ(m.payload); });
+    ch.on('broadcast', { event: 'jhit' }, (m) => { if (v.cbs.onJHit) v.cbs.onJHit(m.payload); });
+    ch.on('broadcast', { event: 'jcrate' }, (m) => { if (v.cbs.onJCrate) v.cbs.onJCrate(m.payload); });
+    ch.on('broadcast', { event: 'jwin' }, (m) => { if (v.cbs.onJWin) v.cbs.onJWin(m.payload); });
     ch.on('broadcast', { event: 'parry' }, (m) => { if (v.cbs.onParry) v.cbs.onParry(m.payload); });
     ch.on('broadcast', { event: 'tide' }, (m) => { if (v.cbs.onTide) v.cbs.onTide(m.payload); });
     ch.on('broadcast', { event: 'ball' }, (m) => { if (v.cbs.onBall) v.cbs.onBall(m.payload); });

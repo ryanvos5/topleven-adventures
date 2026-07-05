@@ -40,6 +40,10 @@ const UI = {
     $('btn-win-shop').onclick = () => this.openShop();
     document.querySelectorAll('.shop-tab').forEach((b) => { b.onclick = () => { this._shopTab = b.dataset.tab; this.renderShop(); }; });
     $('btn-journey').onclick = () => this.openJourney();
+    // ---- Journey CO-OP ----
+    $('btn-coop').onclick = () => document.getElementById('coop-panel').classList.toggle('hidden');
+    $('btn-coop-host').onclick = () => this.coopHost();
+    $('btn-coop-join').onclick = () => this.coopJoin();
     $('btn-inventory').onclick = () => this.openInventory();
     $('btn-inventory-back').onclick = () => this.show('menu');
     document.querySelectorAll('#inv-tabs .shop-tab').forEach((b) => { b.onclick = () => { this._invTab = b.dataset.invtab; this.renderInventory(); }; });
@@ -221,6 +225,54 @@ const UI = {
 
   // ---------- JOURNEY (singleplayer) ----------
   openJourney() { this.renderJourney(); this.show('journey'); },
+
+  // ---------- JOURNEY CO-OP (samen levels spelen via een kamercode) ----------
+  _coopCbs() {
+    const st = () => document.getElementById('coop-status');
+    return {
+      onMatch: (role) => {
+        this._coopRole = role;
+        if (st()) st().textContent = role === 'host' ? 'Verbonden! Kies hieronder een level om samen te spelen.' : 'Verbonden! Je maat kiest een level…';
+      },
+      onJStart: (p) => { if (p && p.n) this.beginCoopStage(p.n); },
+      onJP: (p) => Game.onCoopP(p),
+      onJZ: (p) => Game.onCoopZ(p),
+      onJHit: (p) => Game.onCoopHit(p),
+      onJCrate: (p) => Game.onCoopCrate(p),
+      onJWin: () => Game.onCoopWin(),
+    };
+  },
+  async coopHost() {
+    if (!window.Net || !Net.ready) { alert('Geen verbinding met de server.'); return; }
+    const st = document.getElementById('coop-status');
+    try {
+      this._coopRole = 'host';
+      const code = await Net.versusHost(this._coopCbs());
+      if (st) st.textContent = 'Kamercode: ' + code + ' — geef die aan je maat!';
+    } catch (e) { if (st) st.textContent = '' + (e.message || e); }
+  },
+  async coopJoin() {
+    const code = (document.getElementById('coop-code-input').value || '').trim().toUpperCase();
+    const st = document.getElementById('coop-status');
+    if (!window.Net || !Net.ready) { alert('Geen verbinding met de server.'); return; }
+    try {
+      this._coopRole = 'guest';
+      if (st) st.textContent = 'Meedoen…';
+      await Net.versusJoin(code, this._coopCbs());
+    } catch (e) { this._coopRole = null; if (st) st.textContent = '' + (e.message || e); }
+  },
+  beginCoopStage(n) {
+    document.getElementById('versus-result').classList.add('hidden');
+    const vh = document.getElementById('versus-hud'); if (vh) vh.classList.add('hidden');
+    document.getElementById('loadout-bar').classList.add('hidden');
+    document.getElementById('ability-btn').classList.add('hidden');
+    Game.startJourneyStage(n, this._coopRole || 'guest');
+  },
+  coopReset() {
+    this._coopRole = null;
+    const st = document.getElementById('coop-status'); if (st) st.textContent = '';
+    const pn = document.getElementById('coop-panel'); if (pn) pn.classList.add('hidden');
+  },
   renderJourney() {
     const grid = document.getElementById('journey-grid');
     if (!grid) return;
@@ -239,6 +291,13 @@ const UI = {
     });
   },
   pickJourneyLevel(n) {
+    // CO-OP actief: de host kiest, allebei starten samen (zonder cutscene)
+    if (this._coopRole && window.Net && Net.versus) {
+      if (this._coopRole !== 'host') return;             // de gast wacht op de keuze van de host
+      Net.versusSend('jstart', { n });
+      this.beginCoopStage(n);
+      return;
+    }
     const script = this._journeyStoryFor(n);
     if (script) { this.playStory(script, n); return; }
     this.startJourneyLevel(n);

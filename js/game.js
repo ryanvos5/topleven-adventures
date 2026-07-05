@@ -115,12 +115,15 @@ const Game = {
   },
 
   // ---------- JOURNEY: Mario-stijl level-stage (side-scroller) ----------
-  startJourneyStage(n) {
+  startJourneyStage(n, coopRole) {
     const lv = JOURNEY[1].levels[n - 1]; if (!lv) return;
     this.journey = null;                                // versus-journey context pas bij de boss-fase
     this._beginLevel(lv, 0);
     this.jStage = { idx: n, lv };
     this.levelWasCleared = Storage.journeyCleared(n);   // herhaling = geen kill-munten farmen
+    // CO-OP: host simuleert de zombies; de gast krijgt ze via sync (zelf niets spawnen)
+    this.coop = coopRole ? { role: coopRole, partner: null, z: [], _pT: 0, _zT: 0, won: false } : null;
+    if (coopRole === 'guest') this.level = Object.assign({}, lv, { zombieCount: 0, spawnEvery: 9e9 });
     // Mario-regels
     this.player._marioTouch = true;                     // aanraking = helft HP (zie Player.takeDamage)
     this.player.maxJumps = 2; this.player.jumps = 2;    // dubbel-jump hoort bij het eiland
@@ -128,14 +131,14 @@ const Game = {
     // checkpoint-vlag halverwege (respawn-punt)
     this.jFlagX = Math.round(lv.length * 0.5);
     this.jFlagReached = false;
-    // smashbare power-up-kratten, verspreid over het level
+    // smashbare power-up-kratten, verspreid over het level (deterministisch: co-op ziet dezelfde inhoud)
     this.crates = [];
     const kinds = ['health', 'rage', 'speed', 'shield', 'fireball'];
     const nC = lv.crates || 0;
     for (let i = 0; i < nC; i++) {
       let x = Math.round(lv.length * (0.16 + (i + 0.5) * (0.72 / Math.max(1, nC))));
       if (Math.abs(x - this.jFlagX) < 70) x += 100;     // niet óp de vlag
-      this.crates.push({ x, y: CONFIG.GROUND_Y - 34 - ((i % 2) ? 12 : 0), kind: kinds[Math.floor(Math.random() * kinds.length)], broken: false });
+      this.crates.push({ x, y: CONFIG.GROUND_Y - 34 - ((i % 2) ? 12 : 0), kind: kinds[(n * 3 + i * 7) % kinds.length], broken: false });
     }
     if (window.Sfx) Sfx.music(lv.theme === 'beach' ? 'beach' : 'jungle');
   },
@@ -160,18 +163,101 @@ const Game = {
           for (let i = 0; i < 12; i++) this.particles.push(new Particle(c.x, c.y - 8, (Math.random() - 0.5) * 3.5, -Math.random() * 3, Math.random() < 0.5 ? '#b98a5a' : '#8a5e36', 420, 2));
           this.shake = Math.max(this.shake, 4);
           if (window.Sfx) Sfx.play('hit');
+          if (this.coop && window.Net) Net.versusSend('jcrate', { i: this.crates.indexOf(c) });   // partner ziet 'm ook breken
+        }
+      }
+    }
+    // co-op: state delen + gast-kant (ghost-zombies)
+    if (this.coop) this._coopTick(dt);
+  },
+
+  // ---- CO-OP: sync-tick (speler-state altijd; host stuurt zombies, gast meldt treffers) ----
+  _coopTick(dt) {
+    const co = this.coop, p = this.player;
+    co._pT += dt;
+    if (co._pT >= 100 && window.Net) {
+      co._pT = 0;
+      Net.versusSend('jp', { x: Math.round(p.x), y: Math.round(p.y), d: p.dir, wp: p.walkPhase || 0, a: this.time < p.attackAnimUntil ? 1 : 0, h: Math.round(p.hp), al: p.hp > 0 ? 1 : 0, ch: p.charId || 'ryan', g: p.onGround ? 1 : 0 });
+    }
+    if (co.role === 'host') {
+      co._zT += dt;
+      if (co._zT >= 120 && window.Net) {
+        co._zT = 0;
+        const list = [];
+        for (let i = 0; i < this.zombies.length && list.length < 24; i++) {
+          const z = this.zombies[i];
+          if (!z.alive) continue;
+          list.push([i, Math.round(z.x), Math.round(z.y), z.type.id, Math.round(z.hp), z.dir]);
+        }
+        Net.versusSend('jz', { l: list });
+      }
+      return;
+    }
+    // ---- GAST: ghost-zombies animeren, aanraking en eigen klappen/kogels doorgeven ----
+    for (const g of co.z) { g.walkPhase = (g.walkPhase + dt / 140) % 4; g.cy = g.y - 14; }
+    if (p.hp > 0) for (const g of co.z) {
+      if (Math.abs(g.x - p.x) < 14 && Math.abs(g.y - p.y) < 26) p.takeDamage(10, 'touch');   // Mario-regel geldt ook hier
+    }
+    if (this.time < p.attackAnimUntil) {                 // melee raakt ghosts -> host past de schade toe
+      for (const g of co.z) {
+        if (g._hitAt && this.time - g._hitAt < 300) continue;
+        if ((g.x - p.x) * p.dir > -8 && Math.abs(g.x - p.x) < 34 && Math.abs(g.y - p.y) < 30) {
+          g._hitAt = this.time;
+          if (window.Net) Net.versusSend('jhit', { i: g.i, dmg: Math.round(30 * (p.meleeMul || 1) * (p._rageActive ? 2 : 1)), d: (g.x >= p.x ? 1 : -1) });
+          this.spawnBlood(g.x, g.y - 14);
+        }
+      }
+    }
+    if (this.bullets) for (const b of this.bullets) {     // kogels raken ghosts
+      if (!b.alive) continue;
+      for (const g of co.z) {
+        if (Math.abs(b.x - g.x) < 10 && Math.abs(b.y - (g.y - 16)) < 18) {
+          b.alive = false; g._hitAt = this.time;
+          if (window.Net) Net.versusSend('jhit', { i: g.i, dmg: b.damage || 20, d: (b.vx >= 0 ? 1 : -1) });
+          this.spawnBlood(g.x, g.y - 14);
+          break;
         }
       }
     }
   },
+  // co-op-berichten van de partner
+  onCoopP(p) { if (this.coop) this.coop.partner = p; },
+  onCoopZ(p) {
+    if (!this.coop || this.coop.role !== 'guest' || !p || !p.l) return;
+    const old = {}; for (const g of this.coop.z) old[g.i] = g;
+    this.coop.z = p.l.map((r) => {
+      const prev = old[r[0]] || {};
+      return { i: r[0], x: r[1], y: r[2], type: ZOMBIE_TYPES[r[3]] || ZOMBIE_TYPES.walker, hp: r[4], dir: r[5], alive: true,
+        walkPhase: prev.walkPhase || 0, _hitAt: prev._hitAt || 0, tint: ((r[0] * 37) % 100) / 100, cy: r[2] - 14, hitFlash: 0, atk: 'walk' };
+    });
+  },
+  onCoopHit(p) {
+    if (!this.coop || this.coop.role !== 'host' || !p) return;
+    const z = this.zombies[p.i];
+    if (z && z.alive) z.takeDamage(p.dmg || 20, p.d || 1, this, 6);
+  },
+  onCoopCrate(p) {
+    if (!this.crates || !p || p.i == null) return;
+    const c = this.crates[p.i];
+    if (c && !c.broken) {
+      c.broken = true;
+      if (c.kind === 'health') this.healthDrops.push(new HealthPickup(c.x));
+      else this.powerUps.push(new PowerUpPickup(c.x, c.kind));
+      if (window.Sfx) Sfx.play('hit');
+    }
+  },
+  onCoopWin() {
+    if (this.jStage && this.state === 'playing') { if (this.coop) this.coop.won = true; this.win(); }
+  },
 
-  // dood na de vlag -> respawn bij de vlag (Mario-checkpoint)
+  // dood na de vlag -> respawn bij de vlag (Mario-checkpoint); co-op: ook vóór de vlag (bij de start)
   journeyRespawn() {
     const p = this.player;
-    p.hp = p.maxHp; p.x = this.jFlagX; p.y = CONFIG.GROUND_Y; p.vy = 0; p.onGround = true;
+    const rx = this.jFlagReached ? this.jFlagX : 60;
+    p.hp = p.maxHp; p.x = rx; p.y = CONFIG.GROUND_Y; p.vy = 0; p.onGround = true;
     p.burnUntil = 0; p._touchInvUntil = this.time + 2200;      // even onkwetsbaar na de respawn
-    // zombies vlakbij de vlag wegduwen (geen respawn-kill)
-    for (const z of this.zombies) if (z.alive && Math.abs(z.x - this.jFlagX) < 120) z.x += (z.x < this.jFlagX ? -1 : 1) * 140;
+    // zombies vlakbij het respawn-punt wegduwen (geen respawn-kill)
+    for (const z of this.zombies) if (z.alive && Math.abs(z.x - rx) < 120) z.x += (z.x < rx ? -1 : 1) * 140;
     for (let i = 0; i < 14; i++) this.particles.push(new Particle(p.x, p.y - 14, (Math.random() - 0.5) * 3, -Math.random() * 3, '#5aff7a', 480, 2));
     this.shake = Math.max(this.shake, 5);
     if (window.Sfx) Sfx.play('roundlose');
@@ -181,7 +267,10 @@ const Game = {
   finishJourneyStage() {
     const idx = this.jStage.idx, lv = this.jStage.lv;
     this.jStage = null;
-    if (lv.bossFight) { UI.startJourneyBossFight(idx); return; }   // finish = de boss wacht
+    // co-op: partner meteen laten weten dat de finish gehaald is (allebei klaar)
+    if (this.coop && !this.coop.won && window.Net) { this.coop.won = true; Net.versusSend('jwin', {}); }
+    this.coop = null;
+    if (lv.bossFight) { UI.startJourneyBossFight(idx); return; }   // finish = de boss wacht (co-op: ieder z'n eigen duel)
     this.state = 'versusOver';
     const first = !Storage.journeyCleared(idx);
     const unlocks = Storage.clearJourneyLevel(idx);
@@ -292,6 +381,7 @@ const Game = {
     if (pauseScreen) pauseScreen.classList.add('hidden');
     this.vsPaused = false;
     this.jStage = null;                                   // Journey-stage netjes loslaten
+    if (this.coop) { this.coop = null; if (window.Net) Net.leaveVersus(); if (window.UI) UI.coopReset(); }   // co-op-kamer sluiten
     if (this.journey || this.state === 'versus') { this.quitVersus(); return; }   // Journey/versus netjes opruimen
     this.state = 'menu';
     Input.clear();
@@ -873,7 +963,7 @@ const Game = {
 
     // win / verlies
     if (this.player.hp <= 0) {
-      if (this.jStage && this.jFlagReached) this.journeyRespawn();   // Mario-checkpoint: terug naar de vlag
+      if (this.jStage && (this.jFlagReached || this.coop)) this.journeyRespawn();   // Mario-checkpoint (co-op faalt nooit hard)
       else this.lose();
     } else if (this.level.isBoss) {
       if (this.boss && !this.boss.alive) this.win();      // baas verslagen
@@ -1213,6 +1303,25 @@ const Game = {
         Sprites.px(ctx, '#000', z.x - bw / 2 - 1, by - 1, bw + 2, 4);
         const col = z.type.id === 'brute' ? '#d98a30' : '#6abe30';
         Sprites.px(ctx, col, z.x - bw / 2, by, bw * (z.hp / z.maxHp), 2);
+      }
+    }
+
+    // CO-OP: gast ziet de zombies van de host als ghosts; partner altijd als tweede speler
+    if (this.coop) {
+      if (this.coop.role === 'guest') for (const g of this.coop.z) {
+        Sprites.shadow(ctx, g.x, CONFIG.GROUND_Y, 8);
+        Sprites.drawZombie(ctx, g.x, g.y, g.dir, g);
+      }
+      const pt = this.coop.partner;
+      if (pt && pt.al) {
+        const pch = CHARACTERS[pt.ch] || CHARACTERS.ryan;
+        if (pt.g) Sprites.shadow(ctx, pt.x, pt.y + 1, 7);
+        Sprites.drawCharacter(ctx, Math.round(pt.x), Math.round(pt.y), pt.d || 1, pch.palette, {
+          walkPhase: pt.wp || 0, airborne: !pt.g, attacking: !!pt.a, weapon: 'bat',
+          build: pch.build, hair: pch.hair, t: this.time,
+        });
+        ctx.fillStyle = '#8fd0ff'; ctx.font = 'bold 8px "Courier New", monospace'; ctx.textAlign = 'center';
+        ctx.fillText('P2', Math.round(pt.x), Math.round(pt.y) - 46); ctx.textAlign = 'left';
       }
     }
 
