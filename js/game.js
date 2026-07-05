@@ -1335,6 +1335,15 @@ const Game = {
     this._quakeUntil = 0; this._selfQuakeUntil = 0;    // aardbeving-ability reset
     this.abilityFx = [];                                // magische ring-effecten
     this.zapFx = null;                                   // Ryan zap-dash bliksemboog
+    // ---- visuele "juice"-laag (impact/KO/sfeer) ----
+    this.hitStop = 0;                                    // korte freeze-frame bij een rake klap
+    this.impacts = [];                                   // schokgolf-ringen op het raakpunt
+    this.floatTexts = [];                                // zwevende schade-/combo-cijfers
+    this.ambient = [];                                   // sfeer-deeltjes (embers/bladeren/nevel)
+    this.hurtFlash = 0;                                  // rode schermrand-flits als JIJ geraakt wordt
+    this.smashFlash = 0;                                 // witte flits bij een grote klap / KO
+    this.ko = null;                                      // KO-cinematic {x,y,born,won}
+    this._ambClock = 0;                                  // spawn-timer voor sfeer-deeltjes
     this.vsPaused = false;                              // verse pot is nooit gepauzeerd
     if (!opts.journey) this.journey = null;            // alleen Journey-context houden bij een Journey-potje
     if (window.Net && Net.lobby) Net.lobbyLeave();   // niet meer "online in de lobby" tijdens een potje
@@ -1504,10 +1513,18 @@ const Game = {
 
   updateVersus(dt) {
     if (!this.vs) return;
+    if (this.hitStop > 0 && this.vs.roundFreezeUntil <= this.time) { this.hitStop = Math.max(0, this.hitStop - dt); return; }   // freeze-frame bij een rake klap
     this.time += dt;
     if (this.abilityFx && this.abilityFx.length) this.abilityFx = this.abilityFx.filter((f) => this.time - f.born < f.dur);
     if (this.zapFx && this.time - this.zapFx.born >= this.zapFx.dur) this.zapFx = null;
     this.dtScale = Math.min(3, dt / 16.6667);
+    // ---- visuele effect-timers (impact/KO/sfeer) ----
+    if (this.impacts.length) this.impacts = this.impacts.filter((f) => this.time - f.born < f.dur);
+    if (this.floatTexts.length) { for (const ft of this.floatTexts) { ft.y += ft.vy * this.dtScale; ft.vy += 0.05 * this.dtScale; } this.floatTexts = this.floatTexts.filter((ft) => this.time - ft.born < ft.dur); }
+    if (this.hurtFlash > 0) this.hurtFlash = Math.max(0, this.hurtFlash - dt);
+    if (this.smashFlash > 0) this.smashFlash = Math.max(0, this.smashFlash - dt);
+    if (this.ko && this.time - this.ko.born > 1200) this.ko = null;
+    this._updateAmbient(dt);
     const v = this.vs;
 
     // ronde-freeze: even stilstaan met grote "wint de ronde"-tekst
@@ -1515,6 +1532,7 @@ const Game = {
       for (const p of this.particles) p.update(dt, this);
       this.particles = this.particles.filter((p) => p.life > 0);
       if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 0.04);
+      if (this.ko) this.updateVersusCamera();          // KO-cinematic: camera zoomt in op de ring-out
       if (window.UI && UI.updateVersusHUD) UI.updateVersusHUD(v);
       return;
     } else if (v.roundMsg) {                          // freeze net afgelopen -> nieuwe ronde
@@ -1714,6 +1732,17 @@ const Game = {
       let ty = Math.min((GY + 28) - visH, p.y - visH * 0.55); ty = Math.max(ty, -200);
       this.vsCamX += (tx - this.vsCamX) * 0.2;
       this.vsCamY += (ty - this.vsCamY) * 0.2;
+      return;
+    }
+
+    // KO-cinematic (~0,9s): dramatisch inzoomen op de ring-out-plek
+    if (this.ko && this.time - this.ko.born < 900) {
+      const zz = (this.vsCamZoom += (1.85 - this.vsCamZoom) * 0.14);
+      const visW = W / zz, visH = H / zz;
+      let tx = clamp(this.ko.x - visW / 2, 0, Math.max(0, mapW - visW));
+      let ty = clamp(this.ko.y - visH / 2, -200, (GY + 28) - visH);
+      this.vsCamX += (tx - this.vsCamX) * 0.18;
+      this.vsCamY += (ty - this.vsCamY) * 0.18;
       return;
     }
 
@@ -2674,6 +2703,63 @@ const Game = {
     for (let i = 0; i < 16; i++) this.particles.push(new Particle(p.x, p.y - 14, (Math.random() - 0.5) * 3, -Math.random() * 3, col, 420, 3));
     this.shake = Math.max(this.shake, 4);
   },
+
+  // ==== VISUELE "JUICE": impact-feedback, KO-cinematic, sfeer ====
+  addHitFeel(x, y, dir, dmg, power, localVictim, victim) {
+    const big = (dmg >= 26) || (power >= 30);
+    // freeze-frame — met interval-slot zodat snelvuur (AK/vuurbal) het beeld niet vastvriest
+    if (dmg > 0 && this.time - (this._hitStopAt || 0) > 90) { this.hitStop = Math.max(this.hitStop, big ? 85 : 52); this._hitStopAt = this.time; }
+    this.addImpact(x, y, dir, big);                                          // schokgolf + richting-vonken
+    if (dmg > 0) this.addFloatText(x, y - 8, '-' + dmg, big ? '#ff5a3a' : '#ffe27a', big);
+    if (victim) victim._flashUntil = this.time + 130;                        // witte hit-flash op het slachtoffer
+    if (localVictim && dmg > 0) this.hurtFlash = Math.max(this.hurtFlash, big ? 240 : 150);   // rode schermrand als JIJ geraakt wordt
+    if (big) this.smashFlash = Math.max(this.smashFlash, 90);
+    this.shake = Math.max(this.shake, big ? 10 : 7);
+  },
+  addImpact(x, y, dir, big) {
+    this.impacts.push({ x, y, born: this.time, dur: big ? 260 : 200, big });
+    const n = big ? 12 : 8;
+    for (let i = 0; i < n; i++) {
+      const spread = (Math.random() - 0.5) * 1.4, sp = 3 + Math.random() * 3.5;
+      this.particles.push(new Particle(x, y, dir * sp * (0.6 + Math.random()) + spread, -1 + spread - Math.random() * 2, i % 2 ? '#ffffff' : '#ffe27a', 300, big ? 3 : 2));
+    }
+  },
+  addFloatText(x, y, text, color, big) {
+    this.floatTexts.push({ x, y, vy: -1.1, text, color, born: this.time, dur: 700, scale: big ? 1.7 : 1.1 });
+  },
+  // KO-cinematic op de ring-out-plek: witte flits + schokgolf + "SMASH!"/"K.O."
+  triggerKO(x, y, won) {
+    const gy = (this.vsMap && this.vsMap.fallY) || 232;
+    y = Math.max(24, Math.min(y, gy - 24));                                  // op het scherm houden (vallers zitten ver onderin)
+    this.ko = { x, y, born: this.time, won: !!won };
+    this.smashFlash = Math.max(this.smashFlash, 210);
+    this.shake = Math.max(this.shake, 14);
+    this.addFloatText(x, y - 18, won ? 'SMASH!' : 'K.O.', won ? '#5aff7a' : '#ff5a5a', true);
+    for (let i = 0; i < 22; i++) { const a = (i / 22) * 6.2832, sp = 3 + Math.random() * 4; this.particles.push(new Particle(x, y - 12, Math.cos(a) * sp, Math.sin(a) * sp - 1, i % 2 ? '#ffffff' : '#ffe27a', 520, 3)); }
+    if (window.Sfx) Sfx.play('explos');
+  },
+  // sfeer-deeltjes per map (embers/bladeren/zeenevel/stof) — geven de arena leven
+  _updateAmbient(dt) {
+    const map = this.vsMap; if (!map) return;
+    const kind = map.vulcan ? 'ember' : (map.jungle2 ? 'leaf' : ((map.beach || map.pirate) ? 'spray' : (map.id === 'sky' ? 'spark' : ((map.cave || map.dohyo) ? 'dust' : null))));
+    if (kind) {
+      this._ambClock += dt;
+      if (this._ambClock >= 150 && this.ambient.length < 55) {
+        this._ambClock = 0;
+        const W = this.vsMapW || 720, x = Math.random() * W, gy = (map.fallY || 232);
+        if (kind === 'ember') this.ambient.push({ x, y: gy + 8, vx: (Math.random() - 0.5) * 0.4, vy: -0.6 - Math.random() * 0.9, c: Math.random() < 0.5 ? '#ff7a2a' : '#ffd24a', s: 2, born: this.time, dur: 2600 });
+        else if (kind === 'leaf') this.ambient.push({ x, y: -50 - Math.random() * 60, vx: (Math.random() - 0.5) * 0.7, vy: 0.5 + Math.random() * 0.6, c: Math.random() < 0.5 ? '#4a8c1f' : '#6abe30', s: 2, born: this.time, dur: 4600, sway: Math.random() * 6.28 });
+        else if (kind === 'spray') this.ambient.push({ x, y: gy - 4, vx: (Math.random() - 0.5) * 0.5, vy: -1 - Math.random() * 1.2, c: '#bfe9ff', s: 2, born: this.time, dur: 1400 });
+        else if (kind === 'spark') this.ambient.push({ x, y: Math.random() * 200 - 70, vx: (Math.random() - 0.5) * 0.3, vy: -0.2 - Math.random() * 0.3, c: '#ffffff', s: 1, born: this.time, dur: 2800 });
+        else this.ambient.push({ x, y: Math.random() * 180, vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.2, c: '#7a808c', s: 1, born: this.time, dur: 3200 });
+      }
+    }
+    if (this.ambient.length) {
+      for (const a of this.ambient) { a.x += a.vx * this.dtScale; a.y += a.vy * this.dtScale; if (a.sway != null) { a.sway += 0.05 * this.dtScale; a.x += Math.sin(a.sway) * 0.3; } }
+      this.ambient = this.ambient.filter((a) => this.time - a.born < a.dur);
+    }
+  },
+  _flashPal(pal) { const o = {}; for (const k in pal) o[k] = '#ffffff'; return o; },
   // de bot zet zijn eigen ability in (spiegel van useAbility, maar met de bot als bron en de speler als doelwit)
   botUseAbility() {
     const b = this.bot; if (!b || b.dead || !b.ability || b.abCharge < 1) return false;
@@ -2857,8 +2943,8 @@ const Game = {
         const dmg = Math.round(wd * 0.45);                            // versus-melee-schade
         const kp = 15 + Math.max(0, p.combo - 1) * 8;                 // vanaf x2 fors meer knockback (x1=15 .. x5=47)
         const kvy = -5.5 - Math.max(0, p.combo - 1) * 0.7;            // en iets meer omhoog
-        if (this.vsBot) this.applyHitToBot(kdir, kp, kvy, dmg);       // bot wegslaan + schade
-        else Net.versusSend('hit', { dir: p.dir, power: kp, vy: kvy, dmg: dmg });
+        if (this.vsBot) this.applyHitToBot(kdir, kp, kvy, dmg);       // bot wegslaan + schade (juice zit in applyHitToBot)
+        else { Net.versusSend('hit', { dir: p.dir, power: kp, vy: kvy, dmg: dmg }); this.addHitFeel(r.x, r.y - 16, kdir, dmg, kp, false, r); }
         p.abCharge = Math.min(1, p.abCharge + (0.05 + 0.03 * Math.max(0, p.combo - 1)) / (p.abChargeMul || 1));   // ability laadt sneller op met combos
         // combo-XP (alleen online — geen XP-farmen tegen de bot)
         const cx = comboXp(p.combo);
@@ -2901,6 +2987,7 @@ const Game = {
     r.shieldHp = b.shieldHp || 0; r.giant = !!b.giant; r.heli = !!b.heli;
     r.walkPhase = b.walkPhase; r.alive = !b.dead; r.charId = b.charId;
     r.hp = b.hp; r.maxHp = b.maxHp; r.ducking = b.ducking;
+    r._flashUntil = b._flashUntil || 0;                 // witte hit-flash mee-spiegelen
 
     // bot schiet: vuurwapen (beide-wapens) of fireball/rocket (smash)
     const p2 = this.player;
@@ -3010,7 +3097,8 @@ const Game = {
       b.guard -= GUARD_HIT_COST;
       if (b.guard <= 0) { b.guard = 0; b._guardBroken = true; b._guardBrokenUntil = this.time + GUARD_BREAK_STUN; b.stunUntil = Math.max(b.stunUntil || 0, this.time + GUARD_BREAK_STUN); this.onGuardBreak(b); }
     }
-    this.shake = Math.max(this.shake, blocking ? 3 : 7);
+    if (!blocking && dmg > 0) this.addHitFeel(b.x, b.y - 16, dir, dmg, power, false, b);   // impact-juice
+    else this.shake = Math.max(this.shake, blocking ? 3 : 5);
   },
 
   respawnBot() {
@@ -3203,7 +3291,8 @@ const Game = {
       p.guard -= GUARD_HIT_COST;
       if (p.guard <= 0) { p.guard = 0; p._guardBroken = true; p._guardBrokenUntil = this.time + GUARD_BREAK_STUN; p.stunUntil = Math.max(p.stunUntil || 0, this.time + GUARD_BREAK_STUN); this.onGuardBreak(p); }
     }
-    this.shake = Math.max(this.shake, blocking ? 3 : 7);
+    if (!blocking && payload.dmg > 0) this.addHitFeel(p.x, p.y - 16, payload.dir || 1, payload.dmg, payload.power || 0, true, p);   // impact-juice + rode flits
+    else this.shake = Math.max(this.shake, blocking ? 3 : 5);
   },
 
   // de aanvaller hoort dat z'n klap geparried is -> zelf terugstuiteren + verdoofd
@@ -3218,6 +3307,7 @@ const Game = {
   localFell() {
     if (this.vs.over || this.vs.roundFreezeUntil > this.time) return;   // al klaar / al in freeze
     this.player.dead = true;
+    this.triggerKO(this.player.x, this.player.y, false);                // KO-cinematic (jij bent eraf)
     this.vs.oppScore++;
     // absolute score meesturen -> zelfherstellend tegen verloren/dubbele meldingen
     if (window.Net && !this.vsBot) Net.versusSend('fell', { winScore: this.vs.oppScore });
@@ -3249,8 +3339,10 @@ const Game = {
   onVersusFell(payload) {
     if (this.vs.over) return;
     // absolute score overnemen (max) -> dubbele meldingen tellen niet dubbel, gemiste herstellen
+    const before = this.vs.myScore;
     if (payload && typeof payload.winScore === 'number') this.vs.myScore = Math.max(this.vs.myScore, payload.winScore);
     else this.vs.myScore++;
+    if (this.vs.myScore > before) this.triggerKO(this.vs.remote.x, this.vs.remote.y, true);   // KO-cinematic (tegenstander eraf)
     if (this.vs.myScore >= this.vs.target) { this.endVersus(true); return; }
     if (this.vs.roundFreezeUntil <= this.time) this.beginRoundFreeze('JIJ wint de ronde!');
   },
@@ -3480,6 +3572,16 @@ const Game = {
     if (this.ghostBullets) for (const b of this.ghostBullets) drawBullet(b);
     if (this.botBullets) for (const b of this.botBullets) drawBullet(b);
 
+    // sfeer-deeltjes (embers/bladeren/zeenevel/stof) — achter de spelers
+    if (this.ambient && this.ambient.length) {
+      for (const a of this.ambient) {
+        const life = 1 - (this.time - a.born) / a.dur;
+        ctx.globalAlpha = Math.max(0, Math.min(1, life * 1.4)) * 0.85;
+        Sprites.px(ctx, a.c, Math.round(a.x), Math.round(a.y), a.s, a.s);
+      }
+      ctx.globalAlpha = 1;
+    }
+
     // partikels
     for (const p of this.particles) {
       ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
@@ -3498,11 +3600,13 @@ const Game = {
       if (r.attacking) { if (!r._swStart) r._swStart = this.time; } else r._swStart = 0;
       const rSwing = r.attacking ? Math.max(0, Math.min(1, (this.time - r._swStart) / 150)) : 0;
       ctx.save(); ctx.translate(Math.round(r.x), Math.round(r.y)); const rg = r.giant ? 2.2 : 1; ctx.scale(rg, rg);
-      Sprites.drawCharacter(ctx, 0, 0, r.dir, rc.palette, {
+      const rOpts = {
         walkPhase: r.walkPhase, airborne: !r.onGround, attacking: r.attacking, ducking: r.ducking, swing: rSwing,
         weapon: r.giant ? null : (r.swingWeapon || r.heldWeapon || 'bat'), build: rc.build, hair: rc.hair, squash: r.flat,
         hat: r.hat || 'none', t: this.time, rage: r.rage, burning: r.burn,
-      });
+      };
+      Sprites.drawCharacter(ctx, 0, 0, r.dir, rc.palette, rOpts);
+      if (r._flashUntil > this.time) { ctx.globalAlpha = Math.min(0.9, (r._flashUntil - this.time) / 130 * 0.95); Sprites.drawCharacter(ctx, 0, 0, r.dir, this._flashPal(rc.palette), rOpts); ctx.globalAlpha = 1; }   // witte hit-flash
       ctx.restore();
       }
       if (r.ducking) this.drawBlockGuard(ctx, Math.round(r.x), Math.round(r.y), r.dir);
@@ -3521,14 +3625,16 @@ const Game = {
         else {
         ctx.save(); ctx.translate(Math.round(p.x), Math.round(p.y)); const pg = p.giant ? 2.2 : 1; ctx.scale(pg, pg);
         const pSwing = this.time < p.attackAnimUntil ? Math.max(0, Math.min(1, 1 - (p.attackAnimUntil - this.time) / 150)) : 0;
-        Sprites.drawCharacter(ctx, 0, 0, p.dir, p.pal, {
+        const pOpts = {
           walkPhase: p.walkPhase, airborne: !p.onGround, ducking: p.ducking,
           attacking: this.time < p.attackAnimUntil, swing: pSwing,
           weapon: p.giant ? null : (swinging ? p.swingWeapon : p.weaponId), build: p.build, hair: p.hairStyle,
           squash: (p.flatUntil && this.time < p.flatUntil),
           hat: Storage.data.equippedHat, t: this.time,
           rage: p.hasBuff('rage', this.time), burning: p.burnUntil > this.time,
-        });
+        };
+        Sprites.drawCharacter(ctx, 0, 0, p.dir, p.pal, pOpts);
+        if (p._flashUntil > this.time) { ctx.globalAlpha = Math.min(0.9, (p._flashUntil - this.time) / 130 * 0.95); Sprites.drawCharacter(ctx, 0, 0, p.dir, this._flashPal(p.pal), pOpts); ctx.globalAlpha = 1; }   // witte hit-flash
         ctx.restore();
         }
         if (p.ducking && p.onGround) this.drawBlockGuard(ctx, Math.round(p.x), Math.round(p.y), p.dir);
@@ -3577,7 +3683,46 @@ const Game = {
       for (let k = 0; k < 6; k++) { const ang = t * 6 + k * 1.05; Sprites.px(ctx, '#ffffff', Math.round(fx.x + Math.cos(ang) * R), Math.round(cy + Math.sin(ang) * R), 2, 2); }
       ctx.globalAlpha = 1;
     }
+    // impact-schokgolven op de raakpunten
+    if (this.impacts) for (const im of this.impacts) {
+      const t = (this.time - im.born) / im.dur; if (t < 0 || t >= 1) continue;
+      const R = (im.big ? 6 : 4) + t * (im.big ? 34 : 22), a = 1 - t;
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = im.big ? 2.4 : 1.6; ctx.globalAlpha = a * 0.9;
+      ctx.beginPath(); ctx.arc(im.x, im.y, R, 0, 6.2832); ctx.stroke(); ctx.globalAlpha = 1;
+    }
+    // KO-schokgolf op de ring-out-plek
+    if (this.ko) {
+      const t = (this.time - this.ko.born) / 520;
+      if (t >= 0 && t < 1) {
+        const R = 8 + t * 92, a = 1 - t;
+        ctx.strokeStyle = this.ko.won ? '#9dffb0' : '#ff9a9a'; ctx.lineWidth = 3; ctx.globalAlpha = a * 0.9;
+        ctx.beginPath(); ctx.arc(this.ko.x, this.ko.y - 8, R, 0, 6.2832); ctx.stroke();
+        ctx.globalAlpha = a * 0.5; ctx.beginPath(); ctx.arc(this.ko.x, this.ko.y - 8, R * 0.6, 0, 6.2832); ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+    }
+    // zwevende schade-/combo-cijfers (wereld-ruimte, schalen mee met de zoom)
+    if (this.floatTexts) for (const ft of this.floatTexts) {
+      const t = (this.time - ft.born) / ft.dur; if (t < 0 || t >= 1) continue;
+      ctx.globalAlpha = t < 0.15 ? t / 0.15 : (1 - (t - 0.15) / 0.85);
+      ctx.font = 'bold ' + Math.round(7 * ft.scale) + 'px "Courier New", monospace'; ctx.textAlign = 'center';
+      ctx.fillStyle = '#000'; ctx.fillText(ft.text, ft.x + 0.6, ft.y + 0.6);
+      ctx.fillStyle = ft.color; ctx.fillText(ft.text, ft.x, ft.y);
+      ctx.globalAlpha = 1; ctx.textAlign = 'left';
+    }
     ctx.restore();
+
+    // schermflitsen + vignet (scherm-ruimte, over de wereld)
+    if (this.smashFlash > 0) { ctx.globalAlpha = Math.min(0.6, this.smashFlash / 210 * 0.6); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+    if (this.hurtFlash > 0) {
+      const ha = Math.min(0.5, this.hurtFlash / 240 * 0.5);
+      const hg = ctx.createRadialGradient(W / 2, H / 2, H * 0.32, W / 2, H / 2, H * 0.75);
+      hg.addColorStop(0, 'rgba(210,30,30,0)'); hg.addColorStop(1, 'rgba(190,20,20,' + ha + ')');
+      ctx.fillStyle = hg; ctx.fillRect(0, 0, W, H);
+    }
+    const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, H * 0.98);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.28)');
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
 
     // draken (drakenei-powerup) — scherm-ruimte, over de wereld heen
     this.renderDragons(ctx);
