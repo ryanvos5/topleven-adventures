@@ -148,14 +148,14 @@ const Game = {
     const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
     const GY = CONFIG.GROUND_Y, flagX = this.jFlagX, end = lv.length - 200;
     this.platforms = []; this.pits = []; this.crates = [];
+    this.jEnemySpawns = [];                                       // specs bewaren om bij respawn opnieuw te spawnen
     const kinds = ['health', 'rage', 'speed', 'shield', 'fireball'];
     let crateN = 0;
     const place = (type, x, y, range) => {
+      const dir = rnd() < 0.5 ? -1 : 1;
+      this.jEnemySpawns.push({ type: type.id, x: Math.round(x), y: Math.round(y), range: Math.round(range), dir });
       if (!placeEnemies) return;
-      const z = new Zombie(x, this.level, type);
-      z.x = x; z.patrolL = Math.round(x - range); z.patrolR = Math.round(x + range);
-      z.y = y; z.patrolY = y; z.onGround = !type.flying; z.vy = 0; z.dir = rnd() < 0.5 ? -1 : 1;
-      this.zombies.push(z);
+      this._spawnJourneyEnemy(type.id, Math.round(x), Math.round(y), Math.round(range), dir);
     };
     const clear = (x, y) => !this.platforms.some((pf) => Math.abs(pf.x - x) < pf.w / 2 + 12 && Math.abs(pf.y - y) < 20) &&
                             !this.pits.some((p) => x > p.x0 - 12 && x < p.x1 + 12);
@@ -214,8 +214,9 @@ const Game = {
     this.platforms = this.platforms.filter((pf) => Math.abs(pf.x - flagX) > pf.w / 2 + 24);
     // en er mogen geen apen op/door de vlag patrouilleren -> die weghalen (patrouille die de vlag-zone raakt)
     this.zombies = this.zombies.filter((z) => !z.patrol || z.patrolR < flagX - 26 || z.patrolL > flagX + 26);
+    this.jEnemySpawns = this.jEnemySpawns.filter((s) => (s.x + s.range) < flagX - 26 || (s.x - s.range) > flagX + 26);
     // vogels vanaf level 6 (zweven heen en weer, aanraken = schade)
-    if (placeEnemies && n >= 6) {
+    if (n >= 6) {
       const birds = 1 + Math.floor((n - 6) / 3);
       for (let i = 0; i < birds; i++) {
         const bx = Math.round(lv.length * (0.28 + i * (0.5 / Math.max(1, birds))) + (rnd() - 0.5) * 100);
@@ -223,6 +224,19 @@ const Game = {
         place(ZOMBIE_TYPES.bird, Math.max(220, Math.min(lv.length - 180, bx)), by, 60 + Math.round(rnd() * 50));
       }
     }
+  },
+  // één patrouille-vijand plaatsen vanuit een spec (nieuw + bij respawn)
+  _spawnJourneyEnemy(typeId, x, y, range, dir) {
+    const z = new Zombie(x, this.level, ZOMBIE_TYPES[typeId]);
+    z.x = x; z.patrolL = x - range; z.patrolR = x + range;
+    z.y = y; z.patrolY = y; z.onGround = !z.type.flying; z.vy = 0; z.dir = dir || 1;
+    this.zombies.push(z);
+  },
+  // bij respawn: alle al-gedode apen komen weer terug (op hun oorspronkelijke plek)
+  _respawnJourneyEnemies() {
+    if (!this.jEnemySpawns || this.coop) return;                 // co-op: host houdt de vijanden bij
+    this.zombies = this.zombies.filter((z) => !z.patrol);        // dode + levende patrouille-apen weg
+    for (const s of this.jEnemySpawns) this._spawnJourneyEnemy(s.type, s.x, s.y, s.range, s.dir);
   },
 
   // BOT-MENSAAP: verschijnt op de meeste levels halverwege en moet verslagen (Power Smash-stijl)
@@ -354,7 +368,8 @@ const Game = {
   journeyRespawn() {
     const p = this.player;
     const rx = this.jFlagReached ? this.jFlagX : 60;
-    p.hp = p.maxHp; p.x = rx; p.y = CONFIG.GROUND_Y; p.vy = 0; p.onGround = true;
+    this._respawnJourneyEnemies();                              // alle gedode apen komen weer terug
+    p.hp = p.maxHp; p.x = rx; p.y = CONFIG.GROUND_Y; p.vy = 0; p.onGround = true; p.knockVx = 0;
     p.burnUntil = 0; p._touchInvUntil = this.time + 2200;      // even onkwetsbaar na de respawn
     // zombies vlakbij het respawn-punt wegduwen (geen respawn-kill)
     for (const z of this.zombies) if (z.alive && Math.abs(z.x - rx) < 120) z.x += (z.x < rx ? -1 : 1) * 140;

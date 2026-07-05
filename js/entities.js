@@ -696,7 +696,9 @@ class Zombie {
           game.time - (this._stompCd || 0) > 260) {
         this._stompCd = game.time;
         this.takeDamage(Math.max(1, Math.round(this.maxHp * 0.22)), (this.x >= player.x ? 1 : -1), game, 0);   // ~5 stomps
-        player.vy = -7.5; player.onGround = false; player.jumps = Math.max(player.jumps, 1);                    // stuiter
+        const away = player.x < this.x ? -1 : 1;                  // van de aap vandaan
+        player.knockVx = away * 8.5;                              // TERUGSLAG naar achter (decayt vanzelf) -> opnieuw aanlopen
+        player.vy = -3.8; player.onGround = false;                // klein hopje (niet steeds hoger de lucht in)
         this.hitFlash = 110;
         if (this.alive && game.addHitFeel) game.addHitFeel(this.x, this.cy, this.x >= player.x ? 1 : -1, Math.round(this.maxHp * 0.22), 12, false, null);
         game.shake = Math.max(game.shake, 7);
