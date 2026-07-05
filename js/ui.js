@@ -1693,6 +1693,8 @@ const UI = {
   // Zet de reeds gebouwde .shop-card kinderen om in een carrousel:
   // 1 item groot in het midden (2.5D), buren kleiner, pijltjes om te scrollen.
   _galleryify(container, key) {
+    if (this._galRO) { try { this._galRO.disconnect(); } catch (e) {} this._galRO = null; }
+    if (this._galResizeHandler) { window.removeEventListener('resize', this._galResizeHandler); this._galResizeHandler = null; }
     const cards = Array.prototype.slice.call(container.children).filter((el) => el.classList && el.classList.contains('shop-card'));
     if (!cards.length) return;                     // niets om te tonen (bv. hint-tekst) — laat staan
     container.innerHTML = '';
@@ -1737,6 +1739,18 @@ const UI = {
       dotEls.forEach((d, i) => d.classList.toggle('on', i === cur));
       prev.disabled = cur <= 0;
       next.disabled = cur >= slides.length - 1;
+      // fit-to-hoogte: schaal de actieve kaart zo dat hij altijd binnen de viewport past (geen scroll)
+      const vpH = (viewport.clientHeight || 0) - 14;
+      slides.forEach((s, i) => {
+        if (i === cur) {
+          const card = s.querySelector('.shop-card');
+          const ch = (card && card.offsetHeight) || 1;
+          const fit = vpH > 40 ? Math.min(1, vpH / ch) : 1;
+          s.style.transform = 'scale(' + fit + ')';
+        } else {
+          s.style.transform = '';        // buren gebruiken de CSS-schaal
+        }
+      });
       const sw = slides[0].offsetWidth || (viewport.offsetWidth * 0.6);
       const tx = viewport.offsetWidth / 2 - cur * sw - sw / 2;
       track.style.transform = 'translateX(' + tx + 'px)';
@@ -1760,6 +1774,14 @@ const UI = {
     this._galApply = apply;
     apply();
     requestAnimationFrame(apply);
+    // herbereken fit + centrering bij elke maatverandering (orientatie, layout-settle, resize)
+    if (typeof ResizeObserver !== 'undefined') {
+      this._galRO = new ResizeObserver(() => apply());
+      this._galRO.observe(viewport);
+    } else {
+      this._galResizeHandler = () => apply();
+      window.addEventListener('resize', this._galResizeHandler);
+    }
   },
 
   _spriteCard(palette, opts, nameHtml, owned) {

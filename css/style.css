@@ -374,8 +374,8 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
 }
 #menu-screen { padding: 0; background: transparent; }
 /* op deze schermen scrolt alleen de lijst, niet het paneel */
-#shop-screen .screen-inner, #leaderboard-screen .screen-inner, #chat-screen .screen-inner { overflow: hidden; }
-#shop-grid, #lb-list, .chat-messages { flex: 1 1 auto; min-height: 0; overflow-y: auto; width: 100%; }
+#shop-screen .screen-inner, #inventory-screen .screen-inner, #leaderboard-screen .screen-inner, #chat-screen .screen-inner { overflow: hidden; }
+#shop-grid, #inv-grid, #lb-list, .chat-messages { flex: 1 1 auto; min-height: 0; overflow-y: auto; width: 100%; }
 /* chat: online-balk vast bovenaan, berichten flexen + scrollen (geen overlap) */
 #chat-screen .chat-online { flex: 0 0 auto; max-height: 50px; width: 100%; margin-bottom: 6px; }
 #chat-screen .chat-messages { flex: 1 1 auto; min-height: 56px; max-height: none; }
@@ -1309,16 +1309,28 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
 
 /* ====== Horizontale galerij (shop + inventaris carrousel) ====== */
 .shop-grid.gallery {
-  display: block;
+  display: flex;
+  flex-direction: column;
   position: relative;
-  overflow: visible;
+  overflow: hidden;         /* NIET scrollen — alles past binnen de hoogte */
   padding: 0 46px;          /* zijgoten waar de pijlen in staan (buiten de viewport) */
+  margin: 0 auto;
   max-width: 560px;
+  min-height: 0;
 }
-.gal-viewport { overflow: hidden; width: 100%; padding: 10px 0 6px; }
+.gal-viewport {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  width: 100%;
+  display: flex;
+  align-items: center;      /* kaart verticaal gecentreerd in de beschikbare ruimte */
+  padding: 6px 0;
+}
 .gal-track {
   display: flex;
-  align-items: stretch;
+  align-items: center;
+  width: 100%;
   transition: transform .34s cubic-bezier(.22, .61, .36, 1);
   will-change: transform;
 }
@@ -1369,11 +1381,13 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
 .gal-arrow:disabled { opacity: .28; cursor: default; }
 .gal-arrow:not(:disabled):active { transform: translateY(-50%) scale(.9); }
 .gal-dots {
+  flex: 0 0 auto;
   display: flex;
   gap: 5px;
   justify-content: center;
   flex-wrap: wrap;
-  margin-top: 8px;
+  margin-top: 6px;
+  padding-bottom: 2px;
 }
 .gal-dot {
   width: 7px; height: 7px;
@@ -1387,6 +1401,16 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
   .shop-grid.gallery { padding: 0 38px; }
   .gal-slide { width: min(60%, 200px); }
   .gal-arrow { width: 36px; height: 36px; }
+}
+/* lage schermen (landscape mobiel): kop compacter zodat de galerij past */
+@media (max-height: 500px) {
+  #shop-screen .screen-title, #inventory-screen .screen-title { font-size: 16px; margin-bottom: 2px; }
+  #shop-screen .shop-tabs, #inventory-screen .shop-tabs { margin-bottom: 4px; }
+  .shop-coins { font-size: 12px !important; margin: 2px 0 4px !important; }
+  #inv-hint { display: none; }
+  .gal-viewport { padding: 2px 0; }
+  .gal-dots { margin-top: 3px; }
+  .gal-arrow { width: 32px; height: 32px; }
 }
 
 .result-stats {
