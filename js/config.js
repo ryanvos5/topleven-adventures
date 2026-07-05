@@ -397,6 +397,12 @@ const ZOMBIE_TYPES = {
     reach: 14, patrol: true, journeyFoe: true, flying: true, scale: 1.0, coin: 10,
     ammoDrop: 0, ammoDropChance: 0, healChance: 0, color: '#d2662e',
   },
+  brawler: {              // BOT-MENSAAP: verschijnt af en toe en vecht met je (Power Smash-stijl); moet verslagen
+    id: 'brawler', hpMul: 4.5, speedMul: 0.85, dmg: 16, biteCd: 850,
+    reach: 26, lunge: true, lungeSpeed: 3.0, journeyFoe: true, brawler: true, scale: 1.7, coin: 120,
+    ammoDrop: 0, ammoDropChance: 0, knockback: true, knockResist: 0.55, knockPlayer: 12,
+    healChance: 0, color: '#5a3f28',
+  },
 };
 
 // munitie: beginvoorraad bij een nieuw spel (blijft daarna behouden tussen levels)

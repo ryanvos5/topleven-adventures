@@ -448,6 +448,7 @@ const Sprites = {
   },
   _drawZombieRaw(ctx, cx, footY, dir, z) {
     const id = (z && z.type) ? z.type.id : 'walker';
+    if (id === 'brawler') return this.drawBrawlerApe(ctx, cx, footY, dir, z);
     if (id === 'apeling' || id === 'boomape') return this.drawApeling(ctx, cx, footY, dir, z);
     if (id === 'bird') return this.drawBird(ctx, cx, footY, dir, z);
     if (id === 'boss') return this.drawBoss(ctx, cx, footY, dir, z);
@@ -645,6 +646,36 @@ const Sprites = {
     if (f) { this.px(ctx, '#caa860', x - 4, y - 4, 3, 3); this.px(ctx, '#caa860', x + 1, y + 1, 3, 3); }
     else { this.px(ctx, '#caa860', x + 1, y - 4, 3, 3); this.px(ctx, '#caa860', x - 4, y + 1, 3, 3); }
   },
+  // BOT-MENSAAP (mini-boss): grote, boze mensaap — rode ogen, brede schouders, hp-balk
+  drawBrawlerApe(ctx, cx, footY, dir, z) {
+    const ph = (z && z.walkPhase) || 0;
+    const swing = (ph === 1) ? 3 : (ph === 3) ? -3 : 0;
+    const fur = '#5a3f28', furDk = '#3a2818', chest = '#8a5e38', enraged = z && z.hp < z.maxHp * 0.35;
+    const legTop = footY - 12, torsoTop = legTop - 17, headTop = torsoTop - 13;
+    // benen
+    this.px(ctx, furDk, cx - 8 - swing, footY - 4, 7, 4); this.px(ctx, furDk, cx + 2 + swing, footY - 4, 7, 4);
+    // armen (dik, aap-achtig, tot op de grond)
+    const atk = z && (z.atk === 'strike' || z.atk === 'windup');
+    this.px(ctx, fur, cx - 13, torsoTop + (atk ? -3 : 2), 5, 16); this.px(ctx, fur, cx + 8, torsoTop + (atk ? -3 : 2), 5, 16);
+    this.px(ctx, furDk, cx - 13, torsoTop + 12, 5, 4); this.px(ctx, furDk, cx + 8, torsoTop + 12, 5, 4);   // vuisten
+    // lijf (brede schouders)
+    this.px(ctx, fur, cx - 10, torsoTop, 20, 17); this.px(ctx, furDk, cx - 10, torsoTop, 3, 17);
+    this.px(ctx, chest, cx - 5, torsoTop + 4, 10, 10);                     // borst
+    this.px(ctx, furDk, cx - 10, torsoTop, 20, 3);                        // schouderschaduw
+    // kop
+    this.px(ctx, fur, cx - 8, headTop, 16, 13); this.px(ctx, furDk, cx - 8, headTop, 16, 3);
+    this.px(ctx, '#e8c8a0', cx - 5, headTop + 5, 10, 6);                  // snuit
+    const eye = enraged ? '#ff2020' : '#1a0e06';
+    this.px(ctx, eye, cx - 4, headTop + 4, 3, 2); this.px(ctx, eye, cx + 2, headTop + 4, 3, 2);   // ogen (rood bij razernij)
+    this.px(ctx, '#fff', cx - 4, headTop + 9, 3, 1); this.px(ctx, '#fff', cx + 2, headTop + 9, 3, 1);   // ontblote tanden
+    if (enraged) { for (let i = 0; i < 2; i++) this.px(ctx, '#ff3030', cx - 10 + i * 18, headTop - 3 - i, 3, 1); }   // boze streepjes
+    // hp-balk boven de kop
+    if (z && z.hp < z.maxHp) {
+      const bw = 30; this.px(ctx, '#11151e', cx - bw / 2 - 1, headTop - 8, bw + 2, 4);
+      this.px(ctx, '#e5484d', cx - bw / 2, headTop - 7, Math.round(bw * Math.max(0, z.hp / z.maxHp)), 2);
+    }
+  },
+
   // tropische vogel (Journey): zweeft heen en weer, klappert met de vleugels
   drawBird(ctx, cx, cy, dir, z) {
     const t = (z && z._t) || 0;

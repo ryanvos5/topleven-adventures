@@ -371,6 +371,7 @@ class Player {
       if (hit && Math.abs(z.y - this.y) < 30) {
         const kdir = (z.x >= this.x ? 1 : -1);             // altijd van de speler vandaan
         z.takeDamage(dmg, kdir, game, knock);
+        if (z.brawler && game.addHitFeel) { game.addHitFeel(z.x, z.cy, kdir, Math.round(dmg), knock, false, null); z.hitFlash = 100; }   // Power Smash-impact op de bot-mensaap
       }
     }
     // explosieve vaten kapotslaan
@@ -809,7 +810,13 @@ class Zombie {
   bite(game, player) {
     this.lastBite = game.time;
     if (!this.reachesVertically(player)) return;   // speler sprong eroverheen -> mis
-    player.takeDamage(this.type.dmg, 'touch');
+    const hp0 = player.hp;
+    // BOT-MENSAAP: gewone klap-schade (een gevecht, niet de Mario-helft-HP-regel)
+    player.takeDamage(this.type.dmg, this.brawler ? undefined : 'touch');
+    if (this.brawler && game.addHitFeel && player.hp < hp0) {   // Power Smash-impact op de speler
+      game.addHitFeel(player.x, player.y - 16, this.dir, this.type.dmg, this.type.knockPlayer, true, null);
+      player._flashUntil = game.time + 320;
+    }
     // brutes slaan altijd terug, andere zombies met een kans
     const always = this.type.knockback;
     if (always || Math.random() < (this.type.knockChance || 0)) {

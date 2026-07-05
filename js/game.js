@@ -126,6 +126,9 @@ const Game = {
     this.spawnArmed = true;
     // CO-OP: host simuleert de zombies; de gast krijgt ze via sync (zelf niets spawnen)
     this.coop = coopRole ? { role: coopRole, partner: null, z: [], _pT: 0, _zT: 0, won: false } : null;
+    // Power Smash-juice-laag ook in de Journey (voor de bot-mensaap): impact/flits/KO
+    this.hitStop = 0; this.impacts = []; this.floatTexts = []; this.hurtFlash = 0; this.smashFlash = 0; this.ko = null;
+    this.brawlerSpawned = false;
     // Mario-regels
     this.player._marioTouch = true;                     // aanraking = helft HP (zie Player.takeDamage)
     this.player.maxJumps = 2; this.player.jumps = 2;    // dubbel-jump hoort bij het eiland
@@ -205,6 +208,24 @@ const Game = {
         place(ZOMBIE_TYPES.bird, Math.max(220, Math.min(lv.length - 180, bx)), by, 60 + Math.round(rnd() * 50));
       }
     }
+  },
+
+  // BOT-MENSAAP: verschijnt op de meeste levels halverwege en moet verslagen (Power Smash-stijl)
+  _maybeSpawnBrawler() {
+    if (this.brawlerSpawned || !this.jStage) return;
+    if (this.coop && this.coop.role === 'guest') return;   // host spawnt + synct de bot-mensaap
+    const n = this.jStage.idx;
+    if (n < 2 || (n * 3) % 4 === 0) return;               // niet op het eerste level, en niet élk level ("soms")
+    if (this.player.x < this.level.length * 0.6) return;  // pas voorbij de helft
+    this.brawlerSpawned = true;
+    const sx = Math.min(this.level.length - 120, this.player.x + 210);
+    const z = new Zombie(sx, this.level, ZOMBIE_TYPES.brawler);
+    z.brawler = true; z.dir = -1;
+    this.zombies.push(z);
+    this.shake = Math.max(this.shake, 12);
+    this.smashFlash = Math.max(this.smashFlash, 130);
+    this.addFloatText(this.player.x, CONFIG.GROUND_Y - 64, 'BOT-MENSAAP!', '#ff5a3a', true);
+    if (window.Sfx) Sfx.play('gorilla');
   },
 
   // vlag gehaald + kratten kapot slaan + finish/boss-overgang
@@ -760,6 +781,10 @@ const Game = {
   },
 
   onZombieKilled(z, reward) {
+    if (z && z.brawler && this.triggerKO) {              // BOT-MENSAAP verslagen: Power Smash KO-cinematic
+      this.triggerKO(z.x, z.cy, true);
+      this.addFloatText(z.x, z.cy - 30, 'VERSLAGEN!', '#5aff7a', true);
+    }
     if (this.level.arena) reward = Math.ceil(reward * ARENA_COIN_MULT); // minder munten in de arena
     else if (this.levelWasCleared) reward = 0;                          // herhaald level: geen kill-munten
     this.runCoins += reward;
@@ -890,8 +915,19 @@ const Game = {
 
   // ---------- update ----------
   update(dt) {
+    // Power Smash-juice: korte freeze-frame bij een rake klap (alleen in een Journey-stage)
+    if (this.jStage && this.hitStop > 0) { this.hitStop = Math.max(0, this.hitStop - dt); return; }
     this.time += dt;
     this.dtScale = Math.min(3, dt / 16.6667);
+    // juice-timers (impact-ringen / zweefcijfers / schermflitsen / KO)
+    if (this.jStage) {
+      if (this.impacts && this.impacts.length) this.impacts = this.impacts.filter((f) => this.time - f.born < f.dur);
+      if (this.floatTexts && this.floatTexts.length) { for (const ft of this.floatTexts) { ft.y += ft.vy * this.dtScale; ft.vy += 0.05 * this.dtScale; } this.floatTexts = this.floatTexts.filter((ft) => this.time - ft.born < ft.dur); }
+      if (this.hurtFlash > 0) this.hurtFlash = Math.max(0, this.hurtFlash - dt);
+      if (this.smashFlash > 0) this.smashFlash = Math.max(0, this.smashFlash - dt);
+      if (this.ko && this.time - this.ko.born > 1200) this.ko = null;
+      this._maybeSpawnBrawler();
+    }
 
     this.player.update(dt, this);
 
@@ -1034,8 +1070,10 @@ const Game = {
     } else if (this.level.mode === 'horde') {
       if (this.hordeLeft <= 0 && this.spawnArmed) this.win(); // horde overleefd
     } else if (this.player.x >= this.level.length) {
-      // kill-all: pas finishen als alle zombies dood zijn
-      if (!this.level.killAll || this.zombiesRemaining() <= 0) this.win();
+      // kill-all: pas finishen als alle zombies dood zijn; Journey: eerst de bot-mensaap verslaan
+      const brawlerBlocks = this.jStage && this.zombies.some((z) => z.alive && z.brawler);
+      if ((!this.level.killAll || this.zombiesRemaining() <= 0) && !brawlerBlocks) this.win();
+      else if (brawlerBlocks) { this.tutorialMsg = 'Versla eerst de bot-mensaap!'; this.tutorialUntil = this.time + 900; }
     }
 
     UI.updateHUD(this);
@@ -1453,8 +1491,44 @@ const Game = {
     ctx.globalAlpha = 1;
     ctx.textAlign = 'left';
 
+    // ---- Power Smash-juice (Journey): impact-schokgolven, KO-ring, zweefcijfers (wereld-ruimte) ----
+    if (this.jStage) {
+      if (this.impacts) for (const im of this.impacts) {
+        const t = (this.time - im.born) / im.dur; if (t < 0 || t >= 1) continue;
+        const R = (im.big ? 6 : 4) + t * (im.big ? 34 : 22);
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = im.big ? 2.4 : 1.6; ctx.globalAlpha = (1 - t) * 0.9;
+        ctx.beginPath(); ctx.arc(im.x, im.y, R, 0, 6.2832); ctx.stroke(); ctx.globalAlpha = 1;
+      }
+      if (this.ko) {
+        const t = (this.time - this.ko.born) / 520;
+        if (t >= 0 && t < 1) {
+          const R = 8 + t * 92; ctx.strokeStyle = this.ko.won ? '#9dffb0' : '#ff9a9a'; ctx.lineWidth = 3; ctx.globalAlpha = (1 - t) * 0.9;
+          ctx.beginPath(); ctx.arc(this.ko.x, this.ko.y - 8, R, 0, 6.2832); ctx.stroke(); ctx.globalAlpha = 1;
+        }
+      }
+      if (this.floatTexts) for (const ft of this.floatTexts) {
+        const t = (this.time - ft.born) / ft.dur; if (t < 0 || t >= 1) continue;
+        ctx.globalAlpha = t < 0.15 ? t / 0.15 : (1 - (t - 0.15) / 0.85);
+        ctx.font = 'bold ' + Math.round(7 * ft.scale) + 'px "Courier New", monospace'; ctx.textAlign = 'center';
+        ctx.fillStyle = '#000'; ctx.fillText(ft.text, ft.x + 0.6, ft.y + 0.6);
+        ctx.fillStyle = ft.color; ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.globalAlpha = 1; ctx.textAlign = 'left';
+      }
+    }
+
     ctx.restore();   // wereld (camera)
     ctx.restore();   // schermschud
+
+    // schermflitsen (Journey-juice): witte KO-flits + rode "jij geraakt"-rand
+    if (this.jStage) {
+      if (this.smashFlash > 0) { ctx.globalAlpha = Math.min(0.55, this.smashFlash / 210 * 0.55); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+      if (this.hurtFlash > 0) {
+        const ha = Math.min(0.5, this.hurtFlash / 240 * 0.5);
+        const hg = ctx.createRadialGradient(W / 2, H / 2, H * 0.32, W / 2, H / 2, H * 0.75);
+        hg.addColorStop(0, 'rgba(210,30,30,0)'); hg.addColorStop(1, 'rgba(190,20,20,' + ha + ')');
+        ctx.fillStyle = hg; ctx.fillRect(0, 0, W, H);
+      }
+    }
 
     // (objectief/timers/boss-naam staan nu als scherpe DOM-tekst, zie #game-banner)
 
