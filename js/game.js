@@ -2076,7 +2076,7 @@ const Game = {
     // platforms klonen met basis-positie (bx/by) zodat bewegende platforms kunnen oscilleren
     this.platforms = (map.platforms || []).map((p) => ({
       x: p.x, y: p.y, w: p.w, bx: p.x, by: p.y, mv: p.mv || null, dx: 0, dy: 0, soft: p.soft || false, slide: p.slide || 0, mast: p.mast || false,
-      wall: p.wall || false, roof: p.roof || false,
+      roof: p.roof || false,
       cloud: p.cloud || false, standT: 0, broken: false, reformAt: 0,   // wolk-platform (Airplane): max 5s, dan zak je erdoor
     }));
   },
