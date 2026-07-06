@@ -210,11 +210,22 @@ const Game = {
       this.crates.push({ x: Math.round(cx2), y: GY - 34, kind: kinds[(n * 3 + crateN * 7) % kinds.length], broken: false });
       crateN++;
     }
-    // de midden-vlag mag niet dóór een platform staan -> platforms vlakbij de vlag weghalen
-    this.platforms = this.platforms.filter((pf) => Math.abs(pf.x - flagX) > pf.w / 2 + 24);
-    // en er mogen geen apen op/door de vlag patrouilleren -> die weghalen (patrouille die de vlag-zone raakt)
+    // ---- VLAG-VEILIGE ZONE: rond de checkpoint-vlag vlakke, vaste grond ----
+    // geen GAT onder/naast de vlag (ook al gefilterd bij het aanmaken; hier hard gegarandeerd)
+    const FZ_PIT = 130, FZ_PLAT = 90;
+    this.pits = this.pits.filter((p) => p.x1 <= flagX - FZ_PIT || p.x0 >= flagX + FZ_PIT);
+    // geen PLATFORM dat (horizontaal) door de vlag heen loopt of er vlak naast zweeft
+    this.platforms = this.platforms.filter((pf) => (pf.x + pf.w / 2) <= flagX - FZ_PLAT || (pf.x - pf.w / 2) >= flagX + FZ_PLAT);
+    // geen apen op/door de vlag laten patrouilleren
     this.zombies = this.zombies.filter((z) => !z.patrol || z.patrolR < flagX - 26 || z.patrolL > flagX + 26);
     this.jEnemySpawns = this.jEnemySpawns.filter((s) => (s.x + s.range) < flagX - 26 || (s.x - s.range) > flagX + 26);
+    // ---- FINISH-VLAG-ZONE: laatste stuk vóór de eindvlag altijd vlakke, vaste grond ----
+    // (de vlag staat op x = lv.length; een gat/platform mag daar niet doorheen lopen)
+    const finishX = lv.length, FZ_FIN = 160;
+    this.pits = this.pits.filter((p) => p.x1 <= finishX - FZ_FIN);
+    this.platforms = this.platforms.filter((pf) => (pf.x + pf.w / 2) <= finishX - FZ_FIN);
+    this.zombies = this.zombies.filter((z) => !z.patrol || z.patrolR < finishX - FZ_FIN);
+    this.jEnemySpawns = this.jEnemySpawns.filter((s) => (s.x + s.range) < finishX - FZ_FIN);
     // vogels vanaf level 6 (zweven heen en weer, aanraken = schade)
     if (n >= 6) {
       const birds = 1 + Math.floor((n - 6) / 3);
