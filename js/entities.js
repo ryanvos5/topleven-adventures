@@ -294,6 +294,7 @@ class Player {
     if (this.vy >= 0 && game.platforms) {
       for (const pf of game.platforms) {
         if (pf.soft) continue;                       // zachte wolken zijn niet vast
+        if (pf.broken) continue;                     // ingezakt wolk-platform (Airplane) is even niet vast
         if (Math.abs(this.x - pf.x) < pf.w / 2 + this.w / 2 && prevFeetY <= pf.y + 3 && this.y >= pf.y) {
           this.y = pf.y; this.vy = 0; this.onGround = true;
         }

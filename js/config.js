@@ -573,6 +573,8 @@ const POWERUP_DROP_CHANCE = 0.025; // kans per kill
    8 rondes, melee-only start met de knuppel; er vallen wapens/power-ups/health in de arena. */
 const SMASH_ROUNDS = 8;
 const SMASH_DROP_EVERY = 5000;       // ms tussen drops (host bepaalt)
+const CLOUD_STAND_MS = 5000;         // Airplane: hoe lang je op een wolk-platform kunt staan
+const CLOUD_REFORM_MS = 2600;        // Airplane: hoe lang een ingezakte wolk weg blijft
 const SMASH_WEAPON_TIME = 13000;     // opgepakt melee-wapen ben je na ~13s weer kwijt
 const SMASH_FIREBALL_SHOTS = 3;      // aantal vuurballen
 const SMASH_ROCKETS = 3;             // raketten bij een RPG-drop
@@ -967,22 +969,18 @@ const VERSUS_MAPS = [
     ],
   },
   {
-    // grootste map: heel hoog in de lucht, camera beweegt ver mee (omhoog + horizontaal), veel wolken
-    id: 'sky', name: 'Sky', sky: ['#6fb6e8', '#bfe3f5'], void: '#9fcce8', plat: 'cloud',
-    w: 1040, fallY: 236, camTop: -215, camBottom: 30,
-    spawnL: { x: 150, y: 176 }, spawnR: { x: 890, y: 176 },
+    // Airplane: je vecht op het dak van een vliegend vliegtuig. Het dak is de hele ondergrond
+    // (je valt er alleen vanaf de zijkanten af). In de lucht wolk-platforms (max 5s, dan zak je erdoor).
+    // Af en toe scheren er vogels langs vanaf de voorkant (links) — raken ze je: mega knockback naar achter.
+    id: 'airplane', name: 'Airplane', sky: ['#4a9ad8', '#a9d8f0'], void: '#3a7ab0',
+    plat: 'metal', airplane: true, clouds: true,
+    w: 760, fallY: 240, camTop: -120, camBottom: 30,
+    spawnL: { x: 260, y: 176 }, spawnR: { x: 500, y: 176 },
     platforms: [
-      { x: 150, y: 176, w: 96 }, { x: 890, y: 176, w: 96 },                          // grond links/rechts
-      { x: 340, y: 152, w: 96 }, { x: 700, y: 152, w: 96 },                           // lage brede wolken
-      { x: 520, y: 170, w: 88, soft: true },                                          // midden-laag zachte wolk
-      { x: 240, y: 112, w: 62, soft: true }, { x: 800, y: 112, w: 62, soft: true },   // zachte wolken
-      { x: 430, y: 100, w: 74 }, { x: 610, y: 100, w: 74 },                           // midden-hoog vast
-      { x: 150, y: 64, w: 50, soft: true }, { x: 890, y: 64, w: 50, soft: true },     // zachte wolken buiten
-      { x: 340, y: 44, w: 58, soft: true }, { x: 700, y: 44, w: 58, soft: true },     // zachte wolken
-      { x: 520, y: 14, w: 64, soft: true },                                           // hoge zachte wolk (midden)
-      { x: 260, y: -22, w: 52, soft: true }, { x: 780, y: -22, w: 52, soft: true },   // nog hoger
-      { x: 430, y: -62, w: 58, soft: true }, { x: 610, y: -62, w: 58, soft: true },   // nog hoger
-      { x: 520, y: -112, w: 136 },                                                    // top (midden): groot vast wolk-plateau
+      { x: 380, y: 178, w: 452, roof: true },                          // vliegtuigdak = hele ondergrond
+      { x: 200, y: 120, w: 66, cloud: true }, { x: 560, y: 120, w: 66, cloud: true },   // wolk-platforms (5s)
+      { x: 380, y: 98, w: 76, cloud: true },
+      { x: 288, y: 54, w: 60, cloud: true }, { x: 472, y: 54, w: 60, cloud: true },
     ],
   },
   {

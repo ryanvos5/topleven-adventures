@@ -1969,6 +1969,8 @@ const Game = {
     this.jungleApe = map.ape ? { x: map.ape.x, floorY: map.ape.floorY, y: map.ape.floorY, vy: 0, state: 'idle', dir: 1, nextAt: this.time + 1400, hitP: false, hitB: false, _net: 0 } : null;
     this.monkey = null;
     this.parrots = [];
+    // Airplane: vogels die vanaf de voorkant (links) langs scheren
+    this.birds = []; this._birdAt = map.airplane ? this.time + 2600 : 0;
     this.ammo = mode === 'both' ? 999 : 0;
     this.rockets = 0;
     this.boss = null; this.shake = 0; this.cam.x = 0; this.time = 0; this.dtScale = 1;
@@ -2074,6 +2076,8 @@ const Game = {
     // platforms klonen met basis-positie (bx/by) zodat bewegende platforms kunnen oscilleren
     this.platforms = (map.platforms || []).map((p) => ({
       x: p.x, y: p.y, w: p.w, bx: p.x, by: p.y, mv: p.mv || null, dx: 0, dy: 0, soft: p.soft || false, slide: p.slide || 0, mast: p.mast || false,
+      wall: p.wall || false, roof: p.roof || false,
+      cloud: p.cloud || false, standT: 0, broken: false, reformAt: 0,   // wolk-platform (Airplane): max 5s, dan zak je erdoor
     }));
   },
 
@@ -2151,6 +2155,7 @@ const Game = {
       if (this.vsMap && this.vsMap.beach) this.updateTide(dt);      // strand: getij/vloed
       if (this.ball) this.updateBall(dt);                           // strandbal
       if (this.vsMap && this.vsMap.jungle2) this.updateJungleApe(dt);  // wilde aap: springt + mept je van de map
+      if (this.vsMap && this.vsMap.airplane) this.updateAirplane(dt);  // Airplane: wolk-timers + vogels
       if (this.player.giant) this.giantContact(dt);     // reus: bots iemand weg / stamp
       if (this.vsBot) this.updateBot(dt);              // de AI-tegenstander
       this.checkVersusHit();
@@ -2986,6 +2991,100 @@ const Game = {
     this.shake = Math.max(this.shake, 9); if (window.Sfx) Sfx.play('gorilla');
     for (let i = 0; i < 14; i++) this.particles.push(new Particle(e.x, e.y - 12, (Math.random() - 0.5) * 4, -Math.random() * 3, Math.random() < 0.5 ? '#caa06a' : '#8a5e38', 360, 2));
   },
+
+  // ===== AIRPLANE: wolk-platforms (max 5s) + vogels vanaf de voorkant =====
+  updateAirplane(dt) {
+    const dts = Math.min(3, dt / 16.6667);
+    // ---- wolk-platforms: sta je erop, dan zakken ze na 5s in; daarna vormen ze weer ----
+    const onCloud = (e, pf) => e && !e.dead && e.onGround && Math.abs(e.x - pf.x) < pf.w / 2 + 4 && Math.abs(e.y - pf.y) < 4;
+    for (const pf of this.platforms) {
+      if (!pf.cloud) continue;
+      if (pf.broken) { if (this.time >= pf.reformAt) { pf.broken = false; pf.standT = 0; } continue; }
+      const stood = onCloud(this.player, pf) || (this.vsBot && onCloud(this.bot, pf));
+      if (stood) {
+        pf.standT += dt;
+        if (pf.standT >= CLOUD_STAND_MS) {
+          pf.broken = true; pf.reformAt = this.time + CLOUD_REFORM_MS; pf.standT = 0;
+          for (let i = 0; i < 12; i++) this.particles.push(new Particle(pf.x + (Math.random() - 0.5) * pf.w, pf.y, (Math.random() - 0.5) * 2, Math.random() * 1.5, '#ffffff', 500, 3));
+          if (window.Sfx) Sfx.play('jump');
+        }
+      } else if (pf.standT > 0) {
+        pf.standT = Math.max(0, pf.standT - dt * 0.5);   // langzaam herstellen als je eraf stapt
+      }
+    }
+    // ---- vogels: scheren vanaf de voorkant (links) naar achter (rechts) ----
+    if (this.time >= this._birdAt) {
+      this._birdAt = this.time + 2200 + Math.random() * 2200;
+      const gy = (this.vsMap.platforms[0].y) || 178;
+      const y = gy - (6 + Math.floor(Math.random() * 5) * 16);   // wisselende hoogtes: laag (springen) tot hoog (bukken)
+      this.birds.push({ x: this.vsCamX - 30, y, vx: 3.2 + Math.random() * 1.6, born: this.time, hitP: false, hitB: false });
+    }
+    for (const b of this.birds) {
+      b.x += b.vx * dts;
+      const hit = (e) => e && !e.dead && e.respawnInvuln <= 0 && Math.abs(e.x - b.x) < 16 && Math.abs((e.y - 10) - b.y) < 14;
+      if (!b.hitP && hit(this.player)) { b.hitP = true; this._birdHit(this.player); }
+      if (!b.hitB && this.vsBot && hit(this.bot)) { b.hitB = true; this._birdHit(this.bot); }
+    }
+    this.birds = this.birds.filter((b) => b.x < (this.vsCamX + CONFIG.VIEW_W / (this.vsCamZoom || 1) + 40));
+  },
+  // vogel raakt je -> MEGA knockback naar achter (rechts, weg van de voorkant)
+  _birdHit(e) {
+    e.knockVx = 40; e.vy = -8; e.onGround = false; e.combo = 0; e.stunUntil = this.time + 300;
+    this.shake = Math.max(this.shake, 10); if (window.Sfx) Sfx.play('hit');
+    for (let i = 0; i < 12; i++) this.particles.push(new Particle(e.x, e.y - 12, (Math.random() - 0.5) * 4, -Math.random() * 3, i % 2 ? '#ffffff' : '#cfd6df', 340, 2));
+    if (e === this.player) this.hurtFlash = Math.max(this.hurtFlash, 180);
+  },
+  // vliegtuig-romp + dak (het dak is de ondergrond) — camera-ruimte (wereld)
+  drawAirplane(ctx) {
+    const roof = this.platforms.find((p) => p.roof); if (!roof) return;
+    const x0 = roof.x - roof.w / 2, x1 = roof.x + roof.w / 2, ry = roof.y, w = roof.w, cx = roof.x;
+    const body = '#c8ced6', bodyDk = '#9aa3ad', bodyLt = '#eef2f6', trim = '#3a6ea5', win = '#2a3a52';
+    // vleugels (steken schuin naar buiten-onder achter het dak)
+    Sprites.px(ctx, bodyDk, x0 - 70, ry + 26, 130, 10); Sprites.px(ctx, '#7f8791', x0 - 70, ry + 34, 130, 3);   // linkervleugel
+    Sprites.px(ctx, bodyDk, x1 - 60, ry + 26, 130, 10); Sprites.px(ctx, '#7f8791', x1 - 60, ry + 34, 130, 3);   // rechtervleugel
+    // staartvin (achter = rechts)
+    Sprites.px(ctx, body, x1 - 26, ry - 46, 20, 50); Sprites.px(ctx, bodyLt, x1 - 26, ry - 46, 20, 3);
+    Sprites.px(ctx, trim, x1 - 22, ry - 40, 12, 16);
+    // romp (dik afgerond blok onder het dak)
+    Sprites.px(ctx, body, x0 - 8, ry, w + 16, 62);
+    Sprites.px(ctx, bodyLt, x0 - 8, ry, w + 16, 4);                     // dak-highlight (loopvlak)
+    Sprites.px(ctx, bodyDk, x0 - 8, ry + 56, w + 16, 6);               // onderrand-schaduw
+    Sprites.px(ctx, trim, x0 - 8, ry + 22, w + 16, 4);                 // sierlijn
+    // ramen langs de romp
+    for (let wx = x0 + 6; wx < x1 - 6; wx += 22) { Sprites.px(ctx, '#1c2740', wx, ry + 10, 8, 7); Sprites.px(ctx, win, wx + 1, ry + 11, 6, 5); Sprites.px(ctx, '#6a9fd0', wx + 1, ry + 11, 6, 2); }
+    // cockpit (voorkant = links): schuine neus + raam
+    Sprites.px(ctx, body, x0 - 30, ry + 8, 26, 40); Sprites.px(ctx, bodyLt, x0 - 30, ry + 8, 26, 3);
+    Sprites.px(ctx, '#1c2740', x0 - 26, ry + 12, 12, 9); Sprites.px(ctx, '#6a9fd0', x0 - 26, ry + 12, 12, 3);   // cockpitraam
+    // motoren onder de vleugels
+    Sprites.px(ctx, '#5a636e', x0 - 44, ry + 36, 22, 9); Sprites.px(ctx, '#2a2f36', x0 - 46, ry + 38, 3, 5);
+    Sprites.px(ctx, '#5a636e', x1 + 26, ry + 36, 22, 9); Sprites.px(ctx, '#2a2f36', x1 + 46, ry + 38, 3, 5);
+    // het loopdak zelf (waar je op staat) — metalen paneellijnen
+    Sprites.px(ctx, body, x0, ry - 2, w, 4);
+    Sprites.px(ctx, bodyLt, x0, ry - 2, w, 1);
+    for (let px = x0 + 20; px < x1; px += 40) Sprites.px(ctx, bodyDk, px, ry - 2, 1, 4);   // paneelnaden
+  },
+  // wolk-platform (Airplane): pluizige wolk; knippert/wiebelt als hij bijna inzakt
+  drawCloudPlatform(ctx, pf) {
+    if (pf.broken) return;                                             // ingezakt: niet tekenen
+    const warn = pf.standT > CLOUD_STAND_MS - 1600;                    // laatste ~1,6s: waarschuwing
+    const bob = Math.sin((this.time + pf.x * 7) / (warn ? 90 : 600)) * (warn ? 2.5 : 1.4);
+    const x = pf.x, y = pf.y, w = pf.w;
+    ctx.globalAlpha = warn ? (0.55 + Math.abs(Math.sin(this.time / 80)) * 0.4) : 0.95;
+    const c = warn ? '#dfe6ef' : '#f2f7ff';
+    Sprites.px(ctx, c, x - w / 2, y - 3 + bob, w, 8);
+    for (let i = -w / 2; i < w / 2 - 2; i += 9) Sprites.px(ctx, warn ? '#eef2f8' : '#ffffff', x + i, y - 8 + bob, 13, 8);
+    ctx.globalAlpha = 0.35; Sprites.px(ctx, '#c9d8ec', x - w / 2, y + 4 + bob, w, 3);
+    ctx.globalAlpha = 1;
+  },
+  drawBird(ctx, b) {
+    const x = Math.round(b.x), y = Math.round(b.y);
+    const flap = Math.sin((this.time + b.born) / 90) * 4;
+    Sprites.px(ctx, '#2a2a30', x - 6, y - Math.round(flap), 6, 2);     // achtervleugel
+    Sprites.px(ctx, '#3a3a42', x, y + Math.round(flap), 6, 2);         // voorvleugel
+    Sprites.px(ctx, '#1c1c22', x - 2, y - 1, 6, 3);                    // lijf
+    Sprites.px(ctx, '#e8a83a', x + 4, y, 2, 1);                        // snavel (kijkt naar achter/rechts)
+    Sprites.px(ctx, '#ff3030', x + 2, y - 1, 1, 1);                    // oog
+  },
   onVersusApe(p) {
     const a = this.jungleApe; if (!a || !p) return;
     if (p.x != null) a.x = p.x;
@@ -3317,10 +3416,14 @@ const Game = {
       pool = [{ kind: 'weapon', w: 30 }, { kind: 'health', w: 20 }, { kind: 'rage', w: 8 }, { kind: 'speed', w: 8 }];
       for (const k of this.journeyDrops) pool.push({ kind: k, w: 11 });
     } else {
-      if (mid === 'cave' || mid === 'sky') pool.push({ kind: 'lightning', w: 8 });   // bliksem op Cave + Sky
+      if (mid === 'cave') pool.push({ kind: 'lightning', w: 8 });                     // bliksem op Cave
       if (mid === 'cave') pool.push({ kind: 'rock', w: 8 });                          // steen alleen op Cave
       if (mid === 'pirate') pool.push({ kind: 'cannon', w: 9 });                      // kanonskogel alleen op Pirate Ship
-      if (mid === 'pirate' || mid === 'sky') pool.push({ kind: 'shield', w: 9 });     // shield op Pirate + Sky
+      if (mid === 'pirate') pool.push({ kind: 'shield', w: 9 });                      // shield op Pirate Ship
+      if (mid === 'airplane') {                                                       // Airplane: alle power-ups behalve reus/strandbal/ninjaster/rotsblok
+        pool.push({ kind: 'lightning', w: 8 }); pool.push({ kind: 'cannon', w: 9 });
+        pool.push({ kind: 'shield', w: 9 }); pool.push({ kind: 'ak47', w: 9 });
+      }
       if (mid === 'beach') pool.push({ kind: 'beachball', w: 10 });                     // strandbal op Beach
       if (mid === 'temple') pool.push({ kind: 'ninjastar', w: 12 });                    // ninja-sterren op Temple
       if (mid === 'jungle') { pool.push({ kind: 'giant', w: 6 }); pool.push({ kind: 'ak47', w: 9 }); }  // Giant + AK47 op Jungle
@@ -3496,7 +3599,7 @@ const Game = {
   // sfeer-deeltjes per map (embers/bladeren/zeenevel/stof) — geven de arena leven
   _updateAmbient(dt) {
     const map = this.vsMap; if (!map) return;
-    const kind = map.vulcan ? 'ember' : (map.jungle2 ? 'leaf' : ((map.beach || map.pirate) ? 'spray' : (map.id === 'sky' ? 'spark' : ((map.cave || map.dohyo) ? 'dust' : null))));
+    const kind = map.vulcan ? 'ember' : (map.jungle2 ? 'leaf' : ((map.beach || map.pirate) ? 'spray' : (map.airplane ? 'spark' : ((map.cave || map.dohyo) ? 'dust' : null))));
     if (kind) {
       this._ambClock += dt;
       if (this._ambClock >= 150 && this.ambient.length < 55) {
@@ -4316,8 +4419,8 @@ const Game = {
     sky.addColorStop(0, map.sky[0]); sky.addColorStop(1, map.sky[1]);
     ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
 
-    // wolk-parallax voor de Sky-map (scherm-ruimte, beweegt licht mee)
-    if (map.id === 'sky') {
+    // wolk-parallax voor lucht-maps (scherm-ruimte, beweegt licht mee)
+    if (map.clouds) {
       // zon (rechtsboven, lichte parallax)
       const sunX = W - 64 - this.vsCamX * 0.05, sunY = 42 - this.vsCamY * 0.05;
       ctx.globalAlpha = 0.22; ctx.fillStyle = '#fff3c0'; ctx.beginPath(); ctx.arc(sunX, sunY, 34, 0, 6.2832); ctx.fill();
@@ -4358,10 +4461,13 @@ const Game = {
     ctx.globalAlpha = 0.5; ctx.fillStyle = '#04060a'; ctx.fillRect(camX - 4, CONFIG.GROUND_Y + 18, visW + 8, visH + Math.abs(camY) + 320); ctx.globalAlpha = 1;
 
     if (map.pirate) this.drawPirateHull(ctx);           // scheepsromp onder het dek
+    if (map.airplane) this.drawAirplane(ctx);           // vliegtuig-romp + dak (het dak = de ondergrond)
 
     // platforms (bewegende krijgen een pijltjes-hint; zachte wolken pluizig; Vulcan = steen/schuin; Pirate = hout/masten)
     const platStyle = map.wood ? 'wood' : (map.stone ? 'stone' : (map.dohyo ? 'dohyo' : (map.sand ? 'sand' : null)));
     for (const pf of this.platforms) {
+      if (pf.roof) continue;                             // vliegtuigdak wordt door drawAirplane getekend
+      if (pf.cloud) { this.drawCloudPlatform(ctx, pf); continue; }   // wolk-platform (5s)
       if (pf.soft) { this.drawSoftCloud(ctx, pf); continue; }
       if (pf.mast) { this.drawMast(ctx, pf); continue; }
       if (pf.wall) { this.drawTempleBlock(ctx, pf); continue; }   // solide stenen muur-blok (langs lopen + erop staan)
@@ -4496,6 +4602,7 @@ const Game = {
     if (map.vulcan) this.drawVulcanJet(ctx);                 // borrel-waarschuwing + lavastraal
     if (map.pirate && this.tentacle) this.drawTentacle(ctx); // zeemonster-tentakel
     if (map.jungle2 && this.jungleApe) this.drawJungleApe(ctx);  // wilde aap in het midden (vóór de spelers)
+    if (map.airplane && this.birds) for (const b of this.birds) this.drawBird(ctx, b);   // vogels vóór de spelers
     if (this.ball) this.drawBall(ctx);                       // strandbal
     if (map.beach && this.tide) this.drawTideWater(ctx);     // vloed-water over de spelers
     // Ryan zap-dash: bliksemboog van start -> eind
@@ -5262,7 +5369,7 @@ const Game = {
     this.ghostBullets = []; this.botBullets = []; this.drops = []; this.traps = []; this.portals = []; this.dragons = [];
     this.abilityFx = []; this.impacts = []; this.floatTexts = []; this.ambient = []; this.zapFx = null; this.ko = null;
     this.hitStop = 0; this.hurtFlash = 0; this.smashFlash = 0; this._ambClock = 0;
-    this.caveWall = null; this.rocks = []; this.ball = null; this.gorilla = null; this.jungleApe = null;
+    this.caveWall = null; this.rocks = []; this.ball = null; this.gorilla = null; this.jungleApe = null; this.birds = []; this._birdAt = 0;
     this.tentacle = null; this.vulcan = null; this.tide = null; this.nuke = null;
     this.buildVersusPlatforms(map);
     // veilige stub zodat gedeelde helpers (applyDrop/smashFire) geen null-this.vs raken

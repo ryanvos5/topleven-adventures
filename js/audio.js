@@ -99,7 +99,7 @@ const Sfx = {
   THEMES: {
     menu:   { root: 261.6, bpm: 108, lead: 'triangle', bass: 'square' },
     jungle: { root: 220.0, bpm: 128, lead: 'square',   bass: 'square' },
-    sky:    { root: 329.6, bpm: 116, lead: 'square',   bass: 'triangle' },
+    airplane: { root: 329.6, bpm: 116, lead: 'square',   bass: 'triangle' },
     lava:   { root: 174.6, bpm: 144, lead: 'sawtooth', bass: 'square' },
     pirate: { root: 196.0, bpm: 122, lead: 'square',   bass: 'triangle' },
     cave:   { root: 146.8, bpm: 112, lead: 'square',   bass: 'sine' },
