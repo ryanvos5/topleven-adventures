@@ -338,7 +338,11 @@ const Game = {
       return;
     }
     // ---- GAST: ghost-zombies animeren, aanraking en eigen klappen/kogels doorgeven ----
-    for (const g of co.z) { g.walkPhase = (g.walkPhase + dt / 140) % 4; g.cy = g.y - 14; }
+    const lerp = Math.min(1, dt / 70);                     // vloeiend naar de laatst gesynchte positie schuiven
+    for (const g of co.z) {
+      if (g.tx != null) { g.x += (g.tx - g.x) * lerp; g.y += (g.ty - g.y) * lerp; }
+      g.walkPhase = (g.walkPhase + dt / 140) % 4; g.cy = g.y - 14;
+    }
     if (p.hp > 0) for (const g of co.z) {
       if (Math.abs(g.x - p.x) < 14 && Math.abs(g.y - p.y) < 26) p.takeDamage(10, 'touch');   // Mario-regel geldt ook hier
     }
@@ -370,9 +374,11 @@ const Game = {
     if (!this.coop || this.coop.role !== 'guest' || !p || !p.l) return;
     const old = {}; for (const g of this.coop.z) old[g.i] = g;
     this.coop.z = p.l.map((r) => {
-      const prev = old[r[0]] || {};
-      return { i: r[0], x: r[1], y: r[2], type: ZOMBIE_TYPES[r[3]] || ZOMBIE_TYPES.walker, hp: r[4], dir: r[5], alive: true,
-        walkPhase: prev.walkPhase || 0, _hitAt: prev._hitAt || 0, tint: ((r[0] * 37) % 100) / 100, cy: r[2] - 14, hitFlash: 0, atk: 'walk' };
+      const prev = old[r[0]];                              // interpoleer naar de nieuwe positie (vloeiend i.p.v. elke 120ms springen)
+      const tx = r[1], ty = r[2];
+      return { i: r[0], x: prev ? prev.x : tx, y: prev ? prev.y : ty, tx: tx, ty: ty,
+        type: ZOMBIE_TYPES[r[3]] || ZOMBIE_TYPES.walker, hp: r[4], dir: r[5], alive: true,
+        walkPhase: prev ? prev.walkPhase : 0, _hitAt: prev ? prev._hitAt : 0, tint: ((r[0] * 37) % 100) / 100, cy: (prev ? prev.y : ty) - 14, hitFlash: 0, atk: 'walk' };
     });
   },
   onCoopHit(p) {
@@ -392,6 +398,17 @@ const Game = {
   },
   onCoopWin() {
     if (this.jStage && this.state === 'playing') { if (this.coop) this.coop.won = true; this.win(); }
+  },
+  onCoopLose() { this._coopGameOver(true); },
+  // co-op: allebei tegelijk dood -> level mislukt (game over, terug naar menu)
+  _coopGameOver(fromNet) {
+    if (this.state !== 'playing' || !this.jStage) return;
+    if (!fromNet && window.Net) Net.versusSend('jlose', {});   // partner ook game-over zetten
+    this.player.downed = false;
+    this.state = 'jdead';
+    if (window.Input) Input.clear();
+    if (window.UI) UI.showJourneyDeath(this.jFlagReached, true);   // co-op-verlies: alleen 'terug naar menu'
+    this.coop = null; if (window.Net) Net.leaveVersus(); if (window.UI && UI.coopReset) UI.coopReset();
   },
 
   // dood na de vlag -> respawn bij de vlag (Mario-checkpoint); co-op: ook vóór de vlag (bij de start)
@@ -1134,6 +1151,7 @@ const Game = {
         const pl = this.player;
         if (!pl.downed) { pl.downed = true; this._coopReviveAt = this.time + 10000; if (window.Input) Input.clear(); this.shake = Math.max(this.shake, 6); }
         const pt = this.coop.partner;
+        if (pt && !pt.al) { this._coopGameOver(false); return; }                         // allebei tegelijk down -> level mislukt
         if (pt && pt.al) { pl.x = pt.x; pl.y = pt.y; pl.vy = 0; pl.onGround = true; }   // volg je partner terwijl je wacht
         if (this.time >= this._coopReviveAt) { pl.downed = false; this.journeyRespawn(); }
         else { this.tutorialMsg = 'Terug in ' + Math.ceil((this._coopReviveAt - this.time) / 1000) + 's…'; this.tutorialUntil = this.time + 300; }
@@ -1849,6 +1867,7 @@ const Game = {
     this.powerUps = []; this.enemyShots = []; this.obstacles = []; this.rocketShots = []; this.platforms = [];
     this.ghostBullets = []; this.botBullets = [];
     this.drops = []; this._dropTimer = SMASH_DROP_EVERY; this._dropId = 1;
+    this.nuke = null; this._nukeUsed = false;            // nuke-powerup: max 1x per match
     this.portals = []; this._portalTimer = SMASH_PORTAL_EVERY;
     this.dragons = [];
     // Cave: knoppen + muur + sfeer (bats/druppels)
@@ -1951,6 +1970,7 @@ const Game = {
         onOver: (p) => this.onVersusOver(p),
         onDrop: (p) => this.onVersusDrop(p),
         onPickup: (p) => this.onVersusPickup(p),
+        onNuke: () => this.onVersusNuke(),
         onPortal: (p) => this.onVersusPortal(p),
         onDragon: () => this.onVersusDragon(),
         onStun: () => this.onVersusStun(),
@@ -2168,7 +2188,7 @@ const Game = {
         if (this.vsBot) { this.applyHitToBot(kd, power, vy, dmg); if (stun && this.bot) this.bot.stunUntil = Math.max(this.bot.stunUntil || 0, this.time + stun); }
         else if (window.Net) Net.versusSend('hit', { dir: kd, power: power, vy: vy, dmg: dmg, stun: stun });
         if (b.kind === 'fire') {                          // vuurbal laat ook branden
-          if (this.vsBot) { if (this.bot && this.bot.respawnInvuln <= 0) this.bot.burnUntil = this.time + 3000; }
+          if (this.vsBot) { if (this.bot && this.bot.respawnInvuln <= 0) this.bot.burnUntil = this.time + SMASH_FIRE_BURN; }
           else if (window.Net) Net.versusSend('burn', {});
         }
         this.spawnBlood(b.x, b.y);
@@ -2602,6 +2622,7 @@ const Game = {
         if (window.Net && !this.vsBot) Net.versusSend('pickup', { id: d.id });
       }
     }
+    if (this.nuke) this._updateNuke();      // nuke-afteltimer -> detonatie
     // bot pakt op + wapen-timer
     if (this.vsBot && this.bot && !this.bot.dead) {
       for (const d of this.drops) {
@@ -2657,7 +2678,7 @@ const Game = {
         const b = this.bot; if (!b || b.dead) return;
         wx = b.x; wy = b.y;
         this.applyHitToBot(b.x >= this.player.x ? 1 : -1, 8, -4, dmg);
-        if (b.respawnInvuln <= 0) b.burnUntil = this.time + 3000;
+        if (b.respawnInvuln <= 0) b.burnUntil = this.time + SMASH_FIRE_BURN;   // draak-beam brandt korter
       } else {
         const r = this.vs.remote; if (!r || !r.alive) return;
         wx = r.x; wy = r.y;
@@ -2665,7 +2686,7 @@ const Game = {
       }
     } else if (d.owner === 'bot') {
       const p = this.player; wx = p.x; wy = p.y;
-      if (!p.dead && p.respawnInvuln <= 0) { this.onVersusHit({ dir: (p.x >= this.bot.x ? 1 : -1), power: 8, vy: -4, dmg }); p.burnUntil = this.time + 3000; }
+      if (!p.dead && p.respawnInvuln <= 0) { this.onVersusHit({ dir: (p.x >= this.bot.x ? 1 : -1), power: 8, vy: -4, dmg }); p.burnUntil = this.time + SMASH_FIRE_BURN; }   // draak-beam brandt korter
     } else {                                                        // 'foe': alleen visueel (echte schade komt via 'hit' van de eigenaar)
       const p = this.player; wx = p.x; wy = p.y;
     }
@@ -3107,6 +3128,8 @@ const Game = {
         pool.push({ kind: 'shield', w: 9 }); pool.push({ kind: 'giant', w: 6 }); pool.push({ kind: 'ak47', w: 9 });
       }
     }
+    // nuke: zeldzaam, alleen in smash, maximaal 1x per match (en niet als er al eentje ligt)
+    if (!this.journeyDrops && !this._nukeUsed && !this.drops.some((d) => !d.taken && d.kind === 'nuke')) pool.push({ kind: 'nuke', w: 6 });
     let tot = 0; for (const d of pool) tot += d.w;
     let r = Math.random() * tot, kind = 'health';
     for (const d of pool) { r -= d.w; if (r <= 0) { kind = d.kind; break; } }
@@ -3186,8 +3209,9 @@ const Game = {
   // ==== VISUELE "JUICE": impact-feedback, KO-cinematic, sfeer ====
   addHitFeel(x, y, dir, dmg, power, localVictim, victim) {
     const big = (dmg >= 26) || (power >= 30);
-    // freeze-frame — met interval-slot zodat snelvuur (AK/vuurbal) het beeld niet vastvriest
-    if (dmg > 0 && this.time - (this._hitStopAt || 0) > 90) { this.hitStop = Math.max(this.hitStop, big ? 85 : 52); this._hitStopAt = this.time; }
+    // freeze-frame — alleen wanneer JIJ raakt (impact-juice); niet als JIJ geraakt wordt, anders
+    // hangt je eigen besturing even -> voelt stroef. Interval-slot tegen snelvuur (AK/vuurbal).
+    if (dmg > 0 && !localVictim && this.time - (this._hitStopAt || 0) > 90) { this.hitStop = Math.max(this.hitStop, big ? 85 : 52); this._hitStopAt = this.time; }
     this.addImpact(x, y, dir, big);                                          // schokgolf + richting-vonken
     if (dmg > 0) this.addFloatText(x, y - 8, '-' + dmg, big ? '#ff5a3a' : '#ffe27a', big);
     if (victim) victim._flashUntil = this.time + 130;                        // witte hit-flash op het slachtoffer
@@ -3376,12 +3400,52 @@ const Game = {
       pl.vy = 0; pl.onGround = false; pl.y -= 18;                                  // even opstijgen
       for (let i = 0; i < 14; i++) this.particles.push(new Particle(pl.x, pl.y + 6, (Math.random() - 0.5) * 3, Math.random() * 2, '#cfd6df', 360, 2));
     }
+    else if (d.kind === 'nuke') {                                                  // NUKE: 15s afteltimer voor beide spelers
+      if (!this._nukeUsed) {
+        this._nukeUsed = true;
+        this.nuke = { mine: (pl === this.player), until: this.time + NUKE_MS };    // 'mine' = de LOKALE speler is de drager (beschermd)
+        if (pl === this.player && window.Net && !this.vsBot) Net.versusSend('nuke', {});   // tegenstander z'n timer starten
+        this.smashFlash = Math.max(this.smashFlash || 0, 120); this.shake = Math.max(this.shake, 8);
+        for (let i = 0; i < 22; i++) this.particles.push(new Particle(pl.x, pl.y - 14, (Math.random() - 0.5) * 4, -Math.random() * 3.5, i % 2 ? '#7dff5a' : '#ffe27a', 520, 3));
+        if (window.Sfx) Sfx.play('gorilla');
+      }
+    }
   },
 
   onVersusDrop(p) {
     if (!this.drops) this.drops = [];
     if (this.drops.some((d) => d.id === p.id)) return;
     this.drops.push({ id: p.id, kind: p.kind, x: p.x, y: p.y, wid: p.wid, born: this.time, taken: false });
+  },
+  // tegenstander pakte de nuke -> jouw timer start (jij bent het doelwit als je 'm niet verslaat)
+  onVersusNuke() {
+    if (this._nukeUsed && !this.nuke) { /* al gebruikt en al gedetoneerd/gedefused */ }
+    this._nukeUsed = true;
+    this.nuke = { mine: false, until: this.time + NUKE_MS };
+    this.smashFlash = Math.max(this.smashFlash || 0, 120); this.shake = Math.max(this.shake, 8);
+    if (window.Sfx) Sfx.play('gorilla');
+  },
+  // nuke-afteltimer: loopt 'ie af terwijl de drager nog leeft -> de tegenstander van de drager gaat dood
+  _updateNuke() {
+    const nk = this.nuke; if (!nk || this.time < nk.until) return;
+    this.nuke = null;
+    this._nukeBoom();
+    if (this.vsBot) {
+      if (nk.mine) { if (this.bot && !this.bot.dead) { this.bot.dead = true; this.onVersusFell(); } }   // drager = speler -> bot dood
+      else { if (!this.player.dead) this.localFell(); }                                                  // drager = bot -> speler dood
+    } else if (!nk.mine && !this.player.dead) {
+      this.localFell();   // ik ben het doelwit -> ik ga dood (stuurt 'fell'); is de drager mij, dan gaat de ander op z'n eigen client dood
+    }
+  },
+  _nukeBoom() {
+    this.smashFlash = Math.max(this.smashFlash || 0, 240);
+    this.hurtFlash = Math.max(this.hurtFlash || 0, 200);
+    this.shake = Math.max(this.shake, 18);
+    const spots = [this.player];
+    if (this.vsBot && this.bot) spots.push(this.bot); else if (this.vs && this.vs.remote) spots.push(this.vs.remote);
+    for (const e of spots) for (let i = 0; i < 40; i++)
+      this.particles.push(new Particle(e.x + (Math.random() - 0.5) * 40, e.y - 14 + (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 8, -Math.random() * 7, i % 3 ? '#ffb03a' : '#ff5a2a', 720, 4));
+    if (window.Sfx) Sfx.play('gorilla');
   },
   onVersusPickup(p) {
     if (!this.drops) return;
@@ -3422,8 +3486,8 @@ const Game = {
         const dmg = Math.round(wd * 0.45);                            // versus-melee-schade
         const kp = 15 + Math.max(0, p.combo - 1) * 8;                 // vanaf x2 fors meer knockback (x1=15 .. x5=47)
         const kvy = -5.5 - Math.max(0, p.combo - 1) * 0.7;            // en iets meer omhoog
-        if (this.vsBot) this.applyHitToBot(kdir, kp, kvy, dmg);       // bot wegslaan + schade (juice zit in applyHitToBot)
-        else { Net.versusSend('hit', { dir: p.dir, power: kp, vy: kvy, dmg: dmg }); this.addHitFeel(r.x, r.y - 16, kdir, dmg, kp, false, r); }
+        if (this.vsBot) this.applyHitToBot(kdir, kp, kvy, dmg, true);       // bot wegslaan + schade (juice zit in applyHitToBot); melee = parrybaar
+        else { Net.versusSend('hit', { dir: p.dir, power: kp, vy: kvy, dmg: dmg, melee: 1 }); this.addHitFeel(r.x, r.y - 16, kdir, dmg, kp, false, r); }
         p.abCharge = Math.min(1, p.abCharge + (0.05 + 0.03 * Math.max(0, p.combo - 1)) / (p.abChargeMul || 1));   // ability laadt sneller op met combos
         // combo-XP (alleen online — geen XP-farmen tegen de bot)
         const cx = comboXp(p.combo);
@@ -3540,7 +3604,7 @@ const Game = {
         b.comboUntil = this.time + COMBO_WINDOW;
         const wd = (WEAPONS[b.meleeId] ? WEAPONS[b.meleeId].damage : 34) * (b.meleeMul || 1) * (b.hasBuff('rage', this.time) ? 1.6 : 1) * comboMul(b.combo);
         const kp = 15 + Math.max(0, b.combo - 1) * 8;                 // bot: vanaf x2 ook fors meer knockback
-        this.onVersusHit({ dir: kd, power: kp, vy: -5.5 - Math.max(0, b.combo - 1) * 0.7, dmg: Math.round(wd * 0.45) });
+        this.onVersusHit({ dir: kd, power: kp, vy: -5.5 - Math.max(0, b.combo - 1) * 0.7, dmg: Math.round(wd * 0.45), melee: 1 });
         if (b.ability) b.abCharge = Math.min(1, b.abCharge + (0.05 + 0.03 * Math.max(0, b.combo - 1)) / (b.abChargeMul || 1));   // combo's laden de bot-ability sneller
         this.shake = Math.max(this.shake, 6);
       }
@@ -3554,11 +3618,11 @@ const Game = {
     if (!b.dead && (b.y > FALL_DEATH_Y || b.hp <= 0)) { b.dead = true; this.onVersusFell(); }
   },
 
-  applyHitToBot(dir, power, vy, dmg) {
+  applyHitToBot(dir, power, vy, dmg, melee) {
     const b = this.bot;
     if (!b || b.respawnInvuln > 0 || b.dead) return;
     const blocking = b.ducking && b.onGround && !b._guardBroken;
-    const parry = blocking && (this.time - (b._blockStart || 0)) <= PARRY_WINDOW;
+    const parry = blocking && !!melee && (this.time - (b._blockStart || 0)) <= PARRY_WINDOW;   // perfect block alleen bij melee
     if (parry) {
       // bot parriet -> de speler (aanvaller) stuitert terug + verdoofd
       b.knockVx = 0; b.guard = Math.min(GUARD_MAX, b.guard + 400);
@@ -3748,7 +3812,7 @@ const Game = {
     if (p.respawnInvuln > 0 || p.dead) return;       // net gespawnd = even onkwetsbaar
     if (window.Sfx) Sfx.play('hit');
     const blocking = p.ducking && p.onGround && !p._guardBroken;   // bukken = blok
-    const parry = blocking && (this.time - (p._blockStart || 0)) <= PARRY_WINDOW;   // net op tijd = parry
+    const parry = blocking && !!payload.melee && (this.time - (p._blockStart || 0)) <= PARRY_WINDOW;   // perfect block alleen bij melee
     if (parry) {
       // 100% geblokt + de aanvaller stuitert terug en is even verdoofd
       p.knockVx = 0; p.guard = Math.min(GUARD_MAX, p.guard + 400);
@@ -3785,6 +3849,7 @@ const Game = {
 
   localFell() {
     if (this.vs.over || this.vs.roundFreezeUntil > this.time) return;   // al klaar / al in freeze
+    this.nuke = null;                                                   // een KO ontmantelt de nuke
     this.player.dead = true;
     this.triggerKO(this.player.x, this.player.y, false);                // KO-cinematic (jij bent eraf)
     this.vs.oppScore++;
@@ -3817,6 +3882,7 @@ const Game = {
 
   onVersusFell(payload) {
     if (this.vs.over) return;
+    this.nuke = null;                                                   // een KO ontmantelt de nuke
     // absolute score overnemen (max) -> dubbele meldingen tellen niet dubbel, gemiste herstellen
     const before = this.vs.myScore;
     if (payload && typeof payload.winScore === 'number') this.vs.myScore = Math.max(this.vs.myScore, payload.winScore);
@@ -3836,7 +3902,7 @@ const Game = {
   onVersusBurn() {
     const p = this.player;
     if (p.respawnInvuln > 0 || p.dead) return;
-    p.burnUntil = this.time + 3000;     // 3s branden
+    p.burnUntil = this.time + SMASH_FIRE_BURN;     // vuurbal/draak: korte brand
   },
   onVersusQuake(payload) {              // tegenstander gebruikte aardbeving op jou
     this._selfQuakeUntil = this.time + ((payload && payload.until) || 5000);
@@ -4209,6 +4275,29 @@ const Game = {
     this.renderLightning(ctx);
     // combo-teller
     this.drawComboHud(ctx);
+    // NUKE-afteltimer (scherm-ruimte, boven in beeld) — zichtbaar voor beide spelers
+    if (this.nuke) {
+      const secs = Math.max(0, Math.ceil((this.nuke.until - this.time) / 1000));
+      const urgent = secs <= 5;
+      const pulse = urgent ? (Math.sin(this.time / 90) * 0.5 + 0.5) : 1;
+      ctx.save();
+      const bw = 74, bh = 15, bx = Math.round(W / 2 - bw / 2), by = 15;
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = urgent ? 'rgba(200,20,20,0.9)' : 'rgba(18,18,22,0.82)';
+      ctx.fillRect(bx, by, bw, bh);
+      ctx.globalAlpha = urgent ? (0.6 + pulse * 0.4) : 1;
+      ctx.strokeStyle = '#f2c21a'; ctx.lineWidth = 1.5; ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = urgent ? '#ffffff' : '#ffe27a';
+      ctx.font = 'bold 10px "Courier New", monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('NUKE  ' + secs + 's', W / 2, by + bh / 2 + 1);
+      // hint: overleef (drager) of versla ze (tegenstander)
+      ctx.fillStyle = this.nuke.mine ? '#7dff8a' : '#ff6a4a';
+      ctx.font = 'bold 8px "Courier New", monospace';
+      ctx.fillText(this.nuke.mine ? 'OVERLEEF!' : 'VERSLA ZE!', W / 2, by + bh + 7);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      ctx.restore();
+    }
 
     // Power Smash: huidige item/wapen (scherm-ruimte, onderin)
     if (this.vsMode === 'smash') {
@@ -4316,6 +4405,14 @@ const Game = {
       Sprites.px(ctx, '#a8dcff', x + 1, y - 2, 3, 3);    // cockpit
       Sprites.px(ctx, '#3f5a3a', x - 9, y - 1, 5, 2);    // staart
       Sprites.px(ctx, '#7a7a7a', x - 5, y + 3, 9, 1);    // ski
+    }
+    else if (d.kind === 'nuke') {
+      // nuke-vat met stralings-symbool (geel/zwart)
+      Sprites.px(ctx, '#f2c21a', x - 5, y - 5, 10, 10);          // geel vat
+      Sprites.px(ctx, '#ffe86a', x - 5, y - 5, 10, 2);           // glans bovenop
+      Sprites.px(ctx, '#b8920e', x - 5, y + 3, 10, 2);           // schaduw onder
+      Sprites.px(ctx, '#1a1a1a', x - 1, y - 1, 2, 2);            // kern (stralings-symbool)
+      Sprites.px(ctx, '#1a1a1a', x - 4, y - 4, 2, 2); Sprites.px(ctx, '#1a1a1a', x + 2, y - 4, 2, 2); Sprites.px(ctx, '#1a1a1a', x - 1, y + 2, 2, 2);   // 3 bladen
     }
   },
 

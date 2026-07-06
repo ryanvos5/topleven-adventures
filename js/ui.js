@@ -245,6 +245,7 @@ const UI = {
       onJCrate: (p) => Game.onCoopCrate(p),
       onJWin: () => Game.onCoopWin(),
       onJRS: () => Game.onCoopRespawnEnemies(),
+      onJLose: () => Game.onCoopLose(),
     };
   },
   // online vrienden tonen met een "Uitnodigen"-knop
@@ -368,11 +369,18 @@ const UI = {
     document.getElementById('btn-vs-quit').classList.add('hidden'); // pauzeknop vervangt de kruis-knop
   },
   // Journey-dood: kies checkpoint of menu
-  showJourneyDeath(flagReached) {
+  showJourneyDeath(flagReached, coopOver) {
     const sub = document.getElementById('jdeath-sub');
     const btn = document.getElementById('btn-jdeath-checkpoint');
-    if (sub) sub.textContent = flagReached ? 'Je bent verslagen — je kunt vanaf de vlag verder.' : 'Je bent verslagen.';
-    if (btn) btn.innerHTML = this._ic('flag') + (flagReached ? ' Start vanaf checkpoint' : ' Opnieuw (vanaf begin)');
+    if (coopOver) {
+      // co-op: allebei tegelijk verslagen -> level mislukt, alleen terug naar menu
+      if (sub) sub.textContent = 'Jullie zijn allebei verslagen — level mislukt.';
+      if (btn) btn.classList.add('hidden');
+    } else {
+      if (btn) btn.classList.remove('hidden');
+      if (sub) sub.textContent = flagReached ? 'Je bent verslagen — je kunt vanaf de vlag verder.' : 'Je bent verslagen.';
+      if (btn) btn.innerHTML = this._ic('flag') + (flagReached ? ' Start vanaf checkpoint' : ' Opnieuw (vanaf begin)');
+    }
     document.getElementById('jdeath-screen').classList.remove('hidden');
   },
   journeyCheckpointRestart() {

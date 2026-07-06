@@ -511,6 +511,8 @@ const DRAGON_DUR = 10000;            // de draak blijft 10s
 const DRAGON_SPIT_MS = 1600;         // spuugt elke ~1,6s een vuurstraal
 const DRAGON_DMG = 10;               // schade per vuurstraal
 const SMASH_LIGHTNING_STUN = 1500;   // bliksem (alleen Cave): stunt de tegenstander 1,5s
+const SMASH_FIRE_BURN = 1200;        // brand-duur van vuurbal & draak (korter dan de oude 3s)
+const NUKE_MS = 15000;               // nuke-powerup: 15s afteltimer; drager overleeft = tegenstander dood
 // Cave: midden-knop -> straal die over de map sweept; raakt 'ie je -> schade + harde knockback
 const CAVE_ARM_MS = 7000;            // hoe vaak de knop scherp wordt (rood knippert)
 const CAVE_WALL_SPEED = 7;           // px/frame dat de straal over de map sweept
