@@ -338,18 +338,10 @@ const UI = {
   },
   pickJourneyLevel(n) {
     const world = this._journeyWorld || 1;
-    // Wereld 1: intro (vóór lvl 1) + boss-verhalen (vóór de bazen 5/10/15). Elk verhaal speelt 1x.
+    // Wereld 1: intro (vóór lvl 1) + boss-verhalen (vóór de bazen 5/10/15) — spelen ELKE keer (skipbaar).
     if (world === 1) {
       const script = this._journeyStoryFor(n);
-      if (script) {
-        Storage.data.seenStories = Storage.data.seenStories || {};
-        const key = world + '-' + n;
-        if (!Storage.data.seenStories[key]) {
-          Storage.data.seenStories[key] = true; Storage.save();
-          this.playStory(script, n);
-          return;
-        }
-      }
+      if (script) { this.playStory(script, n); return; }
     }
     this.startJourneyLevel(n);
   },
