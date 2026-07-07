@@ -861,7 +861,7 @@ function xpForLevel(L) { return 75 * L * (L - 1); }   // totale XP nodig voor le
    'm upgraden voor munten (1000, 2500, 4500, 7000, ...). Betere characters kosten meer.
    Elke level: +2 HP; vanaf lvl 10 ook wat sneller; vanaf lvl 5 duren abilities langer. */
 const CHAR_MAX_LEVEL = 20;
-function charXpNeeded(lvl) { return 100 * lvl; }                 // XP voor de balk van lvl -> lvl+1
+function charXpNeeded(lvl) { return 150 * lvl; }                 // XP voor de balk van lvl -> lvl+1 (langzaam)
 function charTierMul(ch) {
   if (!ch) return 1;
   if (ch.journeyOnly) return 1.5;                                // boss-characters (monnik/ninja/bewaker)

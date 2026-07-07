@@ -4353,7 +4353,7 @@ const Game = {
         Storage.data.coins = (Storage.data.coins || 0) + coins;
         if (xp) Storage.data.xp = (Storage.data.xp || 0) + xp;
         Storage.save();
-        if (won) Storage.addCharXp(Storage.data.equippedCharacter, first ? 20 : 8);   // character-XP door Journey te spelen
+        if (won) Storage.addCharXp(Storage.data.equippedCharacter, first ? 12 : 5);   // character-XP door Journey te spelen (langzaam)
         rewards.push({ type: 'earn', coins, xp });
         for (const u of unlocks) rewards.push({ type: u.type, id: u.id, name: u.name });   // unlock-kaartjes
       }
@@ -4391,8 +4391,8 @@ const Game = {
       Storage.data.coins = (Storage.data.coins || 0) + coinsEarned;
       Storage.save();
     }
-    // je character krijgt óók XP door mee te spelen (ook tegen de oefenbot, langzaam)
-    Storage.addCharXp(Storage.data.equippedCharacter, realStakes ? Math.max(25, Math.round(gained * 0.6)) : (won ? 20 : 8));
+    // je character krijgt óók XP door mee te spelen — langzaam (klein vast bedrag per potje)
+    Storage.addCharXp(Storage.data.equippedCharacter, won ? (realStakes ? 15 : 12) : (realStakes ? 6 : 5));
     const myScore = this.vs ? this.vs.myScore : 0, oppScore = this.vs ? this.vs.oppScore : 0;
     if (peerLeft) { UI.showVersusResult(won, myScore, oppScore, gained, isBot, coinsEarned, peerLeft, chestDrop, this._mmBot); return; }
     // korte win-celebratie met de naam van de winnaar, dan pas het uitslagscherm
