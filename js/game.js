@@ -1828,6 +1828,17 @@ const Game = {
   },
   _storyBg(t, theme) {
     const ctx = this.ctx, W = CONFIG.VIEW_W, H = CONFIG.VIEW_H, gy = CONFIG.GROUND_Y;
+    if (theme === 'temple') {
+      const sky = ctx.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, '#f2b96a'); sky.addColorStop(1, '#9a5a4a'); ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = 0.22; ctx.fillStyle = '#ffe79a'; ctx.beginPath(); ctx.arc(W * 0.5, 32, 22, 0, 6.2832); ctx.fill(); ctx.globalAlpha = 1;   // zonnewaas
+      const pyr = (cx, w2, h2) => { for (let i = 0; i < h2; i += 4) { const iw = w2 * (1 - i / h2); ctx.fillRect(Math.round(cx - iw / 2), gy - i - 4, Math.round(iw), 4); } };
+      ctx.fillStyle = '#8a6a44'; pyr(64, 94, 64); pyr(W - 64, 94, 64);
+      ctx.fillStyle = '#7a5a38'; pyr(W * 0.5, 74, 46);
+      ctx.fillStyle = '#3a2a18'; ctx.fillRect(Math.round(W * 0.5) - 6, gy - 20, 12, 20);   // donkere tempel-ingang
+      ctx.fillStyle = '#5a4028'; ctx.fillRect(0, gy, W, H - gy); ctx.fillStyle = '#6a4a30'; ctx.fillRect(0, gy, W, 4);   // stenen grond
+      for (let x = 6; x < W; x += 26) Sprites.px(ctx, '#4a3420', x, gy + 8, 12, 2);         // voegen
+      return;
+    }
     if (theme === 'jungle') {
       const sky = ctx.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, '#2f6e3a'); sky.addColorStop(1, '#7fc06a'); ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
       ctx.fillStyle = '#256033'; for (let x = -10; x < W + 10; x += 26) { ctx.beginPath(); ctx.arc(x, 38, 18, 0, 6.2832); ctx.fill(); }
@@ -1935,6 +1946,70 @@ const Game = {
           this._storyFighter(c, 'kong', W * 0.66, gy - 2 - bob, -1, 0, 1.6);
           this._storyApe(c, W * 0.66 + 30, gy - 2, -1, clk() / 50); this._storyApe(c, W * 0.66 + 50, gy - 2, -1, clk() / 50 + 2);
           c.fillStyle = '#ffef9a'; c.font = 'bold 16px "Courier New",monospace'; c.textAlign = 'center'; c.fillText('VS', P(0.48), gy - 48); c.textAlign = 'left';
+        } },
+      ];
+    }
+    // ===== OUTRO na de Gorilla King -> naar Wereld 2 (De Verloren Tempel) =====
+    if (script === 'kongwin') {
+      const P = (x) => Math.round(W * x);
+      const shout = (c, x, y) => { c.strokeStyle = '#ffef9a'; c.lineWidth = 1.2; for (let k = 0; k < 3; k++) { const a = -0.6 + k * 0.6; c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(a) * 7, y + Math.sin(a) * 7 - 6); c.stroke(); } };
+      const indi = (c, x, fy, dir, ph, weapon, scale) => this._storyFighter(c, 'indiaan', x, fy, dir, ph, scale || 1, { weapon: weapon || null });
+      return [
+        // ---- Cutscene: De Val van de Gorilla King ----
+        { theme: 'jungle', dur: 2200, cap: 'Met de laatste slag versla je de machtige GORILLA KING… de jungle wordt eindelijk stil.', draw: () => {
+          const c = this.ctx;
+          this._storyFighter(c, 'kong', W * 0.62, gy - 2, 1, 0, 1.4, { squash: true });   // verslagen (platgeslagen)
+          for (let k = 0; k < 3; k++) { const a = (clk() / 90 + k) % 3; Sprites.px(c, '#fff', Math.round(W * 0.62 - 6 - a * 4), gy - 20 - k * 3, 2, 2); }   // duizel-sterretjes
+          Sprites.drawCharacter(c, P(0.34), Math.round(gy - 2), 1, ch.palette, Object.assign({ attacking: true, weapon: null }, pose0));
+        } },
+        { theme: 'jungle', dur: 2200, cap: 'Tussen de ruïnes ontdek je een verborgen pad uit het dichte oerwoud.', draw: (t) => {
+          const c = this.ctx, p = Math.min(1, t / 2200), x = P(0.3) + p * (W * 0.4);
+          Sprites.px(c, '#0c1a0e', W - 60, gy - 40, 26, 40); Sprites.px(c, '#3a2414', W - 64, gy - 42, 4, 42); Sprites.px(c, '#3a2414', W - 32, gy - 42, 4, 42);   // donker pad-opening
+          Sprites.drawCharacter(c, Math.round(x), Math.round(gy - 2), 1, ch.palette, Object.assign({ walkPhase: clk() / 60, weapon: null }, pose0));
+        } },
+        { theme: 'temple', dur: 2400, cap: 'Voor je liggen eeuwenoude tempels… maar een vijandige stam INDIANEN wacht je al op.', draw: () => {
+          const c = this.ctx;
+          Sprites.drawCharacter(c, P(0.24), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          indi(c, W * 0.66, gy - 2, -1, 0, 'spear', 1); indi(c, W * 0.78, gy - 2, -1, 0, 'crossbow', 1);
+        } },
+        // ---- Scène 1: De Oude Tempels ----
+        { theme: 'temple', dur: 2200, cap: 'Voorzichtig zet je een stap tussen de oude stenen tempels.', draw: () => {
+          const c = this.ctx, step = Math.round(Math.sin(clk() / 200) * 1.2);
+          Sprites.drawCharacter(c, P(0.4) + step, Math.round(gy - 2), 1, ch.palette, Object.assign({ walkPhase: clk() / 90, weapon: null }, pose0));
+        } },
+        { theme: 'temple', dur: 2400, cap: 'Plotseling verschijnen krijgers uit de schaduwen — met speren en bogen.', draw: (t) => {
+          const c = this.ctx, p = Math.min(1, t / 2400), off = p * (W * 0.5 - 44);
+          Sprites.drawCharacter(c, P(0.5), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          indi(c, -18 + off, gy - 2, 1, clk() / 70, 'spear', 1); indi(c, -40 + off, gy - 2, 1, clk() / 70 + 2, 'crossbow', 1);
+          indi(c, (W + 18) - off, gy - 2, -1, clk() / 70 + 1, 'spear', 1); indi(c, (W + 40) - off, gy - 2, -1, clk() / 70 + 3, 'crossbow', 1);
+        } },
+        { theme: 'temple', dur: 2000, cap: 'Ze zien je als een indringer en maken zich klaar voor de aanval.', draw: () => {
+          const c = this.ctx;
+          Sprites.drawCharacter(c, P(0.5), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          indi(c, P(0.5) - 46, gy - 2, 1, 0, 'spear', 1); indi(c, P(0.5) - 68, gy - 2, 1, 0, 'crossbow', 1);
+          indi(c, P(0.5) + 46, gy - 2, -1, 0, 'spear', 1); indi(c, P(0.5) + 68, gy - 2, -1, 0, 'crossbow', 1);
+          shout(c, P(0.5) - 54, gy - 28); shout(c, P(0.5) + 54, gy - 28);
+        } },
+        // ---- Scène 2: De Stamleider ----
+        { theme: 'temple', dur: 2000, cap: 'De STAMLEIDER stapt naar voren en geeft een luid strijdsein!', draw: () => {
+          const c = this.ctx, bob = Math.abs(Math.sin(clk() / 110)) * 2.5;
+          Sprites.drawCharacter(c, P(0.22), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          indi(c, W * 0.64, gy - 2 - bob, -1, 0, 'spear', 1.4);   // grote stamleider
+          shout(c, W * 0.64 - 18, gy - 40); shout(c, W * 0.64 + 14, gy - 40);
+          c.fillStyle = '#ff5a5a'; c.font = 'bold 14px "Courier New",monospace'; c.fillText('!', P(0.46), gy - 30);
+        } },
+        { theme: 'temple', dur: 2000, cap: 'De krijgers omsingelen je en blokkeren alle uitgangen.', draw: () => {
+          const c = this.ctx;
+          Sprites.drawCharacter(c, P(0.5), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          indi(c, P(0.5) - 44, gy - 2, 1, 0, 'crossbow', 1); indi(c, P(0.5) - 66, gy - 2, 1, 0, 'spear', 1);
+          indi(c, P(0.5) + 44, gy - 2, -1, 0, 'spear', 1.4); indi(c, P(0.5) + 70, gy - 2, -1, 0, 'crossbow', 1);
+        } },
+        { theme: 'temple', dur: 1800, cap: 'Er is nog maar één optie: vecht je een weg door de tempels!', draw: () => {
+          const c = this.ctx, bob = Math.abs(Math.sin(clk() / 90)) * 2;
+          Sprites.drawCharacter(c, P(0.3), Math.round(gy - 2), 1, ch.palette, Object.assign({ attacking: true, weapon: null }, pose0));
+          indi(c, W * 0.64, gy - 2 - bob, -1, 0, 'spear', 1.4);
+          indi(c, W * 0.64 + 26, gy - 2, -1, clk() / 60, 'crossbow', 1);
+          c.fillStyle = '#ffef9a'; c.font = 'bold 16px "Courier New",monospace'; c.textAlign = 'center'; c.fillText('VS', P(0.48), gy - 46); c.textAlign = 'left';
         } },
       ];
     }
@@ -4439,7 +4514,13 @@ const Game = {
       const self = this, name = won ? 'JIJ' : foeName;
       const myScore = this.vs ? this.vs.myScore : 0, oppScore = this.vs ? this.vs.oppScore : 0;
       UI.showWinCelebration(name, won);
-      setTimeout(function () { if (self.state === 'versusOver') UI.showJourneyResult(won, idx, unlocks, rewards, myScore, oppScore, jworld); }, 2600);
+      const showRes = function () { UI.showJourneyResult(won, idx, unlocks, rewards, myScore, oppScore, jworld); };
+      setTimeout(function () {
+        if (self.state !== 'versusOver') return;
+        // Gorilla King (Wereld 1, laatste level) verslagen -> outro-cutscene naar Wereld 2, dán de uitslag
+        if (won && jworld === 1 && idx >= JOURNEY[1].levels.length) UI.playEndStory('kongwin', showRes);
+        else showRes();
+      }, 2600);
       return;
     }
     // betrouwbaar de uitslag naar de tegenstander sturen (paar keer tegen pakketverlies)

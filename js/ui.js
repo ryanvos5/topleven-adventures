@@ -304,17 +304,26 @@ const UI = {
     const st = document.getElementById('coop-status'); if (st) st.textContent = '';
     const pn = document.getElementById('coop-panel'); if (pn) pn.classList.add('hidden');
   },
+  _journeyWorldLocked(w) {
+    if (w <= 1) return false;
+    // ontgrendeld als de vorige wereld is uitgespeeld (of je er al voortgang in had)
+    return !Storage.journeyCleared(JOURNEY[w - 1].levels.length, w - 1) && !((Storage.data['journey' + w] || 0) > 0);
+  },
   renderJourney() {
-    const world = this._journeyWorld = this._journeyWorld || 1;
+    let world = this._journeyWorld = this._journeyWorld || 1;
+    if (this._journeyWorldLocked(world)) world = this._journeyWorld = 1;   // op-slot -> terug naar wereld 1
     // wereld-tabs (Eiland / Tempel)
     const tabs = document.getElementById('journey-worlds');
     if (tabs) {
       tabs.innerHTML = '';
       JOURNEY_ORDER.forEach((w) => {
+        const locked = this._journeyWorldLocked(w);
         const b = document.createElement('button');
-        b.className = 'shop-tab' + (w === world ? ' active' : '');
-        b.textContent = JOURNEY[w].name;
-        b.onclick = () => { this._journeyWorld = w; this.renderJourney(); };
+        b.className = 'shop-tab' + (w === world ? ' active' : '') + (locked ? ' locked' : '');
+        b.innerHTML = (locked ? this._ic('lock') + ' ' : '') + JOURNEY[w].name;
+        b.onclick = locked
+          ? () => { const s = document.getElementById('journey-world'); if (s) s.textContent = 'Versla eerst de GORILLA KING om ' + JOURNEY[w].name + ' vrij te spelen!'; }
+          : () => { this._journeyWorld = w; this.renderJourney(); };
         tabs.appendChild(b);
       });
     }
@@ -360,6 +369,15 @@ const UI = {
     document.body.classList.add('in-game');
     this.el.hud.classList.add('hidden'); this.el.touch.classList.add('hidden'); this.el.pause.classList.add('hidden');
     Game.playJourneyIntro(script, () => this.startJourneyLevel(n));
+  },
+  // outro-cutscene (na een baas), daarna een willekeurige vervolgactie (bv. uitslagscherm)
+  playEndStory(script, onDone) {
+    ['menu', 'level', 'shop', 'journey', 'arena', 'win', 'lose', 'versus', 'leaderboard', 'chat', 'inventory'].forEach((s) => this.el[s].classList.add('hidden'));
+    document.getElementById('versus-result').classList.add('hidden');
+    const vw = document.getElementById('vs-win'); if (vw) vw.classList.add('hidden');   // win-celebratie weg
+    document.body.classList.add('in-game');
+    this.el.hud.classList.add('hidden'); this.el.touch.classList.add('hidden'); this.el.pause.classList.add('hidden');
+    Game.playJourneyIntro(script, onDone || function () {});
   },
   startJourneyLevel(n) {
     document.getElementById('versus-result').classList.add('hidden');
