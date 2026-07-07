@@ -708,10 +708,10 @@ const JUNGLE_LAYOUTS = [
    Levels 5/10/15: eerst het gewone level, bij de finish begint de BOSS FIGHT
    (bestaande 1v1 smash-duels: Baviaan, Koba, Gorilla King). */
 function buildJourneyIsland() {
-  const names = ['Aangespoeld', 'Brekers', 'Palmenrif', 'Apenstreken', 'BAVIAAN',
+  const names = ['Aangespoeld', 'Brekers', 'Palmenrif', 'Apenstreken', 'BONZO',
     'Lagune', 'Kliftoppen', 'Zandbank', 'Verboden strand', 'KOBA',
     'Kokospaleis', 'Stormkaap', 'Springvloed', 'Aapheuvel', 'GORILLA KING'];
-  const bosses = { 5: { bot: 'baviaan', diff: 5, drops: ['dart', 'coco'] },
+  const bosses = { 5: { bot: 'bonzo', diff: 5, drops: ['dart', 'coco'] },
                    10: { bot: 'koba', diff: 7, drops: ['dart', 'coco', 'boom'] },
                    15: { bot: 'kong', diff: 10, drops: ['coco', 'boom', 'dart'], boss: true } };
   const levels = [];

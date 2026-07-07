@@ -338,11 +338,18 @@ const UI = {
   },
   pickJourneyLevel(n) {
     const world = this._journeyWorld || 1;
-    // Wereld 1, level 1: eerst de intro-verhaallijn (1x, daarna direct)
-    if (world === 1 && n === 1 && !Storage.data.seenIntro) {
-      Storage.data.seenIntro = true; Storage.save();
-      this.playStory('intro', n);
-      return;
+    // Wereld 1: intro (vóór lvl 1) + boss-verhalen (vóór de bazen 5/10/15). Elk verhaal speelt 1x.
+    if (world === 1) {
+      const script = this._journeyStoryFor(n);
+      if (script) {
+        Storage.data.seenStories = Storage.data.seenStories || {};
+        const key = world + '-' + n;
+        if (!Storage.data.seenStories[key]) {
+          Storage.data.seenStories[key] = true; Storage.save();
+          this.playStory(script, n);
+          return;
+        }
+      }
     }
     this.startJourneyLevel(n);
   },
@@ -350,8 +357,8 @@ const UI = {
   // speelt nu elke keer dat je het level start — ook bij herhalen (te skippen met "Overslaan")
   _journeyStoryFor(n) {
     if (n === 1) return 'intro';
-    if (n === 5) return 'baviaan';   // Baviaan
-    if (n === 10) return 'koba';     // Koba
+    if (n === 5) return 'bonzo';     // Bonzo (baas 1)
+    if (n === 10) return 'koba';     // Koba (baas 2)
     if (n === 15) return 'kong';     // Gorilla King (eindbaas)
     return null;
   },

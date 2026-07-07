@@ -1106,8 +1106,8 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
 #journey-story { position: absolute; inset: 0; z-index: 60; pointer-events: none; }
 #journey-story.hidden { display: none; }
 .journey-cap {
-  position: absolute; left: 50%; bottom: 14%; transform: translateX(-50%);
-  width: min(86%, 560px); text-align: center;
+  position: absolute; left: 50%; top: 9%; transform: translateX(-50%);
+  width: min(80%, 520px); text-align: center;
   font-family: var(--pixel-font); font-weight: bold; font-size: clamp(13px, 2.4vw, 20px);
   color: #fff; text-shadow: 2px 2px 0 #000, 0 0 10px rgba(0,0,0,.7);
   background: rgba(8,6,10,0.5); border-radius: 8px; padding: 8px 12px; line-height: 1.35;

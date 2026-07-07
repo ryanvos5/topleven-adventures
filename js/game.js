@@ -1760,6 +1760,10 @@ const Game = {
   // keer dat je een NIEUWE mensaap tegenkomt: baviaan (lvl 5), koba (lvl 10), kong (lvl 15).
   _storyDef(script) {
     const S = {
+      bonzo: { theme: 'jungle', foe: 'bonzo', scale: 1.15, caps: [
+        'Diep in het oerwoud verspert een pezige chimp je de weg.',
+        'BONZO — razendsnel en gemeen — springt van tak tot tak.',
+        'Hij daagt je uit… knokken is je enige uitweg!'] },
       baviaan: { theme: 'beach', foe: 'baviaan', scale: 1.12, caps: [
         'Je breekt los en vlucht langs de vloedlijn…',
         'Maar een grotere, getekende BAVIAAN verspert je de weg.',
