@@ -152,6 +152,8 @@ const UI = {
     $('btn-vs-bot').onclick = () => this.openBotSetup();
     const diffSlider = document.getElementById('vs-diff-slider');
     if (diffSlider) diffSlider.oninput = () => this.setBotDiff(parseInt(diffSlider.value, 10));
+    const roundsSlider = document.getElementById('vs-rounds-slider');
+    if (roundsSlider) roundsSlider.oninput = () => this.setVoteRounds(parseInt(roundsSlider.value, 10));
     $('btn-vs-quit').onclick = () => {
       // training-lobby verlaten
       if (Game.state === 'training') { Game.quitTraining(); return; }
@@ -1092,11 +1094,10 @@ const UI = {
     this._stopMatchmaking();
     document.getElementById('versus-mm').classList.add('hidden');
     this._vsStarted = false; this._myReady = false;
-    this._myVote = { map: VERSUS_MAPS[0].id, mode: 'smash' };
+    this._myVote = { map: VERSUS_MAPS[0].id, mode: 'smash', rounds: SMASH_ROUNDS };
     document.getElementById('versus-wait').classList.remove('hidden');
     document.querySelector('.vs-wait-label').classList.add('hidden');   // geen code bij matchmaking
     document.getElementById('vs-bot-diff').classList.add('hidden');
-    const rb = document.getElementById('btn-vs-ready'); rb.textContent = 'READY'; rb.classList.remove('on');
   },
   // geen online tegenstander binnen 8s -> lobby met map-keuze tegen een sterke bot
   matchmakingToBot() {
@@ -1223,7 +1224,8 @@ const UI = {
   // in een kamer: toon code, wacht op tegenstander
   _enterRoom(code) {
     this._vsStarted = false; this._peer = null; this._myReady = false;
-    this._myVote = { map: VERSUS_MAPS[0].id, mode: 'smash' };
+    this._matchType = 'room';
+    this._myVote = { map: VERSUS_MAPS[0].id, mode: 'smash', rounds: SMASH_ROUNDS };
     document.getElementById('versus-msg').textContent = '';
     document.getElementById('versus-lobby').classList.add('hidden');
     document.getElementById('versus-wait').classList.remove('hidden');
@@ -1233,17 +1235,116 @@ const UI = {
     document.getElementById('vs-lobby-opts').classList.add('hidden');
   },
 
-  // tegenstander aanwezig -> open de vote-lobby (NIET meteen starten)
+  // tegenstander aanwezig -> matchmaking = map-roulette; vriend/code-kamer = zelf kiezen + rondes
   _onVersusMatch(role) {
     if (role === 'host' || role === 'guest') this._vsRole = role;   // echte rol van Net (belangrijk bij matchmaking)
-    if (this._mmSearching) this._matchmakingConnected();   // via matchmaking: mm-scherm weg, lobby tonen
+    const isMm = !!this._mmSearching;
+    this._matchType = isMm ? 'mm' : 'room';
+    if (isMm) this._matchmakingConnected();          // via matchmaking: mm-scherm weg, wachtruimte tonen
     if (window.Net && Net.lobby) Net.lobbyLeave();   // chat niet meer nodig tijdens het potje
-    document.getElementById('vs-peer-status').textContent = 'Tegenstander aanwezig!';
     const bd = document.getElementById('vs-bot-diff'); if (bd) bd.classList.add('hidden');   // alleen bij bot
+    if (this._matchType === 'mm') {                  // === RANDOM MATCHMAKING: map-roulette ===
+      document.getElementById('vs-peer-status').textContent = 'Tegenstander gevonden!';
+      document.getElementById('vs-lobby-opts').classList.add('hidden');
+      this._beginMmRoulette();
+      return;
+    }
+    // === VRIEND / KAMER: zelf map kiezen + rondes ===
+    document.getElementById('vs-peer-status').textContent = 'Tegenstander aanwezig!';
+    document.getElementById('vs-roulette').classList.add('hidden');
     document.getElementById('vs-lobby-opts').classList.remove('hidden');
     this.renderMapVote();
+    this._setupRoundsUI();
     this.refreshLobby();
     this.broadcastLobby();        // deel mijn (standaard) keuze
+  },
+
+  // ---- MATCHMAKING: map-roulette (willekeurige map, host beslist) ----
+  _beginMmRoulette() {
+    const roul = document.getElementById('vs-roulette'); if (roul) roul.classList.remove('hidden');
+    const t = document.getElementById('vs-roulette-title'); if (t) t.textContent = 'Willekeurige map wordt gekozen…';
+    this._renderRoulette();
+    this._spinRoulette();
+    if (this._vsRole === 'host') {
+      setTimeout(() => {
+        if (this._vsStarted) return;
+        const map = VERSUS_MAPS[Math.floor(Math.random() * VERSUS_MAPS.length)].id;
+        const swap = Math.random() < 0.5;
+        if (window.Net) Net.versusSend('begin', { map, mode: 'smash', swap, rounds: SMASH_ROUNDS, roulette: 1 });
+        this._landRoulette(map, () => this._beginMatch(map, 'smash', swap, SMASH_ROUNDS));
+      }, 1400);
+    }
+  },
+  _renderRoulette() {
+    const strip = document.getElementById('vs-roulette-strip'); if (!strip) return;
+    strip.innerHTML = '';
+    VERSUS_MAPS.forEach((m) => {
+      const tile = document.createElement('div'); tile.className = 'vs-roul-tile'; tile.dataset.map = m.id;
+      tile.textContent = m.name; strip.appendChild(tile);
+    });
+  },
+  _spinRoulette() {
+    this._stopRoulette();
+    const tiles = Array.prototype.slice.call(document.querySelectorAll('#vs-roulette-strip .vs-roul-tile'));
+    if (!tiles.length) return;
+    let i = 0;
+    this._roulIv = setInterval(() => {
+      tiles.forEach((t) => t.classList.remove('on'));
+      tiles[i % tiles.length].classList.add('on'); i++;
+    }, 90);
+  },
+  _stopRoulette() {
+    if (this._roulIv) { clearInterval(this._roulIv); this._roulIv = 0; }
+    if (this._roulTo) { clearTimeout(this._roulTo); this._roulTo = 0; }
+  },
+  _landRoulette(mapId, cb) {
+    this._stopRoulette();
+    const tiles = Array.prototype.slice.call(document.querySelectorAll('#vs-roulette-strip .vs-roul-tile'));
+    if (!tiles.length) { cb(); return; }
+    const targetIdx = Math.max(0, tiles.findIndex((t) => t.dataset.map === mapId));
+    const total = tiles.length * 2 + targetIdx;   // een paar rondes en dan landen
+    let step = 0, delay = 60;
+    const tick = () => {
+      tiles.forEach((t) => t.classList.remove('on'));
+      tiles[step % tiles.length].classList.add('on');
+      if (step >= total) {
+        tiles[targetIdx].classList.add('picked');
+        const t = document.getElementById('vs-roulette-title'); if (t) t.textContent = tiles[targetIdx].textContent + '!';
+        if (window.Sfx) Sfx.play('pickup');
+        this._roulTo = setTimeout(cb, 800);
+        return;
+      }
+      step++; delay += 14;                          // afremmen
+      this._roulTo = setTimeout(tick, Math.min(240, delay));
+    };
+    tick();
+  },
+  // ---- rondes-keuze (alleen in vriend/code-kamers) ----
+  _setupRoundsUI() {
+    const opt = document.getElementById('vs-rounds-opt'); if (!opt) return;
+    const isRoom = this._matchType === 'room';
+    opt.classList.toggle('hidden', !isRoom);
+    if (!isRoom) return;
+    if (this._myVote.rounds == null) this._myVote.rounds = SMASH_ROUNDS;
+    const isHost = this._vsRole === 'host';
+    const sl = document.getElementById('vs-rounds-slider'); if (sl) sl.disabled = !isHost;
+    const note = document.getElementById('vs-rounds-note'); if (note) note.classList.toggle('hidden', isHost);
+    this._updateRoundsDisplay();
+  },
+  _effectiveRounds() {
+    const r = (this._vsRole === 'host') ? this._myVote.rounds : (this._peer && this._peer.rounds);
+    return Math.max(3, Math.min(10, r || SMASH_ROUNDS));
+  },
+  _updateRoundsDisplay() {
+    const val = document.getElementById('vs-rounds-val'); if (val) val.textContent = this._effectiveRounds();
+    const sl = document.getElementById('vs-rounds-slider');
+    if (sl && this._vsRole === 'host' && +sl.value !== (this._myVote.rounds || SMASH_ROUNDS)) sl.value = this._myVote.rounds || SMASH_ROUNDS;
+  },
+  setVoteRounds(n) {
+    n = Math.max(3, Math.min(10, n || SMASH_ROUNDS));
+    this._myVote.rounds = n;
+    this._updateRoundsDisplay();
+    if (!this._botSetup && this._matchType === 'room') this.broadcastLobby();
   },
 
   renderMapVote() {
@@ -1281,10 +1382,11 @@ const UI = {
   },
 
   broadcastLobby() {
-    if (window.Net && Net.versus) Net.versusSend('lobby', { map: this._myVote.map, mode: this._myVote.mode, ready: !!this._myReady });
+    if (window.Net && Net.versus) Net.versusSend('lobby', { map: this._myVote.map, mode: this._myVote.mode, ready: !!this._myReady, rounds: this._myVote.rounds || SMASH_ROUNDS });
   },
   onLobbyUpdate(p) {
-    this._peer = { map: p.map, mode: p.mode, ready: !!p.ready };
+    this._peer = { map: p.map, mode: p.mode, ready: !!p.ready, rounds: p.rounds };
+    this._updateRoundsDisplay();
     // op het uitslagscherm: alleen de stemmen bijwerken, NIET terug naar de lobby springen
     if (!document.getElementById('versus-result').classList.contains('hidden')) { this.refreshLobby(); return; }
     // tegenstander aanwezig -> zorg dat de opts zichtbaar zijn
@@ -1337,20 +1439,30 @@ const UI = {
     const map = (mine.map === peer.map) ? mine.map : (Math.random() < 0.5 ? mine.map : peer.map);
     const mode = 'smash';                                   // online is altijd Power Smash
     const swap = Math.random() < 0.5;                       // host beslist de kant (soms links, soms rechts)
-    if (window.Net) Net.versusSend('begin', { map, mode, swap });
-    this._beginMatch(map, mode, swap);
+    const rounds = this._effectiveRounds();
+    if (window.Net) Net.versusSend('begin', { map, mode, swap, rounds });
+    this._beginMatch(map, mode, swap, rounds);
   },
-  onLobbyBegin(p) { this._beginMatch(p.map, p.mode, p.swap); },
-  _beginMatch(map, mode, swap) {
+  onLobbyBegin(p) {
+    if (p.roulette && this._matchType === 'mm') {           // matchmaking: laat de roulette op de gekozen map landen
+      this._landRoulette(p.map, () => this._beginMatch(p.map, p.mode, p.swap, p.rounds));
+    } else {
+      this._beginMatch(p.map, p.mode, p.swap, p.rounds);
+    }
+  },
+  _beginMatch(map, mode, swap, rounds) {
     if (this._vsStarted) return;
     this._vsStarted = true;
+    this._stopRoulette();
     this.cancelCountdown();
+    this._lastRounds = Math.max(3, Math.min(10, rounds || this._lastRounds || SMASH_ROUNDS));
     document.getElementById('versus-result').classList.add('hidden');   // uitslag weg bij (re)start
-    Game.startVersus(this._vsRole || 'host', { mapId: map, mode: mode, swapSides: !!swap });
+    Game.startVersus(this._vsRole || 'host', { mapId: map, mode: mode, swapSides: !!swap, rounds: this._lastRounds });
   },
 
   leaveLobby() {
     this.cancelCountdown();
+    this._stopRoulette();
     this._vsStarted = false; this._peer = null; this._myReady = false; this._botSetup = false;
     const lbl = document.querySelector('.vs-wait-label'); if (lbl) lbl.classList.remove('hidden');
     const rb = document.getElementById('btn-vs-ready'); if (rb) { rb.textContent = 'READY'; rb.classList.remove('on'); }
@@ -1587,12 +1699,14 @@ const UI = {
       rs.textContent = isBot ? '' : 'Beiden moeten op rematch drukken.';
       // map-stemmen voor de volgende pot: standaard de huidige map
       const curMap = (Game.vsMap && Game.vsMap.id) || VERSUS_MAPS[0].id;
-      this._myVote = { map: curMap, mode: 'smash' };
+      const rr = this._lastRounds || SMASH_ROUNDS;
+      this._myVote = { map: curMap, mode: 'smash', rounds: rr };
       this._myReady = false;
-      this._peer = isBot ? null : { map: curMap, mode: 'smash', ready: false };
+      this._peer = isBot ? null : { map: curMap, mode: 'smash', ready: false, rounds: rr };
       this.renderMapVote();
       this.refreshLobby();
-      if (voteBox) voteBox.classList.remove('hidden');
+      // matchmaking: geen map-stemmen op het uitslagscherm (rematch = weer een willekeurige map)
+      if (voteBox) voteBox.classList.toggle('hidden', this._matchType === 'mm');
       if (!isBot) this.broadcastLobby();      // deel mijn (standaard) keuze met de tegenstander
     }
 
@@ -1636,16 +1750,22 @@ const UI = {
 
   checkRematch() {
     if (!this._rematchMine || !this._rematchPeer) return;
-    // de host bepaalt de map uit de stemmen en stuurt 'begin'; beiden starten
+    this._vsStarted = false;                                 // nieuwe pot: begin-guard resetten
+    // de host bepaalt map + rondes en stuurt 'begin'; beiden starten
     if (this._vsRole === 'host') {
-      const cur = (Game.vsMap && Game.vsMap.id) || VERSUS_MAPS[0].id;
-      const mine = (this._myVote && this._myVote.map) || cur;
-      const peer = (this._peer && this._peer.map) || mine;
-      const map = (mine === peer) ? mine : (Math.random() < 0.5 ? mine : peer);   // oneens -> loting
-      const mode = 'smash';
-      const swap = Math.random() < 0.5;                                            // ook bij rematch: kant loten
-      if (window.Net) Net.versusSend('begin', { map, mode, swap });
-      this._beginMatch(map, mode, swap);
+      const mode = 'smash', swap = Math.random() < 0.5, rounds = this._effectiveRounds();
+      if (this._matchType === 'mm') {                        // matchmaking-rematch: opnieuw willekeurige map
+        const map = VERSUS_MAPS[Math.floor(Math.random() * VERSUS_MAPS.length)].id;
+        if (window.Net) Net.versusSend('begin', { map, mode, swap, rounds });
+        this._beginMatch(map, mode, swap, rounds);
+      } else {
+        const cur = (Game.vsMap && Game.vsMap.id) || VERSUS_MAPS[0].id;
+        const mine = (this._myVote && this._myVote.map) || cur;
+        const peer = (this._peer && this._peer.map) || mine;
+        const map = (mine === peer) ? mine : (Math.random() < 0.5 ? mine : peer);   // oneens -> loting
+        if (window.Net) Net.versusSend('begin', { map, mode, swap, rounds });
+        this._beginMatch(map, mode, swap, rounds);
+      }
     } else {
       const rs = document.getElementById('vs-rematch-status'); if (rs) rs.textContent = 'Starten…';
     }

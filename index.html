@@ -11,9 +11,9 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#0d0f14" />
   <title>Tiny Power Smashers</title>
-  <link rel="icon" type="image/svg+xml" href="icon.svg?v=menu116" />
-  <link rel="apple-touch-icon" href="icon.svg?v=menu116" />
-  <link rel="stylesheet" href="css/style.css?v=menu116" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg?v=menu117" />
+  <link rel="apple-touch-icon" href="icon.svg?v=menu117" />
+  <link rel="stylesheet" href="css/style.css?v=menu117" />
 </head>
 <body>
   <div id="game-root">
@@ -67,7 +67,7 @@
     </div>
 
     <!-- ===== Splash bij opstarten (logo, fadet vanzelf weg) ===== -->
-    <div id="splash"><img src="logo.svg?v=menu116" alt="Tiny Power Smashers" /></div>
+    <div id="splash"><img src="logo.svg?v=menu117" alt="Tiny Power Smashers" /></div>
 
     <!-- ===== Canvas (de spelwereld) ===== -->
     <canvas id="game-canvas"></canvas>
@@ -129,7 +129,7 @@
     <div id="menu-screen" class="screen">
       <div class="menu-frame">
         <header class="menu-top">
-          <img class="menu-logo-img" src="logo.svg?v=menu116" alt="Tiny Power Smashers" />
+          <img class="menu-logo-img" src="logo.svg?v=menu117" alt="Tiny Power Smashers" />
           <div class="menu-hud">
             <span class="menu-coins-top">
               <svg class="px-icon" viewBox="0 0 8 8" width="16" height="16" shape-rendering="crispEdges"><rect x="2" y="1" width="4" height="6" fill="#caa12e"/><rect x="1" y="2" width="6" height="4" fill="#ffd24a"/><rect x="3" y="2" width="1" height="4" fill="#fff0a8"/></svg>
@@ -382,9 +382,19 @@
         <div id="versus-wait" class="hidden">
           <p class="vs-wait-label">Kamercode: <span id="vs-room-code" class="vs-code-inline">----</span></p>
           <p id="vs-peer-status" class="vs-wait-sub">Wachten op tegenstander…</p>
+          <!-- matchmaking: map-roulette (willekeurige map) -->
+          <div id="vs-roulette" class="hidden">
+            <p class="vs-section" id="vs-roulette-title">Willekeurige map wordt gekozen…</p>
+            <div id="vs-roulette-strip" class="vs-roulette-strip"></div>
+          </div>
           <div id="vs-lobby-opts" class="hidden">
             <p class="vs-section">Stem op een map: <span class="vs-mode-note"><svg class="ic"><use href="#ic-fire"/></svg> Power Smash</span></p>
             <div id="vs-map-list" class="vs-map-list"></div>
+            <div id="vs-rounds-opt" class="hidden">
+              <p class="vs-section">Aantal rondes: <span id="vs-rounds-val">8</span></p>
+              <input id="vs-rounds-slider" class="vs-slider" type="range" min="3" max="10" step="1" value="8" />
+              <p id="vs-rounds-note" class="vs-wait-sub hidden">De host kiest het aantal rondes.</p>
+            </div>
             <div id="vs-bot-diff" class="hidden">
               <p class="vs-section">Bot-moeilijkheid: <span id="vs-diff-val">5</span>/10 — <span id="vs-diff-name">Jager</span></p>
               <input id="vs-diff-slider" class="vs-slider" type="range" min="1" max="10" step="1" value="5" />
@@ -572,17 +582,17 @@
     </div>
   </div>
 
-  <script src="vendor/supabase.min.js?v=menu116"></script>
-  <script src="js/config.js?v=menu116"></script>
-  <script src="js/storage.js?v=menu116"></script>
-  <script src="js/audio.js?v=menu116"></script>
-  <script src="js/net.js?v=menu116"></script>
-  <script src="js/input.js?v=menu116"></script>
-  <script src="js/sprites.js?v=menu116"></script>
-  <script src="js/menubg.js?v=menu116"></script>
-  <script src="js/entities.js?v=menu116"></script>
-  <script src="js/ui.js?v=menu116"></script>
-  <script src="js/game.js?v=menu116"></script>
-  <script src="js/main.js?v=menu116"></script>
+  <script src="vendor/supabase.min.js?v=menu117"></script>
+  <script src="js/config.js?v=menu117"></script>
+  <script src="js/storage.js?v=menu117"></script>
+  <script src="js/audio.js?v=menu117"></script>
+  <script src="js/net.js?v=menu117"></script>
+  <script src="js/input.js?v=menu117"></script>
+  <script src="js/sprites.js?v=menu117"></script>
+  <script src="js/menubg.js?v=menu117"></script>
+  <script src="js/entities.js?v=menu117"></script>
+  <script src="js/ui.js?v=menu117"></script>
+  <script src="js/game.js?v=menu117"></script>
+  <script src="js/main.js?v=menu117"></script>
 </body>
 </html>

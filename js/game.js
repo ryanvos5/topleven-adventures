@@ -1983,7 +1983,7 @@ const Game = {
     const rb = meLeft ? map.spawnR : map.spawnL;
     this.vs = {
       role, spawn: sp, botSpawn: { x: rb.x, y: rb.y, dir: meLeft ? -1 : 1 },
-      myScore: 0, oppScore: 0, target: mode === 'smash' ? SMASH_ROUNDS : 5,
+      myScore: 0, oppScore: 0, target: (mode === 'smash' && opts.rounds) ? Math.max(3, Math.min(10, opts.rounds | 0)) : (mode === 'smash' ? SMASH_ROUNDS : 5),
       countdown: 3000, lastSwing: 0, botLastSwing: 0, netTimer: 0, over: false,
       roundFreezeUntil: 0, roundMsg: '',
       remote: {

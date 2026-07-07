@@ -1584,3 +1584,26 @@ body.is-touch.portrait.in-game #rotate-hint { display: flex; }
 .char-upgrade.cant { border-color: #7a3a2a; color: #e0a08a; opacity: 0.85; cursor: default; }
 .char-upgrade.locked { color: #8a929c; cursor: default; opacity: 0.8; }
 .char-upgrade.maxed { border-color: var(--gold); color: var(--gold); cursor: default; }
+
+/* ===== Matchmaking map-roulette ===== */
+#vs-roulette { margin: 6px 0; }
+.vs-roulette-strip {
+  display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 6px;
+}
+.vs-roul-tile {
+  padding: 7px 12px; border-radius: 9px; border: 2px solid #3a4456;
+  background: rgba(20,26,38,0.75); color: #aeb7c4;
+  font-family: var(--pixel-font); font-size: 12px; letter-spacing: 1px;
+  transition: transform .1s, background .1s, border-color .1s;
+}
+.vs-roul-tile.on {
+  border-color: var(--gold); background: rgba(230,184,80,0.25); color: #fff;
+  transform: scale(1.08); box-shadow: 0 0 10px rgba(230,184,80,0.4);
+}
+.vs-roul-tile.picked {
+  border-color: #2f9a3a; background: linear-gradient(180deg, rgba(46,140,60,0.7), rgba(24,80,36,0.8));
+  color: #eafff0; transform: scale(1.14); box-shadow: 0 0 16px rgba(90,255,122,0.5);
+}
+/* rondes-keuze (vriend-kamer) */
+#vs-rounds-opt { margin: 6px 0 2px; }
+#vs-rounds-slider:disabled { opacity: 0.5; }
