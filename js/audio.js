@@ -96,19 +96,61 @@ const Sfx = {
   },
 
   // ---------- muziek: gevechtsstijl (drums + drijvende bas + mineur-riff) per thema ----------
+  // per thema een EIGEN toonladder, akkoordenschema, riff en drumpatroon -> elke map klinkt anders.
+  // (alles wordt in code gesynthetiseerd -> volledig rechtenvrij; geen audiobestanden nodig.)
   THEMES: {
-    menu:   { root: 261.6, bpm: 108, lead: 'triangle', bass: 'square' },
-    jungle: { root: 220.0, bpm: 128, lead: 'square',   bass: 'square' },
-    airplane: { root: 329.6, bpm: 116, lead: 'square',   bass: 'triangle' },
-    lava:   { root: 174.6, bpm: 144, lead: 'sawtooth', bass: 'square' },
-    pirate: { root: 196.0, bpm: 122, lead: 'square',   bass: 'triangle' },
-    cave:   { root: 146.8, bpm: 112, lead: 'square',   bass: 'sine' },
-    beach:  { root: 293.7, bpm: 132, lead: 'square',   bass: 'triangle' },
-    dohyo:  { root: 164.8, bpm: 120, lead: 'square',   bass: 'square' },
-    arena:  { root: 130.8, bpm: 150, lead: 'sawtooth', bass: 'square' },
+    menu: { root: 261.6, bpm: 104, lead: 'triangle', bass: 'square',
+      scale: [0, 2, 4, 5, 7, 9, 11, 12, 14, 16], prog: [0, 9, 5, 7],   // majeur, rustig
+      riff: [0, -1, 2, -1, 4, -1, 2, -1, 5, -1, 4, -1, 2, -1, 0, -1],
+      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0] },
+    // Jungle: driftig, tribaal, dorisch
+    jungle: { root: 220.0, bpm: 134, lead: 'square', bass: 'square',
+      scale: [0, 2, 3, 5, 7, 9, 10, 12, 14, 16], prog: [0, 5, 7, 3],
+      riff: [0, -1, 2, 3, -1, 4, 3, 2, 0, -1, 4, 5, 3, -1, 2, -1],
+      kick: [1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1], snare: [0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0] },
+    // Airplane: licht, zwevend, majeur-pentatonisch
+    airplane: { root: 349.2, bpm: 118, lead: 'triangle', bass: 'triangle',
+      scale: [0, 2, 4, 7, 9, 12, 14, 16, 19, 21], prog: [0, 7, 9, 4],
+      riff: [4, -1, -1, 2, 3, -1, -1, 4, 5, -1, 4, -1, 2, -1, 0, -1],
+      kick: [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0], snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0] },
+    // Volcano (lava): heftig, donker, frygisch + dubbele kick
+    lava: { root: 174.6, bpm: 150, lead: 'sawtooth', bass: 'square',
+      scale: [0, 1, 3, 5, 7, 8, 10, 12, 13, 15], prog: [0, 1, 0, 3],
+      riff: [0, 1, 0, -1, 3, -1, 1, 0, 0, 1, 3, 4, -1, 1, 0, -1],
+      kick: [1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0], snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0] },
+    // Pirate: zwierig, dramatisch mineur, marcherende kick
+    pirate: { root: 196.0, bpm: 116, lead: 'square', bass: 'triangle',
+      scale: [0, 2, 3, 5, 7, 8, 10, 12, 14, 15], prog: [0, 7, 3, 10],
+      riff: [0, -1, 3, -1, 4, 3, 2, -1, 5, -1, 4, 3, -1, 2, 0, -1],
+      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], snare: [0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0] },
+    // Cave: mysterieus, sober, langzaam
+    cave: { root: 130.8, bpm: 100, lead: 'triangle', bass: 'sine',
+      scale: [0, 2, 3, 5, 7, 8, 10, 12, 14, 15], prog: [0, 3, 7, 5],
+      riff: [0, -1, -1, -1, 3, -1, -1, -1, 5, -1, -1, 4, -1, -1, 2, -1],
+      kick: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], snare: [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0] },
+    // Beach: zonnig, opgewekt, majeur-pentatonisch
+    beach: { root: 293.7, bpm: 128, lead: 'square', bass: 'triangle',
+      scale: [0, 2, 4, 7, 9, 12, 14, 16, 19, 21], prog: [0, 5, 9, 7],
+      riff: [0, 2, -1, 4, 2, -1, 4, 5, -1, 4, 2, -1, 0, 2, -1, 4],
+      kick: [1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0], snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1] },
+    // Dohyo: Japans/taiko, zware trom
+    dohyo: { root: 164.8, bpm: 112, lead: 'square', bass: 'square',
+      scale: [0, 1, 5, 7, 8, 12, 13, 17, 19, 20], prog: [0, 0, 7, 7],
+      riff: [0, -1, -1, -1, 0, -1, 3, -1, 5, -1, -1, -1, 3, -1, 0, -1],
+      kick: [1, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0], snare: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1] },
+    // Temple: oud, ritueel, frygisch/exotisch (nieuw)
+    temple: { root: 155.6, bpm: 104, lead: 'triangle', bass: 'sine',
+      scale: [0, 1, 3, 5, 7, 8, 11, 12, 13, 15], prog: [0, 1, 5, 3],
+      riff: [5, -1, 4, -1, 3, -1, 1, -1, 0, -1, 1, -1, 3, -1, 4, -1],
+      kick: [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0], snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0] },
+    // Arena (Knock-out): snel en agressief
+    arena: { root: 130.8, bpm: 152, lead: 'sawtooth', bass: 'square',
+      scale: [0, 2, 3, 5, 7, 8, 10, 12, 14, 15], prog: [0, 3, 5, 7],
+      riff: [0, 3, 0, 5, 0, 3, 4, -1, 0, 3, 0, 7, 5, 4, 3, -1],
+      kick: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], snare: [0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1] },
   },
-  _minor: [0, 2, 3, 5, 7, 8, 10, 12, 14, 15],   // natuurlijke mineur (gespannen)
-  _prog: [0, 10, 8, 7],                          // i - VII - VI - v (drijvend)
+  _minor: [0, 2, 3, 5, 7, 8, 10, 12, 14, 15],   // fallback-toonladder
+  _prog: [0, 10, 8, 7],                          // fallback-akkoorden
   _kickP: [1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0],
   _snareP: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
   _riff: [0, -1, 3, 4, -1, 3, 0, 2, 4, -1, 5, 4, 3, 2, 0, -1],   // scale-graden (-1 = rust)
@@ -131,16 +173,19 @@ const Sfx = {
   _f(root, semi) { return root * Math.pow(2, semi / 12); },
   _tick() {
     if (!this.enabled || !this.ctx || this.ctx.state !== 'running' || !this._theme) return;
-    const th = this._theme, step = this._step, chord = this._prog[Math.floor(step / 4) % 4];
+    const th = this._theme, step = this._step;
+    const prog = th.prog || this._prog, scale = th.scale || this._minor;
+    const kick = th.kick || this._kickP, snare = th.snare || this._snareP, riff = th.riff || this._riff;
+    const chord = prog[Math.floor(step / 4) % 4];
     // drums
-    if (this._kickP[step]) this._kick();
-    if (this._snareP[step]) this._snare();
+    if (kick[step]) this._kick();
+    if (snare[step]) this._snare();
     if (step % 2 === 0) this._hat(step % 4 === 0 ? 0.1 : 0.07);
     // drijvende bas (8e noten)
     if (step % 2 === 0) this._mnote(this._f(th.root / 2, chord), 0.18, th.bass, 0.42);
-    // mineur-riff
-    const deg = this._riff[step];
-    if (deg >= 0) this._mnote(this._f(th.root, chord + this._minor[deg]), 0.15, th.lead, 0.3);
+    // riff (eigen toonladder per map)
+    const deg = riff[step];
+    if (deg >= 0) this._mnote(this._f(th.root, chord + scale[deg]), 0.15, th.lead, 0.3);
     this._step = (step + 1) % 16;
   },
   _mnote(freq, dur, type, vol) {
