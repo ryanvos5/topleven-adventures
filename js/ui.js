@@ -336,7 +336,16 @@ const UI = {
       grid.appendChild(cell);
     });
   },
-  pickJourneyLevel(n) { this.startJourneyLevel(n); },   // journey = direct het 1v1-smash-duel (geen Mario/cutscene meer)
+  pickJourneyLevel(n) {
+    const world = this._journeyWorld || 1;
+    // Wereld 1, level 1: eerst de intro-verhaallijn (1x, daarna direct)
+    if (world === 1 && n === 1 && !Storage.data.seenIntro) {
+      Storage.data.seenIntro = true; Storage.save();
+      this.playStory('intro', n);
+      return;
+    }
+    this.startJourneyLevel(n);
+  },
   // welk verhaaltje hoort bij dit level? (intro vóór lvl 1, confrontatie bij elke nieuwe aap)
   // speelt nu elke keer dat je het level start — ook bij herhalen (te skippen met "Overslaan")
   _journeyStoryFor(n) {

@@ -1846,6 +1846,7 @@ const Game = {
     const seg = segs[i];
     if (!this._storyFrozen && (this._storyElapsed || 0) >= seg.dur) { this._storyFrozen = true; this._storyElapsed = seg.dur; this._showStoryNext(true); }
     const t = Math.min(this._storyElapsed || 0, seg.dur);
+    if (window.Sfx && seg.theme) Sfx.music(seg.theme === 'jungle' ? 'jungle' : 'beach');   // muziek volgt de scène
     this._storyBg(this._storyClock || 0, seg.theme);   // achtergrond (golven) loopt door, ook tijdens bevriezen
     seg.draw(t);
     const cap = document.getElementById('journey-cap'); if (cap) cap.textContent = seg.cap;
@@ -1856,23 +1857,80 @@ const Game = {
     const ch = this._storyChar || CHARACTERS.ryan, pose0 = { build: ch.build, hair: ch.hair };
     const clk = () => this._storyClock || 0;
     if (script === 'intro') {
+      const wreck = (c, x, y, w2) => { Sprites.px(c, '#5a3a22', x, y, w2, 4); Sprites.px(c, '#7a5230', x, y, w2, 1); Sprites.px(c, '#3f2817', x, y + 3, w2, 1); };
+      const jungleEdge = (c) => {                          // donker oerwoud aan de rechterkant
+        c.fillStyle = '#123a1c'; for (let x = W - 96; x < W + 12; x += 20) { c.beginPath(); c.arc(x, gy - 42, 26, 0, 6.2832); c.fill(); }
+        c.fillStyle = '#0d2a14'; for (let x = W - 92; x < W + 12; x += 24) { c.beginPath(); c.arc(x, gy - 18, 22, 0, 6.2832); c.fill(); }
+        Sprites.px(c, '#3a2414', W - 30, gy - 30, 6, 30); Sprites.px(c, '#3a2414', W - 62, gy - 26, 6, 26);
+      };
+      const waves = (c, x, y) => { c.strokeStyle = '#ffffff'; c.globalAlpha = 0.5; c.lineWidth = 1.4; for (let k = 1; k <= 3; k++) { c.beginPath(); c.arc(x, y, 3 + k * 4 + ((clk() / 120) % 4), -0.9, 0.9); c.stroke(); } c.globalAlpha = 1; };
+      const shout = (c, x, y) => { c.strokeStyle = '#ffef9a'; c.lineWidth = 1.2; for (let k = 0; k < 3; k++) { const a = -0.6 + k * 0.6; c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(a) * 7, y + Math.sin(a) * 7 - 6); c.stroke(); } };
+      const storm = (c, amt) => { c.globalAlpha = 0.3 * amt; c.fillStyle = '#20303f'; c.fillRect(0, 0, W, CONFIG.VIEW_H); c.globalAlpha = 0.9 * amt; c.fillStyle = '#5a6672'; for (let x = 20; x < W; x += 62) { c.beginPath(); c.arc(x + Math.sin(clk() / 900 + x) * 4, 24, 14, 0, 6.2832); c.arc(x + 16, 28, 12, 0, 6.2832); c.fill(); } c.globalAlpha = 1; };
+      const P = (x) => Math.round(W * x);
       return [
-        { theme: 'beach', dur: 2400, cap: 'Je schip is vergaan… je drijft af op open zee.', draw: (t) => {
-          const ctx = this.ctx, prog = Math.min(1, t / 2400), px = 36 + prog * (W * 0.5 - 36), py = gy - 6 + Math.sin(clk() / 200) * 1.5;
-          Sprites.px(ctx, '#6b4a2a', px - 13, py + 4, 26, 4); Sprites.px(ctx, '#8a5e36', px - 13, py + 4, 26, 1);
-          Sprites.drawCharacter(ctx, Math.round(px), Math.round(py), 1, ch.palette, Object.assign({ ducking: true, weapon: null }, pose0));
+        // ===== Scène 1 – Aangespoeld =====
+        { theme: 'beach', dur: 2400, cap: 'Na een zware storm word je wakker op een verlaten strand…', draw: (t) => {
+          const c = this.ctx; storm(c, 1); wreck(c, W * 0.62, gy - 3, 22); wreck(c, W * 0.2, gy + 2, 16);
+          const wake = Math.min(1, t / 2400);
+          Sprites.drawCharacter(c, P(0.42), Math.round(gy - 2), 1, ch.palette, Object.assign({ ducking: wake < 0.6, weapon: null }, pose0));
+          if (wake > 0.5) { c.fillStyle = '#fff'; c.font = 'bold 12px "Courier New",monospace'; c.fillText('?', P(0.42) - 2, gy - 34); }
         } },
-        { theme: 'beach', dur: 2300, cap: 'Je spoelt aan op een onbewoond eiland… maar je bent niet alleen.', draw: (t) => {
-          const ctx = this.ctx, px = W * 0.5;
-          Sprites.drawCharacter(ctx, Math.round(px), Math.round(gy - 2), 1, ch.palette, Object.assign({ ducking: true, weapon: null }, pose0));
-          const ap = Math.min(1, t / 2300), ax = W + 24 - ap * (W * 0.5 - 26 + 24);
-          this._storyApe(ctx, ax, gy - 2, -1, clk() / 70); this._storyApe(ctx, ax + 24, gy - 2, -1, clk() / 70 + 2);
+        { theme: 'beach', dur: 2200, cap: 'Je schip is verdwenen — overal liggen wrakstukken.', draw: (t) => {
+          const c = this.ctx; storm(c, 0.45);
+          Sprites.drawCharacter(c, P(0.5), Math.round(gy - 2), -1, ch.palette, Object.assign({ weapon: null }, pose0));
+          const p = Math.min(1, t / 2200);
+          wreck(c, 30 + p * 4, gy + 2, 20); wreck(c, 80, gy - 2, 14); wreck(c, 250 - p * 6, gy + 3, 24); wreck(c, 300, gy - 1, 12);
+          Sprites.px(c, '#8a2a2a', 120, gy - 1, 10, 6); Sprites.px(c, '#b33', 120, gy - 1, 10, 2);   // stuk rood zeil
         } },
-        { theme: 'beach', dur: 2600, cap: 'Wilde MENSAPEN grijpen je en sleuren je het oerwoud in!', draw: (t) => {
-          const ctx = this.ctx, drag = Math.min(1, t / 2600), px = W * 0.5 + drag * (W * 0.5 + 30);
-          Sprites.drawCharacter(ctx, Math.round(px), Math.round(gy - 2), -1, ch.palette, Object.assign({ airborne: true, weapon: null }, pose0));
-          this._storyApe(ctx, px + 16, gy - 2, -1, clk() / 60); this._storyApe(ctx, px + 36, gy - 2, -1, clk() / 60 + 2);
-          for (let k = 0; k < 3; k++) Sprites.px(ctx, '#d8c9a0', px - 12 - k * 7, gy - 2 - (k % 2) * 2, 3, 3);
+        { theme: 'beach', dur: 2400, cap: 'In de verte zie je een dicht oerwoud… en je hoort vreemde geluiden.', draw: () => {
+          const c = this.ctx; jungleEdge(c);
+          Sprites.drawCharacter(c, P(0.34), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          wreck(c, W * 0.14, gy + 2, 18); waves(c, W - 70, gy - 46);
+        } },
+        // ===== Scène 2 – De ontmoeting =====
+        { theme: 'jungle', dur: 2400, cap: 'Je loopt het oerwoud in… en wordt plots omsingeld door mensapen.', draw: (t) => {
+          const c = this.ctx;
+          Sprites.drawCharacter(c, P(0.5), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          const p = Math.min(1, t / 2400), off = p * (W * 0.5 - 40 + 20);
+          const lx = -20 + off, rx = (W + 20) - off;
+          this._storyApe(c, lx, gy - 2, 1, clk() / 70); this._storyApe(c, lx - 22, gy - 2, 1, clk() / 70 + 2);
+          this._storyApe(c, rx, gy - 2, -1, clk() / 70 + 1); this._storyApe(c, rx + 22, gy - 2, -1, clk() / 70 + 3);
+        } },
+        { theme: 'jungle', dur: 2200, cap: 'Ze staren je woedend aan en laten dreigende kreten horen.', draw: () => {
+          const c = this.ctx;
+          Sprites.drawCharacter(c, P(0.5), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          this._storyApe(c, P(0.5) - 46, gy - 2, 1, 0); this._storyApe(c, P(0.5) - 68, gy - 2, 1, 0);
+          this._storyApe(c, P(0.5) + 46, gy - 2, -1, 0); this._storyApe(c, P(0.5) + 68, gy - 2, -1, 0);
+          shout(c, P(0.5) - 54, gy - 26); shout(c, P(0.5) + 54, gy - 26);
+        } },
+        { theme: 'jungle', dur: 2000, cap: 'Je merkt meteen dat je hier niet welkom bent…', draw: () => {
+          const c = this.ctx, jit = Math.round(Math.sin(clk() / 60) * 1.5);
+          Sprites.drawCharacter(c, P(0.5) + jit, Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          c.fillStyle = '#8fd0ff'; c.fillRect(P(0.5) + 8 + jit, gy - 30, 2, 3);   // zweetdruppel
+          this._storyApe(c, P(0.5) - 40, gy - 2, 1, 0); this._storyApe(c, P(0.5) - 62, gy - 2, 1, 0);
+          this._storyApe(c, P(0.5) + 40, gy - 2, -1, 0); this._storyApe(c, P(0.5) + 62, gy - 2, -1, 0);
+        } },
+        // ===== Scène 3 – De achtervolging =====
+        { theme: 'jungle', dur: 2000, cap: 'De leider brult luid en wijst naar jou!', draw: () => {
+          const c = this.ctx, bob = Math.abs(Math.sin(clk() / 110)) * 3;
+          Sprites.drawCharacter(c, P(0.22), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          this._storyFighter(c, 'baviaan', W * 0.68, gy - 2 - bob, -1, 0, 1.4);
+          shout(c, W * 0.68 - 16, gy - 32); shout(c, W * 0.68 + 12, gy - 32);
+          c.fillStyle = '#ff5a5a'; c.font = 'bold 14px "Courier New",monospace'; c.fillText('!', P(0.5), gy - 26);
+        } },
+        { theme: 'jungle', dur: 2200, cap: 'De hele groep zet de achtervolging in!', draw: (t) => {
+          const c = this.ctx, p = Math.min(1, t / 2200), px2 = (W * 0.7) - p * (W * 0.5);
+          Sprites.drawCharacter(c, Math.round(px2), Math.round(gy - 2), -1, ch.palette, Object.assign({ walkPhase: clk() / 40, weapon: null }, pose0));
+          this._storyFighter(c, 'baviaan', px2 + 40, gy - 2, -1, clk() / 50, 1.3);
+          this._storyApe(c, px2 + 66, gy - 2, -1, clk() / 45); this._storyApe(c, px2 + 86, gy - 2, -1, clk() / 45 + 2); this._storyApe(c, px2 + 104, gy - 2, -1, clk() / 45 + 1);
+          for (let k = 0; k < 3; k++) Sprites.px(c, '#caa860', Math.round(px2 + 50 + k * 10), gy - 1 - (k % 2) * 2, 3, 3);
+        } },
+        { theme: 'jungle', dur: 1600, cap: 'Er is maar één optie: VECHT!', draw: () => {
+          const c = this.ctx, bob = Math.abs(Math.sin(clk() / 90)) * 2;
+          Sprites.drawCharacter(c, P(0.34), Math.round(gy - 2), 1, ch.palette, Object.assign({ attacking: true, weapon: null }, pose0));
+          this._storyFighter(c, 'baviaan', W * 0.66, gy - 2 - bob, -1, 0, 1.4);
+          this._storyApe(c, W * 0.66 + 24, gy - 2, -1, clk() / 50); this._storyApe(c, W * 0.66 + 44, gy - 2, -1, clk() / 50 + 2);
+          c.fillStyle = '#ffef9a'; c.font = 'bold 16px "Courier New",monospace'; c.textAlign = 'center'; c.fillText('VS', P(0.5), gy - 42); c.textAlign = 'left';
         } },
       ];
     }
