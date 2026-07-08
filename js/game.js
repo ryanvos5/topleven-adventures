@@ -2149,6 +2149,70 @@ const Game = {
         } },
       ];
     }
+    // ===== GORILLA KING (Wereld 1, level 15) — de troonzaal diep in de jungle =====
+    if (script === 'kong') {
+      const P = (x) => Math.round(W * x);
+      const shout = (c, x, y) => { c.strokeStyle = '#ffef9a'; c.lineWidth = 1.3; for (let k = 0; k < 3; k++) { const a = -0.6 + k * 0.6; c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(a) * 9, y + Math.sin(a) * 9 - 8); c.stroke(); } };
+      const throne = (c, cx) => { const bx = cx - 20; c.fillStyle = '#5a4a38'; c.fillRect(bx, gy - 34, 40, 34); c.fillStyle = '#6a5844'; c.fillRect(bx, gy - 34, 40, 4); c.fillStyle = '#4a3c2c'; c.fillRect(bx - 4, gy - 54, 8, 54); c.fillRect(bx + 36, gy - 54, 8, 54); for (let y = gy - 30; y < gy; y += 8) Sprites.px(c, '#3a2e20', bx + 4, y, 32, 1); };   // stenen troon
+      const bone = (c, x, y) => { c.fillStyle = '#e6e0d0'; c.fillRect(x, y, 8, 2); c.fillRect(x, y - 2, 2, 2); c.fillRect(x + 6, y - 2, 2, 2); c.fillRect(x, y + 2, 2, 2); c.fillRect(x + 6, y + 2, 2, 2); };
+      const skull = (c, x, y) => { c.fillStyle = '#e6e0d0'; c.fillRect(x, y, 6, 5); c.fillStyle = '#2a2018'; c.fillRect(x + 1, y + 1, 2, 2); c.fillRect(x + 4, y + 1, 1, 2); };
+      const brokenWpn = (c, x, y) => { c.strokeStyle = '#8a8f96'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(x, y); c.lineTo(x + 8, y - 7); c.stroke(); c.fillStyle = '#5b3a22'; c.fillRect(x - 2, y - 1, 4, 3); };   // kapot zwaard
+      const litter = (c) => { skull(c, W * 0.16, gy - 5); bone(c, W * 0.26, gy - 3); brokenWpn(c, W * 0.4, gy - 2); bone(c, W * 0.5, gy - 4); skull(c, W * 0.58, gy - 3); brokenWpn(c, W * 0.12, gy - 3); };
+      const king = (c, x, fy, dir, ph, opts) => this._storyFighter(c, 'kong', x, fy, dir, ph, 1.5, opts || {});
+      const shadow = (c) => { c.globalAlpha = 0.5; c.fillStyle = '#0a1c0e'; c.beginPath(); c.ellipse(W * 0.78, gy - 22, 26, 30, 0, 0, 6.2832); c.fill(); c.globalAlpha = 1; };
+      return [
+        // ===== Scène 1 – De Troon =====
+        { theme: 'jungle', dur: 2400, cap: 'Na een lange tocht bereik je een eeuwenoude troon diep in de jungle.', draw: (t) => {
+          const c = this.ctx, p = Math.min(1, t / 2400); throne(c, W * 0.78); shadow(c); litter(c);
+          Sprites.drawCharacter(c, P(0.16) + Math.round(p * 28), Math.round(gy - 2), 1, ch.palette, Object.assign({ walkPhase: clk() / 70, weapon: null }, pose0));
+        } },
+        { theme: 'jungle', dur: 2300, cap: 'Overal liggen botten en kapotgeslagen wapens van eerdere uitdagers.', draw: () => {
+          const c = this.ctx; throne(c, W * 0.78);
+          skull(c, W * 0.2, gy - 5); bone(c, W * 0.3, gy - 3); brokenWpn(c, W * 0.42, gy - 2); bone(c, W * 0.52, gy - 5); skull(c, W * 0.62, gy - 3); brokenWpn(c, W * 0.34, gy - 3); bone(c, W * 0.14, gy - 4);
+          Sprites.drawCharacter(c, P(0.3), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+        } },
+        { theme: 'jungle', dur: 2000, cap: 'Een ijzige stilte hangt in de lucht…', draw: () => {
+          const c = this.ctx, jit = Math.round(Math.sin(clk() / 80) * 1.1); throne(c, W * 0.78); shadow(c); litter(c);
+          Sprites.drawCharacter(c, P(0.3) + jit, Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          c.fillStyle = '#8fd0ff'; c.fillRect(P(0.3) + 8 + jit, gy - 30, 2, 3);   // zweetdruppel
+        } },
+        // ===== Scène 2 – De Gorilla King =====
+        { theme: 'jungle', dur: 2400, cap: 'Langzaam staat de GORILLA KING op van zijn stenen troon.', draw: (t) => {
+          const c = this.ctx, p = Math.min(1, t / 2400), rise = (1 - p) * 14; throne(c, W * 0.78); litter(c);
+          Sprites.drawCharacter(c, P(0.22), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          king(c, W * 0.76, gy - 2 + rise, -1, 0, {});
+        } },
+        { theme: 'jungle', dur: 2300, cap: 'Met een oorverdovende brul slaat hij op zijn borst en kijkt hij je recht aan.', draw: () => {
+          const c = this.ctx, bob = Math.abs(Math.sin(clk() / 90)) * 3, jit = Math.round(Math.sin(clk() / 26) * 1.4); throne(c, W * 0.78); litter(c);
+          Sprites.drawCharacter(c, P(0.22) - Math.abs(jit), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          king(c, W * 0.72, gy - 2 - bob, -1, 0, { attacking: true });
+          shout(c, W * 0.72 - 24, gy - 54); shout(c, W * 0.72 + 18, gy - 54);
+        } },
+        { theme: 'jungle', dur: 2200, cap: 'Zijn enorme kracht maakt meteen duidelijk: dit is de heerser van de jungle.', draw: () => {
+          const c = this.ctx; throne(c, W * 0.82); litter(c);
+          Sprites.drawCharacter(c, P(0.24), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          king(c, W * 0.7, gy - 2, -1, clk() / 55, {});
+          c.fillStyle = '#ff5a5a'; c.font = 'bold 15px "Courier New",monospace'; c.fillText('!', W * 0.7 - 2, gy - 50);
+        } },
+        // ===== Scène 3 – Het Eindgevecht =====
+        { theme: 'jungle', dur: 2200, cap: 'De GORILLA KING stapt van zijn troon en blokkeert de enige uitweg.', draw: (t) => {
+          const c = this.ctx, p = Math.min(1, t / 2200), kx = (W * 0.74) - p * (W * 0.06); throne(c, W * 0.86); litter(c);
+          Sprites.drawCharacter(c, P(0.26), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          king(c, kx, gy - 2, -1, clk() / 45, {});
+        } },
+        { theme: 'jungle', dur: 2000, cap: 'Hij heft zijn gigantische vuisten en daagt je uit voor een laatste gevecht.', draw: () => {
+          const c = this.ctx, bob = Math.abs(Math.sin(clk() / 80)) * 2; litter(c);
+          Sprites.drawCharacter(c, P(0.3), Math.round(gy - 2), 1, ch.palette, Object.assign({ ducking: true, weapon: null }, pose0));
+          king(c, W * 0.68, gy - 2 - bob, -1, 0, { attacking: true });
+        } },
+        { theme: 'jungle', dur: 1800, cap: 'Versla de GORILLA KING en ontsnap uit de jungle — VECHT!', draw: () => {
+          const c = this.ctx, bob = Math.abs(Math.sin(clk() / 80)) * 2.5; litter(c);
+          Sprites.drawCharacter(c, P(0.3), Math.round(gy - 2), 1, ch.palette, Object.assign({ attacking: true, weapon: null }, pose0));
+          king(c, W * 0.68, gy - 2 - bob, -1, 0, {});
+          c.fillStyle = '#ffef9a'; c.font = 'bold 16px "Courier New",monospace'; c.textAlign = 'center'; c.fillText('VS', P(0.48), gy - 56); c.textAlign = 'left';
+        } },
+      ];
+    }
     const sc = this._storyData; if (!sc) return [];
     const px = Math.round(W * 0.30), fxT = W * 0.68;
     return [
