@@ -279,6 +279,16 @@ class Player {
       this.vy += (target - this.vy) * Math.min(1, 0.2 * s);
     } else {
       this.vy += CONFIG.GRAVITY * s;
+      // fast-fall: in de lucht op down/shield drukken -> snel naar beneden duiken (aanvallen ontwijken)
+      if (inp.duck && !wasGround && !this.vine && !rooted) {
+        this.vy += CONFIG.GRAVITY * 2 * s;                                  // flink extra zwaartekracht
+        if (this.vy < CONFIG.FAST_FALL_VY) this.vy = CONFIG.FAST_FALL_VY;   // meteen een stevige duiksnelheid
+        this._fastFalling = true;
+        if (game.particles && game.particles.length < 240 && game.time >= (this._ffFxCd || 0)) {
+          this._ffFxCd = game.time + 45;                                    // korte lucht-streep achter je aan
+          game.particles.push(new Particle(this.x + (Math.random() - 0.5) * 8, this.y - 22, 0, -1.4, '#cfe6ff', 200, 1));
+        }
+      } else this._fastFalling = false;
     }
     this.y += this.vy * s;
     // op autodaken landen (eenrichtings-platform: alleen van bovenaf)
