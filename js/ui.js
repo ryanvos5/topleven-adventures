@@ -380,6 +380,9 @@ const UI = {
     if (world === 1) {
       const script = this._journeyStoryFor(n);
       if (script) { this.playStory(script, n); return; }
+    } else if (world === 2 && n === 1) {
+      // Wereld 2 begint met de slot-cutscene van wereld 1 (de overgang van de jungle naar de tempel).
+      this.playStory('kongwin', n); return;
     }
     this.startJourneyLevel(n);
   },
