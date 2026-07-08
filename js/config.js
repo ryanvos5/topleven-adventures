@@ -830,6 +830,49 @@ const CHEST_WIN_CHANCE = 0.5, CHEST_LOSS_CHANCE = 0.15;               // kans op
 const CHEST_RARITY_WEIGHTS = { common: 62, rare: 26, epic: 9, legendary: 3 };   // betere kisten veel zeldzamer
 const CHEST_SLOTS = 3;                                                // je kunt er max 3 hebben
 
+/* ---------- SMEDERIJ (blacksmith): materialen + harnassen ---------- */
+// materialen vind je in kisten; bij de smid smeed je er harnas-stukken mee (kost tijd, te skippen met robijnen).
+const MATERIALS = {
+  leather: { id: 'leather', name: 'Leer',     col: '#9a5a2a' },
+  nails:   { id: 'nails',   name: 'Spijkers', col: '#c0c6cc' },
+  iron:    { id: 'iron',    name: 'IJzer',    col: '#aab2ba' },
+  steel:   { id: 'steel',   name: 'Staal',    col: '#8fa8c4' },
+};
+const MATERIAL_ORDER = ['leather', 'nails', 'iron', 'steel'];
+
+const ARMOR_SLOTS = ['hat', 'chest', 'bottom', 'feet'];
+const ARMOR_SLOT_NAME = { hat: 'Helm', chest: 'Borststuk', bottom: 'Beenstuk', feet: 'Laarzen' };
+// 3 sets: Leer (goedkoop, weinig HP) -> IJzer -> Staal (duur, veel HP). Elk stuk geeft extra HP + heeft duurzaamheid.
+const ARMOR_SETS = {
+  leather: { id: 'leather', name: 'Leren',   col: '#a4652f', colDk: '#6e3f1c' },
+  iron:    { id: 'iron',    name: 'IJzeren', col: '#bcc4cc', colDk: '#7a828a' },
+  steel:   { id: 'steel',   name: 'Stalen',  col: '#a6bcd6', colDk: '#69809a' },
+};
+const ARMOR_SET_ORDER = ['leather', 'iron', 'steel'];
+function buildArmorPieces() {
+  const slotHp   = { chest: 1.0, bottom: 0.7, hat: 0.55, feet: 0.45 };   // borst geeft het meest
+  const tierBase = { leather: 14, iron: 26, steel: 40 };                 // basis-HP per set
+  const tierDur  = { leather: 60, iron: 110, steel: 170 };               // duurzaamheid (slijt langzaam)
+  const tierMs   = { leather: 5 * 60e3, iron: 20 * 60e3, steel: 45 * 60e3 };   // smeedtijd
+  const cost = {
+    leather: { hat: { leather: 3, nails: 2 }, chest: { leather: 6, nails: 3 }, bottom: { leather: 4, nails: 2 }, feet: { leather: 3, nails: 2 } },
+    iron:    { hat: { iron: 3, nails: 3 },    chest: { iron: 6, nails: 4 },    bottom: { iron: 4, nails: 3 },    feet: { iron: 3, nails: 2 } },
+    steel:   { hat: { steel: 3, iron: 2, nails: 3 }, chest: { steel: 6, iron: 3, nails: 4 }, bottom: { steel: 4, iron: 2, nails: 3 }, feet: { steel: 3, iron: 2, nails: 2 } },
+  };
+  const pieces = {};
+  for (const set of ARMOR_SET_ORDER) for (const slot of ARMOR_SLOTS) {
+    const id = set + '_' + slot;
+    pieces[id] = {
+      id, set, slot, name: ARMOR_SETS[set].name + ' ' + ARMOR_SLOT_NAME[slot],
+      hp: Math.round(tierBase[set] * slotHp[slot]),
+      maxDur: tierDur[set], craft: cost[set][slot], craftMs: tierMs[set],
+    };
+  }
+  return pieces;
+}
+const ARMOR_PIECES = buildArmorPieces();
+const ARMOR_ORDER = Object.keys(ARMOR_PIECES);
+
 /* ---------- BOT-MOEILIJKHEID (level 1..10) ----------
    Elk level heeft een eigen speelstijl. Velden:
    meleeCd = ms tussen meppen, block = blokkans, aggro = hoe vaak 'ie de aanval zoekt,

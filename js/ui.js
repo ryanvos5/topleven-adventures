@@ -13,7 +13,7 @@ const UI = {
     this.el = {
       hud: $('hud'), touch: $('touch-controls'), pause: $('pause-btn'),
       menu: $('menu-screen'), level: $('level-screen'), shop: $('shop-screen'),
-      journey: $('journey-screen'),
+      journey: $('journey-screen'), blacksmith: $('blacksmith-screen'),
       win: $('win-screen'), lose: $('lose-screen'),
       progressFill: $('progress-fill'), progressPlayer: $('progress-player'),
       levelName: $('level-name'), healthFill: $('health-fill'),
@@ -54,6 +54,8 @@ const UI = {
     { const rp = $('train-clear-pu'); if (rp) rp.onclick = () => { Game.trainClearPowerups(); this.closeTrainComputer(); }; }
     $('btn-inventory-back').onclick = () => this.show('menu');
     document.querySelectorAll('#inv-tabs .shop-tab').forEach((b) => { b.onclick = () => { this._invTab = b.dataset.invtab; this.renderInventory(); }; });
+    { const bb = $('btn-blacksmith'); if (bb) bb.onclick = () => this.openBlacksmith(); }
+    document.querySelectorAll('#bs-tabs .shop-tab').forEach((b) => { if (b.dataset.bstab) b.onclick = () => { this._bsTab = b.dataset.bstab; this.renderBlacksmith(); }; });
     document.querySelectorAll('.chest-slot').forEach((b) => { b.onclick = () => this.chestClick(+b.dataset.chest); });
     document.querySelectorAll('.loadout-slot').forEach((b) => {
       // in-match: op pointerdown activeren, zodat een power-up ook werkt terwijl je beweegt
@@ -514,10 +516,12 @@ const UI = {
       Storage.data.xp = (Storage.data.xp || 0) + rw.xp;
       Storage.data.powerups = Storage.data.powerups || {};
       for (const id in rw.pus) Storage.data.powerups[id] = (Storage.data.powerups[id] || 0) + rw.pus[id];
+      if (rw.mats) { const m = Storage.materials(); for (const k in rw.mats) m[k] = (m[k] || 0) + rw.mats[k]; }
       Storage.save();
       out.push({ type: 'chestopen', rarity, level: L });           // openings-animatie
       out.push({ type: 'earn', coins: rw.gold, xp: rw.xp });
       for (const id in rw.pus) out.push({ type: 'pu', id, n: rw.pus[id] });
+      for (const k in (rw.mats || {})) out.push({ type: 'mat', id: k, n: rw.mats[k] });
     }
     return out;
   },
@@ -617,6 +621,11 @@ const UI = {
       if (Game && Game.drawDrop) Game.drawDrop(ctx, { kind: pu.kind, x: 0, y: 0, id: 0 });
       ctx.restore();
       nameEl.textContent = (pu.name || r.id) + (r.n > 1 ? '  x' + r.n : '');
+    } else if (r.type === 'mat') {   // smeed-materiaal uit een kist
+      title.innerHTML = this._ic('hammer') + ' MATERIAAL';
+      const mt = (typeof MATERIALS !== 'undefined' && MATERIALS[r.id]) || { name: r.id, col: '#b0a080' };
+      ctx.save(); ctx.translate(cv.width / 2, cv.height / 2 - 4); this._matArt(ctx, r.id, 3.2); ctx.restore();
+      nameEl.textContent = (mt.name || r.id) + (r.n > 1 ? '  x' + r.n : '');
     } else if (r.type === 'chest') {   // nieuwe kist uit een match
       title.innerHTML = this._ic('chest') + ' NIEUWE KIST!';
       ctx.save(); ctx.translate(cv.width / 2, cv.height / 2 - 6); ctx.scale(2.8, 2.8);
@@ -1720,6 +1729,9 @@ const UI = {
     const setShield = (el, amt) => { if (!el) return; const on = amt > 0; el.classList.toggle('hidden', !on); if (on) el.firstElementChild.style.width = Math.max(0, Math.min(100, (amt / (typeof SMASH_SHIELD !== 'undefined' ? SMASH_SHIELD : 50)) * 100)) + '%'; };
     if (Game.player) setShield(shMe, Game.player.shieldHp || 0);
     if (v.remote) setShield(shThem, v.remote.shieldHp || 0);
+    // harnas-HP (grijs balkje onder de normale hp)
+    const arMe = document.getElementById('vs-armor-me');
+    if (arMe && Game.player) { const amax = Game.player.armorMax || 0, on = amax > 0; arMe.classList.toggle('hidden', !on); if (on) arMe.firstElementChild.style.width = Math.max(0, Math.min(100, ((Game.player.armorHp || 0) / amax) * 100)) + '%'; }
     // guard-meter (eigen speler): zichtbaar als 'ie niet vol is; rood als 'ie gebroken is
     const gMe = document.getElementById('vs-guard-me');
     if (gMe && Game.player) {
@@ -1875,8 +1887,8 @@ const UI = {
   },
 
   show(name) {
-    ['menu', 'level', 'shop', 'journey', 'arena', 'win', 'lose', 'versus', 'leaderboard', 'chat', 'inventory'].forEach((s) => {
-      this.el[s].classList.toggle('hidden', s !== name);
+    ['menu', 'level', 'shop', 'journey', 'blacksmith', 'arena', 'win', 'lose', 'versus', 'leaderboard', 'chat', 'inventory'].forEach((s) => {
+      if (this.el[s]) this.el[s].classList.toggle('hidden', s !== name);
     });
     const inGame = (name === 'game');
     document.body.classList.toggle('in-game', inGame);
@@ -1893,6 +1905,7 @@ const UI = {
     if (window.MenuBg) { if (!inGame) MenuBg.start(); else MenuBg.stop(); }
     // kisten + live timer alleen op het hoofdmenu
     if (name === 'menu') { this.renderChests(); this._startChestTimer(); } else this._stopChestTimer();
+    if (name !== 'blacksmith') this._stopForgeTimer();
     if (name !== 'versus') this._stopMatchmaking();   // buiten het versus-scherm nooit blijven zoeken
 
     // munten- en robijntellers bijwerken
@@ -2031,9 +2044,135 @@ const UI = {
       hint.innerHTML = 'Kies max <b>3</b> power-ups voor je loadout (<span id="inv-loadout-count">' + Storage.loadout().length + '</span>/3). In een match activeer je ze; per gebruik gaat er 1 af.';
       this.renderPowerupCards(grid, 'inventory');
     } else if (tab === 'chars') { hint.classList.add('hidden'); this.renderOwnedChars(grid); }
-    else { hint.classList.add('hidden'); this.renderOwnedHats(grid); }
+    else if (tab === 'hats') { hint.classList.add('hidden'); this.renderOwnedHats(grid); }
+    else if (tab === 'armor') { hint.classList.remove('hidden'); hint.innerHTML = 'Harnas geeft <b>extra HP</b> (grijs balkje). Rust per slot 1 stuk uit. Smeed nieuwe stukken bij de <b>Blacksmith</b>.'; this.renderOwnedArmor(grid); }
+    else if (tab === 'materials') { hint.classList.remove('hidden'); hint.innerHTML = 'Materialen vind je in <b>kisten</b>. Gebruik ze bij de <b>Blacksmith</b> om harnas te smeden.'; this.renderMaterials(grid); }
     this._galleryify(grid, 'inv_' + tab);
   },
+  // ---------- INVENTARIS: harnas ----------
+  renderOwnedArmor(grid) {
+    const eq = Storage.equippedArmor();
+    let any = false;
+    for (const set of ARMOR_SET_ORDER) for (const slot of ARMOR_SLOTS) {
+      const id = set + '_' + slot; if (!Storage.hasArmor(id)) continue;
+      any = true;
+      const p = ARMOR_PIECES[id], dur = Storage.armorDur(id), broken = dur <= 0, equipped = eq[slot] === id;
+      const card = document.createElement('div'); card.className = 'shop-card armor-card' + (equipped ? ' equipped' : '') + (broken ? ' depleted' : '');
+      const cv = this._armorPieceCanvas(id); card.appendChild(cv);
+      const nm = document.createElement('div'); nm.className = 'shop-card-name'; nm.textContent = p.name; card.appendChild(nm);
+      const hp = document.createElement('div'); hp.className = 'armor-hp'; hp.innerHTML = '+' + p.hp + ' HP · ' + ARMOR_SLOT_NAME[slot]; card.appendChild(hp);
+      const durw = document.createElement('div'); durw.className = 'armor-dur' + (dur / p.maxDur < 0.34 ? ' low' : ''); const dspan = document.createElement('span'); dspan.style.width = Math.round(100 * dur / p.maxDur) + '%'; durw.appendChild(dspan); card.appendChild(durw);
+      const btn = document.createElement('button'); btn.className = 'shop-card-btn';
+      if (broken) { btn.className += ' equip'; btn.textContent = 'REPAREER'; this._tap(btn, () => { this.openBlacksmith(); this._bsTab = set; this.renderBlacksmith(); }); }
+      else if (equipped) { btn.className += ' equipped'; btn.innerHTML = this._ic('check') + ' AAN'; this._tap(btn, () => { Storage.equipArmor(id); this.renderInventory(); }); }
+      else { btn.className += ' equip'; btn.textContent = 'UITRUSTEN'; this._tap(btn, () => { Storage.equipArmor(id); this.renderInventory(); }); }
+      card.appendChild(btn); grid.appendChild(card);
+    }
+    if (!any) { const e = document.createElement('p'); e.className = 'screen-sub'; e.textContent = 'Nog geen harnas. Smeed er een bij de Blacksmith.'; grid.appendChild(e); }
+  },
+  renderMaterials(grid) {
+    for (const id of MATERIAL_ORDER) {
+      const m = MATERIALS[id], n = Storage.materials()[id] || 0;
+      const card = document.createElement('div'); card.className = 'shop-card';
+      const cv = document.createElement('canvas'); cv.width = 90; cv.height = 70; const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false; ctx.save(); ctx.translate(45, 38); this._matArt(ctx, id, 4.4); ctx.restore(); card.appendChild(cv);
+      const nm = document.createElement('div'); nm.className = 'shop-card-name'; nm.textContent = m.name; card.appendChild(nm);
+      const cnt = document.createElement('div'); cnt.className = 'armor-hp'; cnt.textContent = 'Aantal: ' + n; card.appendChild(cnt);
+      grid.appendChild(card);
+    }
+  },
+  _matArt(ctx, id, scale) {
+    const s = scale || 3; ctx.save(); ctx.scale(s, s);
+    const P = (c, x, y, w, h) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); };
+    const col = (MATERIALS[id] || {}).col || '#b0a080';
+    if (id === 'leather') { P('#6e3f1c', -7, -5, 14, 10); P(col, -6, -4, 12, 8); P('#c98a5a', -5, -4, 10, 1); P('#5a3316', -3, -1, 2, 2); P('#5a3316', 2, 1, 2, 2); }
+    else if (id === 'nails') { for (let k = 0; k < 3; k++) { const x = -5 + k * 4; P('#8a9098', x, -5, 2, 9); P('#e6ecf2', x - 1, -6, 4, 2); } }
+    else { P(col, -7, -3, 14, 7); P(id === 'steel' ? '#cfe0f2' : '#dfe6ec', -7, -3, 14, 2); P('#5a636c', -7, 3, 14, 1); P('#7a828a', -5, -2, 3, 1); }
+    ctx.restore();
+  },
+  // een harnas-stuk als losstaand icoon (voor de kaarten)
+  _armorPieceCanvas(id) {
+    const p = ARMOR_PIECES[id], set = ARMOR_SETS[p.set];
+    const cv = document.createElement('canvas'); cv.width = 90; cv.height = 70; const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
+    ctx.save(); ctx.translate(45, 40); ctx.scale(3.4, 3.4);
+    const P = (c, x, y, w, h) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); };
+    const plate = (x, y, w, h) => { P(set.col, x, y, w, h); P('#ffffff22', x, y, w, 1); P(set.colDk, x, y, 1, h); };
+    if (p.slot === 'chest') { plate(-5, -6, 10, 12); P(set.colDk, -1, -5, 2, 10); }
+    else if (p.slot === 'bottom') { plate(-5, -4, 10, 5); plate(-5, 1, 4, 5); plate(1, 1, 4, 5); }
+    else if (p.slot === 'feet') { plate(-6, 2, 5, 4); plate(1, 2, 5, 4); }
+    else { plate(-5, -6, 10, 5); P(set.col, -6, -1, 3, 5); P(set.col, 3, -1, 3, 5); }   // helm
+    ctx.restore();
+    return cv;
+  },
+
+  // ---------- BLACKSMITH (smederij) ----------
+  openBlacksmith() { if (!this._bsTab) this._bsTab = 'leather'; this.show('blacksmith'); this.renderBlacksmith(); this._startForgeTimer(); },
+  _fmtDur(ms) { const m = Math.round(ms / 60000); if (m < 60) return m + 'm'; const h = Math.floor(m / 60); return h + 'u' + (m % 60 ? (m % 60) + 'm' : ''); },
+  renderBlacksmith() {
+    const set = this._bsTab || 'leather';
+    document.querySelectorAll('#bs-tabs .shop-tab').forEach((b) => { if (b.dataset.bstab) b.classList.toggle('active', b.dataset.bstab === set); });
+    // materiaal-strip
+    const mats = document.getElementById('bs-mats');
+    if (mats) { mats.innerHTML = '';
+      for (const id of MATERIAL_ORDER) {
+        const chip = document.createElement('span'); chip.className = 'mat-chip';
+        const cv = document.createElement('canvas'); cv.width = 22; cv.height = 20; const c = cv.getContext('2d'); c.imageSmoothingEnabled = false; c.save(); c.translate(11, 11); this._matArt(c, id, 1.5); c.restore(); chip.appendChild(cv);
+        const t = document.createElement('span'); t.innerHTML = MATERIALS[id].name + ' <b>' + (Storage.materials()[id] || 0) + '</b>'; chip.appendChild(t);
+        mats.appendChild(chip);
+      }
+    }
+    this._renderForgeSlot();
+    const grid = document.getElementById('bs-grid'); grid.innerHTML = '';
+    const busy = !!Storage.forge();
+    for (const slot of ARMOR_SLOTS) {
+      const id = set + '_' + slot, p = ARMOR_PIECES[id], owned = Storage.hasArmor(id), dur = Storage.armorDur(id);
+      const repair = owned && dur < p.maxDur;
+      const card = document.createElement('div'); card.className = 'shop-card armor-card';
+      card.appendChild(this._armorPieceCanvas(id));
+      const nm = document.createElement('div'); nm.className = 'shop-card-name'; nm.textContent = p.name; card.appendChild(nm);
+      const hp = document.createElement('div'); hp.className = 'armor-hp'; hp.textContent = '+' + p.hp + ' HP · ' + ARMOR_SLOT_NAME[slot]; card.appendChild(hp);
+      if (repair) { const dw = document.createElement('div'); dw.className = 'armor-dur' + (dur / p.maxDur < 0.34 ? ' low' : ''); const ds = document.createElement('span'); ds.style.width = Math.round(100 * dur / p.maxDur) + '%'; dw.appendChild(ds); card.appendChild(dw); }
+      const cost = Storage.craftCost(id, repair), ms = Storage.craftMs(id, repair);
+      const cl = document.createElement('div'); cl.className = 'armor-cost';
+      cl.innerHTML = Object.keys(cost).map((k) => { const short = (Storage.materials()[k] || 0) < cost[k]; return '<span' + (short ? ' class="short"' : '') + '>' + cost[k] + ' ' + MATERIALS[k].name + '</span>'; }).join(' · ') + ' · ' + this._fmtDur(ms);
+      card.appendChild(cl);
+      const btn = document.createElement('button'); btn.className = 'shop-card-btn';
+      if (owned && dur >= p.maxDur) { btn.className += ' owned'; btn.textContent = 'GEMAAKT'; btn.disabled = true; }
+      else if (busy) { btn.className += ' locked'; btn.textContent = 'SMID BEZIG'; btn.disabled = true; }
+      else {
+        const can = Storage.canCraft(id, repair);
+        btn.className += can ? ' equip' : ' locked'; btn.textContent = repair ? 'REPAREER' : 'SMEED';
+        if (can) this._tap(btn, () => { if (Storage.startCraft(id, repair)) { if (window.Sfx) Sfx.play('pickup'); this.renderBlacksmith(); } });
+        else btn.disabled = true;
+      }
+      card.appendChild(btn); grid.appendChild(card);
+    }
+  },
+  _renderForgeSlot() {
+    const el = document.getElementById('bs-forge'); if (!el) return;
+    const f = Storage.forge();
+    if (!f) { el.classList.add('hidden'); el.innerHTML = ''; return; }
+    el.classList.remove('hidden'); el.innerHTML = '';
+    const p = ARMOR_PIECES[f.id];
+    const nm = document.createElement('span'); nm.className = 'bs-forge-name'; nm.textContent = (f.repair ? 'Repareren: ' : 'Smeden: ') + p.name; el.appendChild(nm);
+    if (Storage.forgeReady()) {
+      const btn = document.createElement('button'); btn.className = 'bs-collect'; btn.textContent = 'OPHALEN';
+      this._tap(btn, () => { const r = Storage.collectForge(); if (r) { if (window.Sfx) Sfx.play('coin'); this.renderBlacksmith(); } });
+      el.appendChild(btn);
+    } else {
+      const tm = document.createElement('span'); tm.className = 'bs-forge-time'; tm.textContent = this._fmtChestTime(Storage.forgeSecondsLeft()); el.appendChild(tm);
+      const skip = document.createElement('span'); skip.className = 'bs-skip';
+      skip.innerHTML = '<svg class="px-icon" viewBox="0 0 8 8" width="11" height="11" shape-rendering="crispEdges"><rect x="2" y="1" width="4" height="1" fill="#ff9db0"/><rect x="1" y="2" width="6" height="1" fill="#f24d68"/><rect x="1" y="3" width="6" height="1" fill="#e0364f"/><rect x="2" y="4" width="4" height="1" fill="#c72740"/></svg> ' + Storage.forgeSkipCost();
+      skip.onclick = () => this.forgeSkip();
+      el.appendChild(skip);
+    }
+  },
+  forgeSkip() {
+    const cost = Storage.forgeSkipCost();
+    if (Storage.rubies() < cost) { const el = document.getElementById('bs-forge'); if (el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); } if (window.Sfx) Sfx.play('roundlose'); return; }
+    if (Storage.skipForge()) { if (window.Sfx) Sfx.play('coin'); this.syncCoins(); this.renderBlacksmith(); }
+  },
+  _startForgeTimer() { if (this._forgeIv) return; this._forgeIv = setInterval(() => { const sc = document.getElementById('blacksmith-screen'); if (sc && !sc.classList.contains('hidden')) this._renderForgeSlot(); else this._stopForgeTimer(); }, 1000); },
+  _stopForgeTimer() { if (this._forgeIv) { clearInterval(this._forgeIv); this._forgeIv = 0; } },
 
   // ---------- HOED-PREVIEW (shop / inventaris) — grote 2.5D buste met de hoed ----------
   _hatCanvas(id) {
@@ -2418,6 +2557,7 @@ const UI = {
     const list = [{ type: 'chestopen', rarity: rw.rarity }];   // eerst de openings-animatie
     list.push({ type: 'earn', coins: rw.gold, xp: rw.xp });
     for (const id in rw.pus) list.push({ type: 'pu', id, n: rw.pus[id] });
+    for (const k in (rw.mats || {})) list.push({ type: 'mat', id: k, n: rw.mats[k] });
     list.push(...this._levelUpRewards());   // kist-xp kan je laten levelen (evt. mijlpaal-kist)
     this.showRewards(list);
   },

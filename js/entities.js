@@ -446,6 +446,13 @@ class Player {
       this.shieldHp -= absorbed; n -= absorbed;
       if (n <= 0) return;
     }
+    // Harnas: vangt daarna de schade op (grijs balkje). Wat het opvangt telt mee voor de slijtage na de match.
+    if (this.armorHp > 0) {
+      const absorbed = Math.min(this.armorHp, n);
+      this.armorHp -= absorbed; n -= absorbed;
+      this._armorAbsorbed = (this._armorAbsorbed || 0) + absorbed;
+      if (n <= 0) return;
+    }
     this.hp = Math.max(0, this.hp - n);
   }
 }

@@ -442,6 +442,16 @@ const Sprites = {
       for (let i = -2; i <= 2; i++) this.px(ctx, i % 2 ? '#3a2614' : '#7a5024', cx + i * 2, torsoTop, 1, 1);
     }
 
+    // --- harnas (blacksmith) — over lijf/hoofd, ONDER de cosmetische hoed ---
+    if (pose.armor) {
+      const A = pose.armor;
+      const plate = (col, colDk, x, y, w, h) => { this.px(ctx, col, x, y, w, h); this.px(ctx, this._shade(col, 0.30), x, y, w, 1); this.px(ctx, colDk, x, y, 1, h); this.px(ctx, this._shade(col, -0.25), x, y + h - 1, w, 1); };
+      if (A.feet) { const f = A.feet; this.px(ctx, f.col, Math.round(hipX + offB) - (dir < 0 ? 1 : 0), footY - 3, legW + 1, 3); this.px(ctx, f.col, Math.round(hipX + offA) - (dir < 0 ? 1 : 0), footY - 3, legW + 1, 3); this.px(ctx, f.colDk, Math.round(hipX + offA) - (dir < 0 ? 1 : 0), footY - 1, legW + 1, 1); }
+      if (A.bottom) { const b = A.bottom; plate(b.col, b.colDk, cx - bh, legTop - 1, bh * 2, Math.min(legH + 1, 6)); }   // heup/dij-bescherming
+      if (A.chest) { const c2 = A.chest; plate(c2.col, c2.colDk, cx - bh, torsoTop + 1, bh * 2, Math.max(3, torsoH - 2)); this.px(ctx, this._shade(c2.col, 0.35), cx - 1, torsoTop + 2, 2, Math.max(1, torsoH - 4)); }   // borstplaat + middenribbel
+      if (A.hat) { const h2 = A.hat; this.px(ctx, h2.col, cx - hh - 1, headTop - 2, hh * 2 + 2, 3); this.px(ctx, this._shade(h2.col, 0.30), cx - hh - 1, headTop - 2, hh * 2 + 2, 1); this.px(ctx, h2.col, cx - hh - 1, headTop - 1, 2, headH); this.px(ctx, h2.col, cx + hh - 1, headTop - 1, 2, headH); }   // helm-kap
+    }
+
     // --- hoed (cosmetisch) ---
     if (pose.hat && pose.hat !== 'none') this.drawHat(ctx, pose.hat, cx, headTop, hh, dir, pose.t || 0);
 

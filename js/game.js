@@ -2626,6 +2626,7 @@ const Game = {
     const rangedId = mode === 'both' ? Storage.data.equippedRanged : null;
     this.player = new Player(baseMelee, rangedId, Storage.data.equippedCharacter);
     this._applyCharLevel(this.player);                 // per-character level-bonussen (+HP/+speed/langere abilities)
+    this._setupPlayerArmor(this.player);               // harnas (blacksmith): extra grijze HP + slijtage-teller
     this.player.maxJumps = 2; this.player.jumps = 2;
     this.player.knockVx = 0; this.player.dead = false; this.player.respawnInvuln = 0;
     this.player.baseMelee = baseMelee; this.player.fireballs = 0; this.player.smashRockets = 0;
@@ -4208,6 +4209,18 @@ const Game = {
     p.abilityDurMul = st.abilityDurMul;
     p.charLvl = st.lvl;
   },
+  // harnas (blacksmith): grijze extra-HP-pool die schade opvangt; wordt per ronde bijgevuld
+  _setupPlayerArmor(p) {
+    const bonus = (window.Storage && Storage.armorHpBonus) ? Storage.armorHpBonus() : 0;
+    p.armorMax = bonus; p.armorHp = bonus; p._armorAbsorbed = 0;
+    p.armorRender = this._buildArmorRender();
+  },
+  _buildArmorRender() {
+    if (!window.Storage || !Storage.equippedArmorInfo || typeof ARMOR_SETS === 'undefined') return null;
+    const info = Storage.equippedArmorInfo(); const out = {}; let any = false;
+    for (const slot in info) { const it = info[slot]; if (it.broken) continue; const s = ARMOR_SETS[it.set]; if (s) { out[slot] = { col: s.col, colDk: s.colDk }; any = true; } }
+    return any ? out : null;
+  },
   // de vlam-knop (of E): met vallen-in-de-hand plaats je er één; anders zet je je ability in
   abilityButton() {
     const p = this.player;
@@ -4971,6 +4984,7 @@ const Game = {
       this.player.meleeId = this.player.baseMelee || 'bat'; this.player.rangedId = null;
       this.player.weaponId = this.player.meleeId;    // ook het getekende wapen terug naar de knuppel
       this.player.fireballs = 0; this.player.smashRockets = 0; this.player.stars = 0; this.player.cannon = 0; this.player.shieldHp = 0; this.player._weaponUntil = 0; this.player.gunAmmo = 0; this.player.beachball = 0; this.player.coco = 0; this.player.boomerang = 0; this.player.dart = 0;
+      this.player.armorHp = this.player.armorMax || 0;   // harnas elke ronde weer vol (grijs balkje)
       // Yarno's zap-mes blijft nog een ronde staan
       if (this.player._bladeRounds > 0) { this.player._bladeRounds--; if (this.player._bladeRounds > 0) { this.player.meleeId = 'zapblade'; this.player.weaponId = 'zapblade'; } }
     }
@@ -5047,6 +5061,8 @@ const Game = {
     if (this.vs) this.vs.over = true;
     this.state = 'versusOver';
     const isBot = this.vsBot;
+    // harnas-slijtage: verwerk hoeveel schade het harnas deze match opving
+    if (this.player && this.player._armorAbsorbed > 0 && Storage.applyArmorWear) { Storage.applyArmorWear(this.player._armorAbsorbed); this.player._armorAbsorbed = 0; }
     // ----- JOURNEY: eigen afhandeling (level halen, unlocks, eigen uitslag) -----
     if (this.journey) {
       const jr = this.journey, idx = jr.idx, jworld = jr.world || 1;
@@ -5316,7 +5332,7 @@ const Game = {
           attacking: this.time < p.attackAnimUntil, swing: pSwing,
           weapon: p.giant ? null : (swinging ? p.swingWeapon : p.weaponId), build: p.build, hair: p.hairStyle,
           squash: (p.flatUntil && this.time < p.flatUntil),
-          hat: Storage.data.equippedHat, t: this.time,
+          hat: Storage.data.equippedHat, t: this.time, armor: p.giant ? null : p.armorRender,
           rage: p.hasBuff('rage', this.time), burning: p.burnUntil > this.time, outfit: p.outfit,
         };
         Sprites.drawCharacter(ctx, 0, 0, p.dir, p.pal, pOpts);

@@ -515,7 +515,7 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
   padding: 2px 6px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.5); z-index: 3;
 }
 .chest-skip:hover { filter: brightness(1.15); }
-.chest-slot.shake { animation: chestShake .32s ease; }
+.chest-slot.shake, .shake { animation: chestShake .32s ease; }
 @keyframes chestShake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-4px)} 40%{transform:translateX(4px)} 60%{transform:translateX(-3px)} 80%{transform:translateX(3px)} }
 .chest-slot .chest-lbl { font-family: var(--pixel-font); font-weight: bold; font-size: clamp(9px, 1.5vw, 12px); text-shadow: 1px 1px 0 #000; line-height: 1; }
 .chest-slot.ready { animation: chestReady 1s ease-in-out infinite; }
@@ -883,6 +883,31 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
 }
 .vs-guard-fill { height: 100%; width: 100%; background: linear-gradient(180deg, #ffe27a, #d8a32e); transition: width 0.1s linear; }
 .vs-guard.broken .vs-guard-fill { background: linear-gradient(180deg, #ff6a4a, #b32e22); }
+/* harnas-HP (grijs balkje onder de normale hp) */
+.vs-armor {
+  width: 84px; height: 5px; margin-top: 2px; background: #11151e; border: 1px solid #000; border-radius: 3px; overflow: hidden;
+}
+.vs-armor-fill { height: 100%; width: 100%; background: linear-gradient(180deg, #d6dde4, #8b949e); transition: width 0.12s linear; }
+
+/* ===== Blacksmith ===== */
+.bs-mats { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 2px 0 6px; }
+.mat-chip { display: inline-flex; align-items: center; gap: 5px; font-size: clamp(11px,1.6vw,14px); color: #f0e6d2;
+  background: linear-gradient(180deg, rgba(40,30,20,.8), rgba(18,12,8,.85)); border: 1px solid #5a4632; border-radius: 999px; padding: 3px 10px; }
+.mat-chip canvas { image-rendering: pixelated; }
+.mat-chip b { color: #ffe6a0; }
+.bs-forge { display: flex; align-items: center; gap: 10px; justify-content: center; margin: 2px auto 8px; max-width: 520px;
+  background: linear-gradient(180deg, rgba(40,28,18,.7), rgba(16,10,6,.8)); border: 1px solid #6a4a2a; border-radius: 12px; padding: 8px 12px; }
+.bs-forge .bs-forge-name { font-weight: bold; color: #ffe6a0; }
+.bs-forge .bs-forge-time { color: #cfe0f2; font-variant-numeric: tabular-nums; }
+.bs-skip { display: inline-flex; align-items: center; gap: 3px; font-weight: bold; color: #ffd7e0; cursor: pointer;
+  background: linear-gradient(180deg, #6a1830, #3a0c1a); border: 1px solid #ff6f8a; border-radius: 999px; padding: 3px 9px; }
+.bs-collect { font-weight: bold; color: #10240f; background: linear-gradient(180deg, #7be07a, #2f9c3a); border: none; border-radius: 8px; padding: 5px 12px; cursor: pointer; }
+.armor-card .armor-hp { color: #cfe0f2; font-size: 12px; }
+.armor-card .armor-dur { height: 5px; border-radius: 3px; background: #2a2018; overflow: hidden; margin-top: 3px; }
+.armor-card .armor-dur > span { display: block; height: 100%; background: linear-gradient(180deg, #d6dde4, #8b949e); }
+.armor-card .armor-dur.low > span { background: linear-gradient(180deg, #ff8a6a, #c0392b); }
+.armor-cost { font-size: 11px; color: #d8c9a8; margin-top: 2px; }
+.armor-cost .short { color: #ff8a7a; }
 #btn-vs-quit {
   position: absolute; right: max(10px, env(safe-area-inset-right)); top: 4px;
   pointer-events: auto; width: 34px; height: 34px; border-radius: 8px;

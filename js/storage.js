@@ -30,6 +30,10 @@ const DEFAULT_SAVE = {
   mpLosses: 0,                  // verloren 1v1-duels
   charXp: {},                   // XP per character (voor de level-balk): { id: xp }
   charLevel: {},                // level per character (1..20): { id: lvl }
+  materials: { leather: 0, nails: 0, iron: 0, steel: 0 },   // smeed-materialen (uit kisten)
+  armor: {},                    // bezeten harnas-stukken: { pieceId: { dur } }
+  equippedArmor: { hat: null, chest: null, bottom: null, feet: null },   // uitgerust harnas per slot
+  forge: null,                  // smederij-slot (1 tegelijk): { id, repair, doneAt }
 };
 
 const Storage = {
@@ -320,6 +324,74 @@ const Storage = {
     this.save(); return true;
   },
 
+  // ---- smederij: materialen + harnas ----
+  materials() { return this.data.materials || (this.data.materials = { leather: 0, nails: 0, iron: 0, steel: 0 }); },
+  addMaterial(id, n) { const m = this.materials(); m[id] = (m[id] || 0) + n; this.save(); },
+  hasMaterials(cost) { const m = this.materials(); for (const k in cost) if ((m[k] || 0) < cost[k]) return false; return true; },
+  spendMaterials(cost) { if (!this.hasMaterials(cost)) return false; const m = this.materials(); for (const k in cost) m[k] -= cost[k]; this.save(); return true; },
+  ownedArmor() { return this.data.armor || (this.data.armor = {}); },
+  hasArmor(id) { return !!this.ownedArmor()[id]; },
+  armorDur(id) { const a = this.ownedArmor()[id]; return a ? (a.dur || 0) : 0; },
+  equippedArmor() { return this.data.equippedArmor || (this.data.equippedArmor = { hat: null, chest: null, bottom: null, feet: null }); },
+  equipArmor(id) {   // aan/uit (per slot)
+    const p = ARMOR_PIECES[id]; if (!p || !this.hasArmor(id)) return false;
+    const eq = this.equippedArmor(); eq[p.slot] = (eq[p.slot] === id) ? null : id; this.save(); return true;
+  },
+  // som van HP-bonus van de uitgeruste, niet-kapotte stukken
+  armorHpBonus() {
+    const eq = this.equippedArmor(); let hp = 0;
+    for (const slot of ARMOR_SLOTS) { const id = eq[slot]; if (id && this.armorDur(id) > 0) hp += ARMOR_PIECES[id].hp; }
+    return hp;
+  },
+  // uitgeruste stukken (voor HUD/rendering): { slot: {id, piece, dur, maxDur, broken} }
+  equippedArmorInfo() {
+    const eq = this.equippedArmor(), out = {};
+    for (const slot of ARMOR_SLOTS) { const id = eq[slot]; if (id && this.hasArmor(id)) { const p = ARMOR_PIECES[id]; out[slot] = { id, piece: p, set: p.set, dur: this.armorDur(id), maxDur: p.maxDur, broken: this.armorDur(id) <= 0 }; } }
+    return out;
+  },
+  craftCost(id, repair) {
+    const p = ARMOR_PIECES[id]; if (!p) return null;
+    if (!repair) return p.craft;
+    const c = {}; for (const k in p.craft) c[k] = Math.max(1, Math.ceil(p.craft[k] / 2)); return c;   // reparatie = helft materiaal
+  },
+  craftMs(id, repair) { const p = ARMOR_PIECES[id]; if (!p) return 0; return repair ? Math.round(p.craftMs * 0.4) : p.craftMs; },   // reparatie = kortere tijd
+  canCraft(id, repair) {
+    if (this.data.forge) return false;                                  // maar 1 tegelijk
+    const p = ARMOR_PIECES[id]; if (!p) return false;
+    if (repair) { if (!this.hasArmor(id) || this.armorDur(id) >= p.maxDur) return false; }
+    else if (this.hasArmor(id)) return false;                           // elk stuk maak je maar 1x
+    return this.hasMaterials(this.craftCost(id, repair));
+  },
+  startCraft(id, repair) {
+    if (!this.canCraft(id, repair)) return false;
+    this.spendMaterials(this.craftCost(id, repair));
+    this.data.forge = { id, repair: !!repair, doneAt: this.now() + this.craftMs(id, repair) };
+    this.save(); return true;
+  },
+  forge() { return this.data.forge || null; },
+  forgeSecondsLeft() { const f = this.data.forge; if (!f) return -1; return Math.max(0, Math.ceil((f.doneAt - this.now()) / 1000)); },
+  forgeReady() { const f = this.data.forge; return !!(f && this.now() >= f.doneAt); },
+  forgeSkipCost() { const s = this.forgeSecondsLeft(); if (s <= 0) return 0; return Math.max(1, Math.ceil(s / 3600)); },   // 1 robijn / begonnen uur
+  skipForge() { const f = this.data.forge; if (!f || this.now() >= f.doneAt) return false; if (!this.spendRubies(this.forgeSkipCost())) return false; f.doneAt = this.now(); this.save(); return true; },
+  collectForge() {
+    if (!this.forgeReady()) return null;
+    const f = this.data.forge, p = ARMOR_PIECES[f.id], a = this.ownedArmor();
+    if (!a[f.id]) a[f.id] = { dur: p.maxDur }; else a[f.id].dur = p.maxDur;   // nieuw of gerepareerd -> vol
+    this.data.forge = null; this.save();
+    return { id: f.id, repair: f.repair };
+  },
+  // slijtage na een match: verdeeld over de uitgeruste stukken op basis van geabsorbeerde schade
+  applyArmorWear(absorbed) {
+    if (!absorbed || absorbed <= 0) return;
+    const eq = this.equippedArmor(), ids = [];
+    for (const slot of ARMOR_SLOTS) { const id = eq[slot]; if (id && this.armorDur(id) > 0) ids.push(id); }
+    if (!ids.length) return;
+    const wear = Math.max(1, Math.round(absorbed * 0.14 / ids.length));   // slechts ~14% van de opgevangen schade -> gaat lang mee
+    const a = this.ownedArmor();
+    for (const id of ids) a[id].dur = Math.max(0, a[id].dur - wear);
+    this.save();
+  },
+
   // ---- kisten (loot uit online matches) ----
   now() { try { return Date.now(); } catch (e) { return 0; } },
   chests() { return this.data.chests || (this.data.chests = []); },
@@ -376,7 +448,13 @@ const Storage = {
         ['ak47', 2.2], ['rocket', 1.6], ['giant', 1.4], ['dragon', 1], ['rock', 1.4], ['lightning', 1.2]];
       const n = ri(5, 8); for (let i = 0; i < n; i++) add(wpick(pool));
     }
-    return { rarity, gold, xp, pus };
+    // smeed-materialen (schalen met rarity) — de nieuwe drop
+    const mats = {}; const addMat = (id, n2) => { if (n2 > 0) mats[id] = (mats[id] || 0) + n2; };
+    if (rarity === 'common') { addMat('leather', ri(1, 3)); if (Math.random() < 0.5) addMat('nails', ri(1, 2)); }
+    else if (rarity === 'rare') { addMat('leather', ri(2, 4)); addMat('nails', ri(1, 3)); if (Math.random() < 0.4) addMat('iron', ri(1, 2)); }
+    else if (rarity === 'epic') { addMat('nails', ri(2, 4)); addMat('iron', ri(2, 4)); if (Math.random() < 0.4) addMat('steel', 1); }
+    else { addMat('iron', ri(3, 5)); addMat('steel', ri(1, 3)); addMat('nails', ri(2, 4)); }
+    return { rarity, gold, xp, pus, mats };
   },
   // een klaar-staande kist ophalen -> beloning toepassen + slot vrijmaken
   collectChest(i) {
@@ -387,6 +465,7 @@ const Storage = {
     this.data.xp = (this.data.xp || 0) + rw.xp;
     this.data.powerups = this.data.powerups || {};
     for (const id in rw.pus) this.data.powerups[id] = (this.data.powerups[id] || 0) + rw.pus[id];
+    if (rw.mats) { const m = this.materials(); for (const k in rw.mats) m[k] = (m[k] || 0) + rw.mats[k]; }   // materialen bijschrijven
     this.chests().splice(i, 1);
     this.save();
     return rw;
