@@ -11,9 +11,9 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#0d0f14" />
   <title>Tiny Power Smashers</title>
-  <link rel="icon" type="image/svg+xml" href="icon.svg?v=menu149" />
-  <link rel="apple-touch-icon" href="icon.svg?v=menu149" />
-  <link rel="stylesheet" href="css/style.css?v=menu149" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg?v=menu150" />
+  <link rel="apple-touch-icon" href="icon.svg?v=menu150" />
+  <link rel="stylesheet" href="css/style.css?v=menu150" />
 </head>
 <body>
   <div id="game-root">
@@ -69,7 +69,7 @@
     </div>
 
     <!-- ===== Splash bij opstarten (logo, fadet vanzelf weg) ===== -->
-    <div id="splash"><img src="logo.svg?v=menu149" alt="Tiny Power Smashers" /></div>
+    <div id="splash"><img src="logo.svg?v=menu150" alt="Tiny Power Smashers" /></div>
 
     <!-- ===== Canvas (de spelwereld) ===== -->
     <canvas id="game-canvas"></canvas>
@@ -141,7 +141,7 @@
               <span id="menu-ruby-count">0</span>
             </span>
           </div>
-          <img class="menu-logo-img" src="logo.svg?v=menu149" alt="Tiny Power Smashers" />
+          <img class="menu-logo-img" src="logo.svg?v=menu150" alt="Tiny Power Smashers" />
           <div class="menu-hud">
             <span id="menu-userline" class="menu-userline">Gast | Lvl 1</span>
             <button id="btn-settings" class="stone-icon" title="Instellingen" aria-label="Instellingen">
@@ -152,18 +152,18 @@
 
         <main class="menu-tiles">
           <button id="btn-journey" class="stone-tile">
-            <span class="tile-badge solo">Singleplayer</span>
-            <span class="tile-play">Play</span>
-            <span class="tile-name">Journey</span>
-            <span class="tile-sub" id="journey-prog">Wereld 1</span>
+            <span class="tile-badge solo" data-i18n="badge_solo">Singleplayer</span>
+            <span class="tile-play" data-i18n="play">Play</span>
+            <span class="tile-name" data-i18n="tile_journey">Journey</span>
+            <span class="tile-sub" id="journey-prog">World 1</span>
           </button>
           <button id="btn-versus" class="stone-tile">
-            <span class="tile-badge">Online</span>
-            <span class="tile-play">Play</span>
-            <span class="tile-name">Power Smash</span>
+            <span class="tile-badge" data-i18n="badge_online">Online</span>
+            <span class="tile-play" data-i18n="play">Play</span>
+            <span class="tile-name" data-i18n="tile_smash">Power Smash</span>
           </button>
           <button class="stone-tile soon" disabled>
-            <span class="soon-name">Coming Soon!</span>
+            <span class="soon-name" data-i18n="coming_soon">Coming Soon!</span>
           </button>
         </main>
 
@@ -174,16 +174,16 @@
         </div>
 
         <div class="menu-utility-row">
-          <button id="btn-training" class="stone-btn train-lobby-btn"><svg class="ic"><use href="#ic-char"/></svg> Training Lobby</button>
-          <button id="btn-blacksmith" class="stone-btn train-lobby-btn"><svg class="ic"><use href="#ic-hammer"/></svg> Blacksmith</button>
+          <button id="btn-training" class="stone-btn train-lobby-btn"><svg class="ic"><use href="#ic-char"/></svg> <span data-i18n="training_lobby">Training Lobby</span></button>
+          <button id="btn-blacksmith" class="stone-btn train-lobby-btn"><svg class="ic"><use href="#ic-hammer"/></svg> <span data-i18n="blacksmith">Blacksmith</span></button>
         </div>
 
         <footer class="menu-bottom">
-          <button id="btn-shop" class="stone-btn"><svg class="ic"><use href="#ic-cart"/></svg> Shop</button>
-          <button id="btn-inventory" class="stone-btn"><svg class="ic"><use href="#ic-backpack"/></svg> Inventaris</button>
+          <button id="btn-shop" class="stone-btn"><svg class="ic"><use href="#ic-cart"/></svg> <span data-i18n="shop">Shop</span></button>
+          <button id="btn-inventory" class="stone-btn"><svg class="ic"><use href="#ic-backpack"/></svg> <span data-i18n="inventory">Inventory</span></button>
           <div class="menu-bottom-right">
-            <button id="btn-chat" class="stone-btn"><svg class="ic"><use href="#ic-char"/></svg> Friends</button>
-            <button id="btn-leaderboard" class="stone-btn">Leaderboard</button>
+            <button id="btn-chat" class="stone-btn"><svg class="ic"><use href="#ic-char"/></svg> <span data-i18n="friends">Friends</span></button>
+            <button id="btn-leaderboard" class="stone-btn" data-i18n="leaderboard">Leaderboard</button>
           </div>
         </footer>
       </div>
@@ -191,22 +191,33 @@
 
     <!-- ===== Instellingen ===== -->
     <div id="settings-screen" class="overlay hidden">
-      <div class="overlay-box">
-        <h2 class="screen-title">INSTELLINGEN</h2>
-        <div id="account-bar" class="account-bar">
-          <button id="btn-account" class="big-btn secondary">Inloggen / account</button>
-          <span id="account-status" class="account-status hidden"></span>
-          <div id="xp-bar-wrap" class="xp-bar-wrap hidden">
-            <div id="xp-bar-fill" class="xp-bar-fill"></div>
-            <span id="xp-bar-label" class="xp-bar-label"></span>
+      <div class="overlay-box settings-box">
+        <h2 class="screen-title" data-i18n="settings">Settings</h2>
+        <div class="settings-grid">
+          <div id="account-bar" class="account-bar settings-col">
+            <span class="settings-label" data-i18n="account">Account</span>
+            <button id="btn-account" class="big-btn secondary" data-i18n="login_account">Log in / account</button>
+            <span id="account-status" class="account-status hidden"></span>
+            <div id="xp-bar-wrap" class="xp-bar-wrap hidden">
+              <div id="xp-bar-fill" class="xp-bar-fill"></div>
+              <span id="xp-bar-label" class="xp-bar-label"></span>
+            </div>
+            <button id="btn-nick" class="text-btn hidden"><svg class="ic"><use href="#ic-edit"/></svg> <span data-i18n="change_name">Change name</span></button>
+            <button id="btn-logout" class="text-btn hidden" data-i18n="logout">Log out</button>
+            <button id="btn-delete-account" class="text-btn danger hidden" data-i18n="delete_account">Delete account</button>
           </div>
-          <button id="btn-nick" class="text-btn hidden"><svg class="ic"><use href="#ic-edit"/></svg> Naam wijzigen</button>
-          <button id="btn-logout" class="text-btn hidden">Uitloggen</button>
+          <div class="settings-col">
+            <span class="settings-label" data-i18n="language">Language</span>
+            <div class="lang-row">
+              <button id="btn-lang-en" class="lang-btn" data-lang="en">English</button>
+              <button id="btn-lang-nl" class="lang-btn" data-lang="nl">Nederlands</button>
+            </div>
+            <button id="btn-sound" class="big-btn secondary">Sound: On</button>
+            <button id="btn-update" class="big-btn secondary"><svg class="ic"><use href="#ic-refresh"/></svg> <span data-i18n="update_fresh">Update (fresh version)</span></button>
+            <button id="btn-newgame" class="text-btn" data-i18n="new_game">New game (wipe progress)</button>
+          </div>
         </div>
-        <button id="btn-sound" class="big-btn secondary">Geluid: Aan</button>
-        <button id="btn-update" class="big-btn secondary"><svg class="ic"><use href="#ic-refresh"/></svg> Update (verse versie)</button>
-        <button id="btn-newgame" class="text-btn">Nieuw spel (wis voortgang)</button>
-        <button id="btn-settings-close" class="big-btn">Sluiten</button>
+        <button id="btn-settings-close" class="big-btn" data-i18n="close">Close</button>
       </div>
     </div>
 
@@ -270,14 +281,14 @@
     <!-- ===== Shop (wapens / characters / hoeden) ===== -->
     <div id="shop-screen" class="screen hidden">
       <div class="screen-inner">
-        <h2 class="screen-title"><svg class="ic"><use href="#ic-cart"/></svg> SHOP</h2>
+        <h2 class="screen-title"><svg class="ic"><use href="#ic-cart"/></svg> <span data-i18n="shop_title">SHOP</span></h2>
         <div id="shop-tabs" class="shop-tabs">
-          <button class="shop-tab active" data-tab="chars"><svg class="ic"><use href="#ic-char"/></svg> Characters</button>
-          <button class="shop-tab" data-tab="hats"><svg class="ic"><use href="#ic-hat"/></svg> Hoeden</button>
-          <button class="shop-tab" data-tab="powerups"><svg class="ic"><use href="#ic-bolt"/></svg> Power-ups</button>
-          <button class="corner-back shop-back" data-back="menu" aria-label="Terug"><svg class="ic"><use href="#ic-undo"/></svg></button>
+          <button class="shop-tab active" data-tab="chars"><svg class="ic"><use href="#ic-char"/></svg> <span data-i18n="tab_characters">Characters</span></button>
+          <button class="shop-tab" data-tab="hats"><svg class="ic"><use href="#ic-hat"/></svg> <span data-i18n="tab_hats">Hats</span></button>
+          <button class="shop-tab" data-tab="powerups"><svg class="ic"><use href="#ic-bolt"/></svg> <span data-i18n="tab_powerups">Power-ups</span></button>
+          <button class="corner-back shop-back" data-back="menu" data-i18n-aria="back" aria-label="Back"><svg class="ic"><use href="#ic-undo"/></svg></button>
         </div>
-        <div class="shop-coins">Munten: <span id="shop-coin-count">0</span> <svg class="ic"><use href="#ic-coin"/></svg></div>
+        <div class="shop-coins"><span data-i18n="coins">Coins</span>: <span id="shop-coin-count">0</span> <svg class="ic"><use href="#ic-coin"/></svg></div>
         <div id="shop-grid" class="shop-grid"></div>
       </div>
     </div>
@@ -285,14 +296,14 @@
     <!-- ===== Inventaris ===== -->
     <div id="inventory-screen" class="screen hidden">
       <div class="screen-inner">
-        <h2 class="screen-title"><svg class="ic"><use href="#ic-backpack"/></svg> INVENTARIS</h2>
+        <h2 class="screen-title"><svg class="ic"><use href="#ic-backpack"/></svg> <span data-i18n="inv_title">INVENTORY</span></h2>
         <div id="inv-tabs" class="shop-tabs">
-          <button class="shop-tab active" data-invtab="powerups"><svg class="ic"><use href="#ic-bolt"/></svg> Power-ups</button>
-          <button class="shop-tab" data-invtab="chars"><svg class="ic"><use href="#ic-char"/></svg> Characters</button>
-          <button class="shop-tab" data-invtab="hats"><svg class="ic"><use href="#ic-hat"/></svg> Hoeden</button>
-          <button class="shop-tab" data-invtab="armor"><svg class="ic"><use href="#ic-hammer"/></svg> Harnas</button>
-          <button class="shop-tab" data-invtab="materials"><svg class="ic"><use href="#ic-hammer"/></svg> Materiaal</button>
-          <button class="corner-back" id="btn-inventory-back" aria-label="Terug"><svg class="ic"><use href="#ic-undo"/></svg></button>
+          <button class="shop-tab active" data-invtab="powerups"><svg class="ic"><use href="#ic-bolt"/></svg> <span data-i18n="tab_powerups">Power-ups</span></button>
+          <button class="shop-tab" data-invtab="chars"><svg class="ic"><use href="#ic-char"/></svg> <span data-i18n="tab_characters">Characters</span></button>
+          <button class="shop-tab" data-invtab="hats"><svg class="ic"><use href="#ic-hat"/></svg> <span data-i18n="tab_hats">Hats</span></button>
+          <button class="shop-tab" data-invtab="armor"><svg class="ic"><use href="#ic-hammer"/></svg> <span data-i18n="tab_armor">Armour</span></button>
+          <button class="shop-tab" data-invtab="materials"><svg class="ic"><use href="#ic-hammer"/></svg> <span data-i18n="tab_materials">Materials</span></button>
+          <button class="corner-back" id="btn-inventory-back" data-i18n-aria="back" aria-label="Back"><svg class="ic"><use href="#ic-undo"/></svg></button>
         </div>
         <div class="inv-hint hidden" id="inv-hint"></div>
         <div id="inv-grid" class="shop-grid"></div>
@@ -612,17 +623,18 @@
     </div>
   </div>
 
-  <script src="vendor/supabase.min.js?v=menu149"></script>
-  <script src="js/config.js?v=menu149"></script>
-  <script src="js/storage.js?v=menu149"></script>
-  <script src="js/audio.js?v=menu149"></script>
-  <script src="js/net.js?v=menu149"></script>
-  <script src="js/input.js?v=menu149"></script>
-  <script src="js/sprites.js?v=menu149"></script>
-  <script src="js/menubg.js?v=menu149"></script>
-  <script src="js/entities.js?v=menu149"></script>
-  <script src="js/ui.js?v=menu149"></script>
-  <script src="js/game.js?v=menu149"></script>
-  <script src="js/main.js?v=menu149"></script>
+  <script src="vendor/supabase.min.js?v=menu150"></script>
+  <script src="js/i18n.js?v=menu150"></script>
+  <script src="js/config.js?v=menu150"></script>
+  <script src="js/storage.js?v=menu150"></script>
+  <script src="js/audio.js?v=menu150"></script>
+  <script src="js/net.js?v=menu150"></script>
+  <script src="js/input.js?v=menu150"></script>
+  <script src="js/sprites.js?v=menu150"></script>
+  <script src="js/menubg.js?v=menu150"></script>
+  <script src="js/entities.js?v=menu150"></script>
+  <script src="js/ui.js?v=menu150"></script>
+  <script src="js/game.js?v=menu150"></script>
+  <script src="js/main.js?v=menu150"></script>
 </body>
 </html>

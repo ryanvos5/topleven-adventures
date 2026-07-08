@@ -88,6 +88,12 @@ const Net = {
     this.user = null;
     this._refreshUI();
   },
+  // account verwijderen: probeer server-side RPC (indien opgezet), daarna hoe dan ook uitloggen.
+  async deleteAccount() {
+    if (!this.ready) return;
+    try { if (this.sb && this.sb.rpc) await this.sb.rpc('delete_account'); } catch (e) {}
+    await this.logout();
+  },
 
   // na (her)inloggen: profiel borgen + cloud-save mergen
   async afterLogin() {

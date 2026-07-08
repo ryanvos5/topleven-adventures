@@ -1130,6 +1130,24 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
 }
 .shop-tab.active { border-color: #d2622e; color: #ffe9c0; background: linear-gradient(180deg, #7a3418, #4a1c0c); box-shadow: 0 0 8px rgba(255,90,25,.5); }
 .shop-back { margin-top: 0; display: inline-flex; align-items: center; gap: 5px; }
+/* ===== Instellingen (2 kolommen — past ook op landscape) ===== */
+.settings-box { width: min(720px, 96%); }
+.settings-grid { display: flex; gap: clamp(10px, 3vw, 26px); align-items: flex-start; justify-content: center; width: 100%; }
+.settings-col { display: flex; flex-direction: column; gap: 8px; flex: 1 1 0; min-width: 0; max-width: 340px; }
+.settings-label { font-family: var(--pixel-font); font-size: 12px; letter-spacing: 1px; color: #e2b48a; text-transform: uppercase; text-align: left; margin-bottom: 2px; }
+.settings-col .big-btn, .settings-col .text-btn { width: 100%; margin: 0; }
+.lang-row { display: flex; gap: 8px; }
+.lang-btn { flex: 1 1 0; padding: 8px; border-radius: 8px; cursor: pointer;
+  font-family: var(--pixel-font); font-size: 13px; color: #e2c4aa;
+  background: linear-gradient(180deg, #2a1810, #190c07); border: 2px solid #4a2818; }
+.lang-btn.active { border-color: #d2622e; color: #ffe9c0; background: linear-gradient(180deg, #5a2810, #3a160c); box-shadow: 0 0 8px rgba(255,90,25,.4); }
+.text-btn.danger { color: #ff6a5a; }
+@media (max-height: 520px) {
+  #settings-screen .overlay-box { padding: 10px 14px; max-height: 96%; overflow-y: auto; }
+  .settings-grid { gap: 14px; }
+  #settings-screen .screen-title { font-size: 16px; margin-bottom: 4px; }
+  .settings-col .big-btn { padding: 8px; font-size: 13px; }
+}
 /* kleine ronde terug-knop linksboven (shop / inventaris / blacksmith) */
 #shop-screen .screen-inner, #inventory-screen .screen-inner, #blacksmith-screen .screen-inner { position: relative; }
 .corner-back {

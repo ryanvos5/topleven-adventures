@@ -105,10 +105,18 @@ const UI = {
     // geluid aan/uit
     const sb = $('btn-sound');
     if (sb) {
-      const upd = () => { sb.textContent = 'Geluid: ' + (window.Sfx && Sfx.enabled ? 'Aan' : 'Uit'); };
-      upd();
-      sb.onclick = () => { if (window.Sfx) Sfx.setEnabled(!Sfx.enabled); upd(); };
+      this._updSoundBtn = () => { sb.textContent = t(window.Sfx && Sfx.enabled ? 'sound_on' : 'sound_off'); };
+      this._updSoundBtn();
+      sb.onclick = () => { if (window.Sfx) Sfx.setEnabled(!Sfx.enabled); this._updSoundBtn(); };
     }
+    // taal (Engels/Nederlands)
+    if (window.I18N) {
+      I18N.apply();
+      const markLang = () => document.querySelectorAll('.lang-btn').forEach((b) => b.classList.toggle('active', b.dataset.lang === I18N.lang));
+      markLang();
+      document.querySelectorAll('.lang-btn').forEach((b) => { b.onclick = () => { I18N.set(b.dataset.lang); markLang(); }; });
+    }
+    { const db = $('btn-delete-account'); if (db) db.onclick = () => this.deleteAccount(); }
     // klikgeluid op menu-knoppen
     document.addEventListener('pointerdown', (e) => {
       if (window.Sfx && e.target && e.target.closest && e.target.closest('.stone-btn,.stone-tile,.stone-icon,.big-btn,.shop-tab,.world-tab,.back-btn,.corner-back')) Sfx.play('click');
@@ -239,7 +247,7 @@ const UI = {
     if (!c) return;
     const total = (JOURNEY[1].levels || []).length;
     const done = Math.min(total, Storage.data.journey1 || 0);
-    if (done >= total) c.innerHTML = 'Wereld 1 ' + this._ic('check'); else c.textContent = 'Lvl ' + (done + 1) + '/' + total;
+    if (done >= total) c.innerHTML = t('world') + ' 1 ' + this._ic('check'); else c.textContent = t('lvl') + ' ' + (done + 1) + '/' + total;
   },
 
   // ---------- JOURNEY (singleplayer) ----------
@@ -729,25 +737,51 @@ const UI = {
     const inLogged = window.Net && Net.isLoggedIn && Net.isLoggedIn();
     // header-regel "Nickname | Lvl"
     const line = document.getElementById('menu-userline');
-    if (line) line.textContent = (inLogged ? Net.nickname() : 'Gast') + ' | Lvl ' + playerLevel(Storage.data.xp || 0);
+    if (line) line.textContent = (inLogged ? Net.nickname() : t('guest')) + ' | ' + t('lvl') + ' ' + playerLevel(Storage.data.xp || 0);
     if (!status || !btnAcc || !btnOut) return;
     const xpWrap = document.getElementById('xp-bar-wrap');
     const btnNick = document.getElementById('btn-nick');
+    const btnDel = document.getElementById('btn-delete-account');
     if (inLogged) {
-      status.innerHTML = this._ic('char') + ' ' + this._esc(Net.nickname()) + ' · Lvl ' + playerLevel(Storage.data.xp || 0);
+      status.innerHTML = this._ic('char') + ' ' + this._esc(Net.nickname()) + ' · ' + t('lvl') + ' ' + playerLevel(Storage.data.xp || 0);
       status.classList.remove('hidden');
       btnOut.classList.remove('hidden');
       btnAcc.classList.add('hidden');
       if (btnNick) btnNick.classList.remove('hidden');
+      if (btnDel) btnDel.classList.remove('hidden');
       if (xpWrap) { xpWrap.classList.remove('hidden'); this.renderXpBar(); }
     } else {
       status.classList.add('hidden');
       btnOut.classList.add('hidden');
       btnAcc.classList.remove('hidden');
       if (btnNick) btnNick.classList.add('hidden');
+      if (btnDel) btnDel.classList.add('hidden');
       if (xpWrap) xpWrap.classList.add('hidden');
     }
     this.updateArenaButton();
+  },
+  // taal gewisseld -> dynamische teksten opnieuw invullen + zichtbaar scherm hertekenen
+  onLangChange() {
+    if (this._updSoundBtn) this._updSoundBtn();
+    document.querySelectorAll('.lang-btn').forEach((b) => b.classList.toggle('active', b.dataset.lang === I18N.lang));
+    this.refreshAuthUI();
+    const vis = (id) => { const e = document.getElementById(id); return e && !e.classList.contains('hidden'); };
+    if (vis('shop-screen') && this.renderShop) this.renderShop();
+    if (vis('inventory-screen') && this.renderInventory) this.renderInventory();
+    if (vis('blacksmith-screen') && this.renderBlacksmith) this.renderBlacksmith();
+    if (vis('journey-screen') && this.renderJourney) this.renderJourney();
+  },
+  async deleteAccount() {
+    if (!(window.Net && Net.isLoggedIn && Net.isLoggedIn())) return;
+    const msg = I18N.lang === 'nl'
+      ? 'Weet je zeker dat je je account definitief wilt verwijderen? Je online voortgang en leaderboard-plek gaan verloren.'
+      : 'Are you sure you want to permanently delete your account? Your online progress and leaderboard spot will be lost.';
+    if (!window.confirm(msg)) return;
+    try {
+      if (Net.deleteAccount) { await Net.deleteAccount(); }
+      else if (Net.logout) { await Net.logout(); }
+      this.refreshAuthUI();
+    } catch (e) { window.alert(String(e && e.message || e)); }
   },
 
   // heeft de ingelogde speler een echte nickname? (anders valt nickname() terug op de e-mail)
