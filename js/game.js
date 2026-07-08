@@ -2013,6 +2013,77 @@ const Game = {
         } },
       ];
     }
+    // ===== BONZO (Wereld 1, level 5) — nog op het strand aan de rand van de jungle =====
+    if (script === 'bonzo') {
+      const P = (x) => Math.round(W * x);
+      const jungleEdge = (c) => {                          // donker oerwoud aan de rechterkant
+        c.fillStyle = '#123a1c'; for (let x = W - 96; x < W + 12; x += 20) { c.beginPath(); c.arc(x, gy - 42, 26, 0, 6.2832); c.fill(); }
+        c.fillStyle = '#0d2a14'; for (let x = W - 92; x < W + 12; x += 24) { c.beginPath(); c.arc(x, gy - 18, 22, 0, 6.2832); c.fill(); }
+        Sprites.px(c, '#3a2414', W - 30, gy - 30, 6, 30); Sprites.px(c, '#3a2414', W - 62, gy - 26, 6, 26);
+      };
+      const shout = (c, x, y) => { c.strokeStyle = '#ffef9a'; c.lineWidth = 1.2; for (let k = 0; k < 3; k++) { const a = -0.6 + k * 0.6; c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(a) * 7, y + Math.sin(a) * 7 - 6); c.stroke(); } };
+      const eyes = (c, x, y) => { const gl = 0.6 + 0.4 * Math.abs(Math.sin(clk() / 200)); c.fillStyle = 'rgba(255,220,90,' + gl.toFixed(2) + ')'; c.fillRect(x, y, 3, 2); c.fillRect(x + 7, y, 3, 2); };
+      const speed = (c, x, y, dir) => { c.strokeStyle = 'rgba(255,255,255,0.6)'; c.lineWidth = 1.4; for (let k = 0; k < 4; k++) { const yy = y - 2 - k * 4, len = 10 + (k % 2) * 6; c.beginPath(); c.moveTo(x, yy); c.lineTo(x + dir * len, yy); c.stroke(); } };
+      const bonzo = (c, x, fy, dir, ph, opts) => this._storyFighter(c, 'bonzo', x, fy, dir, ph, 0.95, opts || {});
+      const rustle = (c, x, y) => { c.strokeStyle = '#1c4a24'; c.lineWidth = 1.2; for (let k = 0; k < 3; k++) { const a = -0.7 + k * 0.7 + Math.sin(clk() / 90) * 0.3; c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(a) * 8, y - 8 - Math.sin(a) * 4); c.stroke(); } };
+      return [
+        // ===== Scène 1 – Een vreemde stilte =====
+        { theme: 'beach', dur: 2200, cap: 'Je verslaat de laatste vijanden… en plots wordt het doodstil.', draw: () => {
+          const c = this.ctx; jungleEdge(c);
+          Sprites.drawCharacter(c, P(0.36), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+        } },
+        { theme: 'beach', dur: 2300, cap: 'Tussen de bomen hoor je snelle voetstappen — maar je ziet niemand.', draw: () => {
+          const c = this.ctx; jungleEdge(c);
+          Sprites.drawCharacter(c, P(0.36), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          c.fillStyle = '#fff'; c.font = 'bold 12px "Courier New",monospace'; c.fillText('?', P(0.36) + 6, gy - 32);
+          rustle(c, W - 48, gy - 4); rustle(c, W - 78, gy - 2);
+        } },
+        { theme: 'beach', dur: 2200, cap: 'Iets houdt je vanuit de schaduwen nauwlettend in de gaten…', draw: () => {
+          const c = this.ctx, jit = Math.round(Math.sin(clk() / 70) * 1.2); jungleEdge(c);
+          Sprites.drawCharacter(c, P(0.36) + jit, Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          c.fillStyle = '#8fd0ff'; c.fillRect(P(0.36) + 8 + jit, gy - 30, 2, 3);   // zweetdruppel
+          eyes(c, W - 58, gy - 34); eyes(c, W - 40, gy - 20);
+        } },
+        // ===== Scène 2 – De verschijning van Bonzo =====
+        { theme: 'beach', dur: 2200, cap: 'Uit de struiken springt een kleine, gespierde krijger: BONZO!', draw: (t) => {
+          const c = this.ctx; jungleEdge(c);
+          Sprites.drawCharacter(c, P(0.3), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          const p = Math.min(1, t / 2200), arc = Math.sin(p * Math.PI) * 40;
+          bonzo(c, W * 0.86 - p * (W * 0.24), gy - 2 - arc, -1, clk() / 40, { airborne: true });
+        } },
+        { theme: 'beach', dur: 2100, cap: 'Hij grijnst, slaat op zijn borst en daagt je uit.', draw: () => {
+          const c = this.ctx, bob = Math.abs(Math.sin(clk() / 90)) * 2; jungleEdge(c);
+          Sprites.drawCharacter(c, P(0.3), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          bonzo(c, W * 0.62, gy - 2 - bob, -1, 0, { attacking: true });
+          shout(c, W * 0.62 - 14, gy - 30); shout(c, W * 0.62 + 12, gy - 30);
+        } },
+        { theme: 'beach', dur: 2100, cap: 'Laat je niet misleiden door zijn formaat — hij is razendsnel en agressief.', draw: () => {
+          const c = this.ctx, jit = Math.round(Math.sin(clk() / 55) * 1.5); jungleEdge(c);
+          Sprites.drawCharacter(c, P(0.3), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          bonzo(c, W * 0.62 + jit, gy - 2, -1, clk() / 40, {});
+          c.fillStyle = '#ff5a5a'; c.font = 'bold 13px "Courier New",monospace'; c.fillText('!', W * 0.62 - 2, gy - 30);
+        } },
+        // ===== Scène 3 – Het gevecht begint =====
+        { theme: 'beach', dur: 2000, cap: 'Bonzo sprint met hoge snelheid op je af!', draw: (t) => {
+          const c = this.ctx, p = Math.min(1, t / 2000), bx = (W * 0.78) - p * (W * 0.30); jungleEdge(c);
+          Sprites.drawCharacter(c, P(0.26), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          speed(c, bx + 16, gy - 4, 1);
+          bonzo(c, bx, gy - 2, -1, clk() / 26, {});
+        } },
+        { theme: 'beach', dur: 2000, cap: 'Zijn aanvallen zijn snel, onvoorspelbaar en dodelijk.', draw: () => {
+          const c = this.ctx, bob = Math.abs(Math.sin(clk() / 60)) * 2; jungleEdge(c);
+          Sprites.drawCharacter(c, P(0.32), Math.round(gy - 2), 1, ch.palette, Object.assign({ ducking: true, weapon: null }, pose0));
+          bonzo(c, W * 0.56, gy - 2 - bob, -1, clk() / 30, { attacking: true });
+          for (let k = 0; k < 3; k++) Sprites.px(c, '#ffe79a', Math.round(W * 0.44 + k * 6), gy - 20 - k * 2, 3, 3);
+        } },
+        { theme: 'beach', dur: 1700, cap: 'Versla BONZO voordat hij jóu uitschakelt — VECHT!', draw: () => {
+          const c = this.ctx, bob = Math.abs(Math.sin(clk() / 80)) * 2; jungleEdge(c);
+          Sprites.drawCharacter(c, P(0.3), Math.round(gy - 2), 1, ch.palette, Object.assign({ attacking: true, weapon: null }, pose0));
+          bonzo(c, W * 0.62, gy - 2 - bob, -1, 0, {});
+          c.fillStyle = '#ffef9a'; c.font = 'bold 16px "Courier New",monospace'; c.textAlign = 'center'; c.fillText('VS', P(0.48), gy - 46); c.textAlign = 'left';
+        } },
+      ];
+    }
     const sc = this._storyData; if (!sc) return [];
     const px = Math.round(W * 0.30), fxT = W * 0.68;
     return [
