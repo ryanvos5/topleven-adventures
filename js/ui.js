@@ -2095,11 +2095,20 @@ const UI = {
     const cv = document.createElement('canvas'); cv.width = 90; cv.height = 70; const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
     ctx.save(); ctx.translate(45, 40); ctx.scale(3.4, 3.4);
     const P = (c, x, y, w, h) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); };
-    const plate = (x, y, w, h) => { P(set.col, x, y, w, h); P('#ffffff22', x, y, w, 1); P(set.colDk, x, y, 1, h); };
-    if (p.slot === 'chest') { plate(-5, -6, 10, 12); P(set.colDk, -1, -5, 2, 10); }
-    else if (p.slot === 'bottom') { plate(-5, -4, 10, 5); plate(-5, 1, 4, 5); plate(1, 1, 4, 5); }
+    const plate = (x, y, w, h) => { P(set.col, x, y, w, h); P('#ffffff40', x, y, w, 1); P(set.colDk, x, y, 1, h); P('#00000030', x, y + h - 1, w, 1); };
+    if (p.slot === 'chest') {
+      if (set.cape) { P('#8a1f1a', -8, -6, 3, 15); P('#c0392b', -8, -6, 3, 2); }              // mantelpunt
+      plate(-5, -6, 10, 12); P(set.colDk, -1, -5, 2, 10); P('#ffffff55', 0, -4, 1, 8);        // borstplaat + ribbel
+      P(set.col, -7, -6, 3, 3); P(set.col, 4, -6, 3, 3);                                       // schouderstukken
+      if (set.trim) { P(set.trim, -5, -6, 10, 1); P(set.trim, -5, 5, 10, 1); }                 // gouden randen
+    } else if (p.slot === 'bottom') { plate(-5, -4, 10, 5); plate(-5, 1, 4, 5); plate(1, 1, 4, 5); if (set.trim) P(set.trim, -5, -4, 10, 1); }
     else if (p.slot === 'feet') { plate(-6, 2, 5, 4); plate(1, 2, 5, 4); }
-    else { plate(-5, -6, 10, 5); P(set.col, -6, -1, 3, 5); P(set.col, 3, -1, 3, 5); }   // helm
+    else {   // helm + rode pluim
+      P('#6a1512', -1, -12, 2, 4); P(set.plume, -1, -14, 3, 4);                                // pluim
+      plate(-5, -7, 10, 6); P(set.col, -6, -1, 3, 5); P(set.col, 3, -1, 3, 5);                 // helm-dome + wangstukken
+      P('#2b2f38', -4, -4, 8, 2); P('#8fd0ff', 1, -4, 2, 2);                                   // vizier + oog
+      if (set.trim) P(set.trim, -5, -2, 10, 1);
+    }
     ctx.restore();
     return cv;
   },

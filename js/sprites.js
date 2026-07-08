@@ -442,14 +442,46 @@ const Sprites = {
       for (let i = -2; i <= 2; i++) this.px(ctx, i % 2 ? '#3a2614' : '#7a5024', cx + i * 2, torsoTop, 1, 1);
     }
 
-    // --- harnas (blacksmith) — over lijf/hoofd, ONDER de cosmetische hoed ---
+    // --- harnas (blacksmith): ridder-plaatwerk — over lijf/hoofd, ONDER de cosmetische hoed ---
     if (pose.armor) {
-      const A = pose.armor;
-      const plate = (col, colDk, x, y, w, h) => { this.px(ctx, col, x, y, w, h); this.px(ctx, this._shade(col, 0.30), x, y, w, 1); this.px(ctx, colDk, x, y, 1, h); this.px(ctx, this._shade(col, -0.25), x, y + h - 1, w, 1); };
-      if (A.feet) { const f = A.feet; this.px(ctx, f.col, Math.round(hipX + offB) - (dir < 0 ? 1 : 0), footY - 3, legW + 1, 3); this.px(ctx, f.col, Math.round(hipX + offA) - (dir < 0 ? 1 : 0), footY - 3, legW + 1, 3); this.px(ctx, f.colDk, Math.round(hipX + offA) - (dir < 0 ? 1 : 0), footY - 1, legW + 1, 1); }
-      if (A.bottom) { const b = A.bottom; plate(b.col, b.colDk, cx - bh, legTop - 1, bh * 2, Math.min(legH + 1, 6)); }   // heup/dij-bescherming
-      if (A.chest) { const c2 = A.chest; plate(c2.col, c2.colDk, cx - bh, torsoTop + 1, bh * 2, Math.max(3, torsoH - 2)); this.px(ctx, this._shade(c2.col, 0.35), cx - 1, torsoTop + 2, 2, Math.max(1, torsoH - 4)); }   // borstplaat + middenribbel
-      if (A.hat) { const h2 = A.hat; this.px(ctx, h2.col, cx - hh - 1, headTop - 2, hh * 2 + 2, 3); this.px(ctx, this._shade(h2.col, 0.30), cx - hh - 1, headTop - 2, hh * 2 + 2, 1); this.px(ctx, h2.col, cx - hh - 1, headTop - 1, 2, headH); this.px(ctx, h2.col, cx + hh - 1, headTop - 1, 2, headH); }   // helm-kap
+      const A = pose.armor, sh = (c, a) => this._shade(c, a);
+      // rode MANTEL achter het lijf (van de schouders omlaag), alleen bij sets met cape
+      const cape = (A.chest && A.chest.cape) ? A.chest : null;
+      if (cape) {
+        const cw = 5, cxp = dir > 0 ? (cx - bh - cw + 1) : (cx + bh), ch2 = torsoH + legH + 2, sway = Math.round(Math.sin((pose.t || 0) / 220) * 1);
+        this.px(ctx, '#8a1f1a', cxp, torsoTop, cw, ch2);
+        this.px(ctx, '#c0392b', cxp, torsoTop, cw, 3);                                   // lichte bovenkant
+        this.px(ctx, '#6a1512', cxp + (dir > 0 ? -sway : sway), torsoTop + ch2 - 4, cw, 4);   // wapperende donkere zoom
+      }
+      // zilveren LAARZEN
+      if (A.feet) { const f = A.feet; for (const off of [offB, offA]) { const x = Math.round(hipX + off) - (dir < 0 ? 1 : 0); this.px(ctx, f.col, x, footY - 3, legW + 1, 3); this.px(ctx, sh(f.col, 0.3), x, footY - 3, legW + 1, 1); this.px(ctx, f.colDk, x, footY - 1, legW + 1, 1); } }
+      // been/heup-platen (faulds)
+      if (A.bottom) { const b = A.bottom, h = Math.min(legH + 1, 6); this.px(ctx, b.col, cx - bh, legTop - 1, bh * 2, h); this.px(ctx, sh(b.col, 0.3), cx - bh, legTop - 1, bh * 2, 1); this.px(ctx, b.colDk, cx - bh, legTop - 1, 1, h); this.px(ctx, sh(b.col, -0.25), cx - bh, legTop - 1 + h - 1, bh * 2, 1); if (b.trim) this.px(ctx, b.trim, cx - bh, legTop - 1, bh * 2, 1); }
+      // BORSTPLAAT + schouderstukken + middenribbel + (gouden) randen
+      if (A.chest) { const c2 = A.chest, y0 = torsoTop + 1, h0 = Math.max(3, torsoH - 2);
+        this.px(ctx, c2.col, cx - bh, y0, bh * 2, h0);
+        this.px(ctx, sh(c2.col, 0.34), cx - bh + 1, y0, bh * 2 - 2, 1);                   // highlight bovenop
+        this.px(ctx, c2.colDk, cx - bh, y0, 1, h0);                                       // schaduwkant
+        this.px(ctx, sh(c2.col, -0.22), cx - bh, y0 + h0 - 1, bh * 2, 1);                 // onderrand
+        this.px(ctx, sh(c2.col, 0.42), cx - 1, y0 + 1, 2, h0 - 2);                        // glanzende middenribbel
+        this.px(ctx, c2.col, cx - bh - 1, y0 - 1, 3, 3); this.px(ctx, c2.col, cx + bh - 2, y0 - 1, 3, 3);   // pauldrons (schouders)
+        this.px(ctx, sh(c2.col, 0.3), cx - bh - 1, y0 - 1, 3, 1); this.px(ctx, sh(c2.col, 0.3), cx + bh - 2, y0 - 1, 3, 1);
+        if (c2.trim) { this.px(ctx, c2.trim, cx - bh, y0, bh * 2, 1); this.px(ctx, c2.trim, cx - bh, y0 + h0 - 1, bh * 2, 1); }   // gouden randen (royal)
+      }
+      // HELM (dekt het hoofd) + vizier-spleet + rode pluim
+      if (A.hat) { const h2 = A.hat;
+        this.px(ctx, h2.col, cx - hh - 1, headTop - 1, hh * 2 + 2, headH + 1);
+        this.px(ctx, sh(h2.col, 0.3), cx - hh - 1, headTop - 1, hh * 2 + 2, 1);           // helm-highlight
+        this.px(ctx, h2.colDk, cx - hh - 1, headTop - 1, 2, headH + 1);                   // schaduwkant
+        this.px(ctx, '#2b2f38', cx - hh, headTop + 3, hh * 2, 2);                         // vizier-spleet
+        this.px(ctx, pose.rage ? '#ff3030' : '#8fd0ff', cx + (dir > 0 ? 1 : -2), headTop + 3, 2, 2);   // oog-glim
+        if (h2.trim) this.px(ctx, h2.trim, cx - hh - 1, headTop + headH - 1, hh * 2 + 2, 1);   // gouden helmrand
+        if (h2.plume) { const pw = Math.round(Math.sin((pose.t || 0) / 150) * 1);         // pluim
+          this.px(ctx, '#6a1512', cx - 1, headTop - 5, 2, 5);
+          this.px(ctx, h2.plume, cx - 1 + pw, headTop - 9, 3, 5);
+          this.px(ctx, sh(h2.plume, 0.3), cx + pw, headTop - 9, 1, 4);
+        }
+      }
     }
 
     // --- hoed (cosmetisch) ---

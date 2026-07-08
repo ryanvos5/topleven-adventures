@@ -843,10 +843,12 @@ const MATERIAL_ORDER = ['leather', 'nails', 'iron', 'steel'];
 const ARMOR_SLOTS = ['hat', 'chest', 'bottom', 'feet'];
 const ARMOR_SLOT_NAME = { hat: 'Helm', chest: 'Borststuk', bottom: 'Beenstuk', feet: 'Laarzen' };
 // 3 sets: Leer (goedkoop, weinig HP) -> IJzer -> Staal (duur, veel HP). Elk stuk geeft extra HP + heeft duurzaamheid.
+// ridder-harnassen (intern nog leather/iron/steel als tier-id, maar met ridder-namen & zilverlook).
+// col = plaatkleur, plume = pluim/mantel-rood, trim = randwerk (goud bij de royal), cape = rode mantel.
 const ARMOR_SETS = {
-  leather: { id: 'leather', name: 'Leren',   col: '#a4652f', colDk: '#6e3f1c' },
-  iron:    { id: 'iron',    name: 'IJzeren', col: '#bcc4cc', colDk: '#7a828a' },
-  steel:   { id: 'steel',   name: 'Stalen',  col: '#a6bcd6', colDk: '#69809a' },
+  leather: { id: 'leather', name: 'Schildknaap',  col: '#aab2ba', colDk: '#6a727a', plume: '#c0392b', trim: null,      cape: false },
+  iron:    { id: 'iron',    name: 'Ridder',       col: '#c6ced6', colDk: '#79818a', plume: '#c0392b', trim: '#9aa3ad', cape: true },
+  steel:   { id: 'steel',   name: 'Royal Knight', col: '#dae2ea', colDk: '#8a929c', plume: '#d13a2e', trim: '#e8b431', cape: true },
 };
 const ARMOR_SET_ORDER = ['leather', 'iron', 'steel'];
 function buildArmorPieces() {
@@ -854,10 +856,11 @@ function buildArmorPieces() {
   const tierBase = { leather: 14, iron: 26, steel: 40 };                 // basis-HP per set
   const tierDur  = { leather: 60, iron: 110, steel: 170 };               // duurzaamheid (slijt langzaam)
   const tierMs   = { leather: 5 * 60e3, iron: 20 * 60e3, steel: 45 * 60e3 };   // smeedtijd
+  // elke set heeft leer + ijzer nodig; hogere sets ook staal (meer naarmate het beter wordt)
   const cost = {
-    leather: { hat: { leather: 3, nails: 2 }, chest: { leather: 6, nails: 3 }, bottom: { leather: 4, nails: 2 }, feet: { leather: 3, nails: 2 } },
-    iron:    { hat: { iron: 3, nails: 3 },    chest: { iron: 6, nails: 4 },    bottom: { iron: 4, nails: 3 },    feet: { iron: 3, nails: 2 } },
-    steel:   { hat: { steel: 3, iron: 2, nails: 3 }, chest: { steel: 6, iron: 3, nails: 4 }, bottom: { steel: 4, iron: 2, nails: 3 }, feet: { steel: 3, iron: 2, nails: 2 } },
+    leather: { hat: { iron: 2, leather: 2, nails: 2 }, chest: { iron: 4, leather: 3, nails: 3 }, bottom: { iron: 3, leather: 2, nails: 2 }, feet: { iron: 2, leather: 2, nails: 1 } },
+    iron:    { hat: { iron: 3, steel: 1, leather: 1, nails: 3 }, chest: { iron: 5, steel: 2, leather: 2, nails: 4 }, bottom: { iron: 4, steel: 1, leather: 1, nails: 3 }, feet: { iron: 3, steel: 1, nails: 2 } },
+    steel:   { hat: { steel: 3, iron: 2, leather: 1, nails: 3 }, chest: { steel: 6, iron: 3, leather: 2, nails: 4 }, bottom: { steel: 4, iron: 2, leather: 1, nails: 3 }, feet: { steel: 3, iron: 2, nails: 2 } },
   };
   const pieces = {};
   for (const set of ARMOR_SET_ORDER) for (const slot of ARMOR_SLOTS) {

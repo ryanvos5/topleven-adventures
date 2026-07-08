@@ -4218,7 +4218,7 @@ const Game = {
   _buildArmorRender() {
     if (!window.Storage || !Storage.equippedArmorInfo || typeof ARMOR_SETS === 'undefined') return null;
     const info = Storage.equippedArmorInfo(); const out = {}; let any = false;
-    for (const slot in info) { const it = info[slot]; if (it.broken) continue; const s = ARMOR_SETS[it.set]; if (s) { out[slot] = { col: s.col, colDk: s.colDk }; any = true; } }
+    for (const slot in info) { const it = info[slot]; if (it.broken) continue; const s = ARMOR_SETS[it.set]; if (s) { out[slot] = { col: s.col, colDk: s.colDk, plume: s.plume, trim: s.trim, cape: s.cape }; any = true; } }
     return any ? out : null;
   },
   // de vlam-knop (of E): met vallen-in-de-hand plaats je er één; anders zet je je ability in
