@@ -2084,6 +2084,71 @@ const Game = {
         } },
       ];
     }
+    // ===== KOBA (Wereld 1, level 10) — diep in het oerwoud, een reusachtige mensaap =====
+    if (script === 'koba') {
+      const P = (x) => Math.round(W * x);
+      const shout = (c, x, y) => { c.strokeStyle = '#ffef9a'; c.lineWidth = 1.2; for (let k = 0; k < 3; k++) { const a = -0.6 + k * 0.6; c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(a) * 8, y + Math.sin(a) * 8 - 7); c.stroke(); } };
+      const foot = (c, x, y) => { c.fillStyle = '#20120a'; c.fillRect(x, y, 12, 6); c.fillRect(x + 1, y - 3, 3, 3); c.fillRect(x + 5, y - 3, 3, 3); c.fillRect(x + 9, y - 3, 3, 3); };   // enorme voetafdruk
+      const brokenTree = (c, x, y) => { c.fillStyle = '#3a2414'; c.fillRect(x, y - 14, 6, 14); c.save(); c.translate(x + 3, y - 14); c.rotate(1.1); c.fillRect(-3, -22, 6, 22); c.restore(); c.fillStyle = '#5b3a22'; for (let k = 0; k < 3; k++) Sprites.px(c, '#5b3a22', x + 8 + k * 5, y - 2, 3, 2); };   // omgevallen boom + splinters
+      const koba = (c, x, fy, dir, ph, opts) => this._storyFighter(c, 'koba', x, fy, dir, ph, 1.42, opts || {});
+      const trem = () => Math.round(Math.sin(clk() / 30) * 1.4);   // grondbeving-tril
+      return [
+        // ===== Scène 1 – Een dreigende aanwezigheid =====
+        { theme: 'jungle', dur: 2300, cap: 'Terwijl je dieper de jungle in loopt, begint de grond zacht te trillen.', draw: (t) => {
+          const c = this.ctx, p = Math.min(1, t / 2300), jit = Math.round(Math.sin(clk() / 45) * 1.1);
+          Sprites.drawCharacter(c, P(0.24) + Math.round(p * 30), Math.round(gy - 2) + jit, 1, ch.palette, Object.assign({ walkPhase: clk() / 70, weapon: null }, pose0));
+        } },
+        { theme: 'jungle', dur: 2300, cap: 'Gebroken bomen en enorme voetafdrukken liggen verspreid om je heen.', draw: () => {
+          const c = this.ctx;
+          brokenTree(c, W * 0.14, gy); brokenTree(c, W * 0.8, gy);
+          foot(c, W * 0.4, gy - 2); foot(c, W * 0.56, gy + 3); foot(c, W * 0.7, gy - 1);
+          Sprites.drawCharacter(c, P(0.3), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+        } },
+        { theme: 'jungle', dur: 2200, cap: 'Je voelt dat iets gigantisch dichtbij is…', draw: () => {
+          const c = this.ctx, jit = trem();
+          Sprites.drawCharacter(c, P(0.3) + jit, Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          c.fillStyle = '#8fd0ff'; c.fillRect(P(0.3) + 8 + jit, gy - 30, 2, 3);   // zweetdruppel
+          c.globalAlpha = 0.4; c.fillStyle = '#0a1c0e'; c.beginPath(); c.ellipse(W * 0.72, gy - 30, 34, 40, 0, 0, 6.2832); c.fill(); c.globalAlpha = 1;   // dreigende schaduw
+        } },
+        // ===== Scène 2 – De komst van Koba =====
+        { theme: 'jungle', dur: 2400, cap: 'Uit de dichte begroeiing verschijnt KOBA, een enorme gespierde mensaap.', draw: (t) => {
+          const c = this.ctx, p = Math.min(1, t / 2400);
+          Sprites.drawCharacter(c, P(0.24), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          c.fillStyle = '#153e1f'; for (let x = W - 70; x < W + 12; x += 18) { c.beginPath(); c.arc(x, gy - 40, 24 * (1 - p * 0.5), 0, 6.2832); c.fill(); }   // wijkende struiken
+          koba(c, W * 0.9 - p * (W * 0.22), gy - 2, -1, clk() / 55, {});
+        } },
+        { theme: 'jungle', dur: 2300, cap: 'Met een oorverdovende brul slaat hij op zijn borst en staart je woedend aan.', draw: () => {
+          const c = this.ctx, bob = Math.abs(Math.sin(clk() / 90)) * 3, jit = trem();
+          Sprites.drawCharacter(c, P(0.24) - Math.abs(jit), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          koba(c, W * 0.66, gy - 2 - bob, -1, 0, { attacking: true });
+          shout(c, W * 0.66 - 20, gy - 48); shout(c, W * 0.66 + 16, gy - 48);
+        } },
+        { theme: 'jungle', dur: 2200, cap: 'Zijn kracht is ongekend en hij lijkt vastbesloten je tegen te houden.', draw: () => {
+          const c = this.ctx, jit = trem();
+          Sprites.drawCharacter(c, P(0.26), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          koba(c, W * 0.66 + jit, gy - 2, -1, clk() / 55, {});
+          c.fillStyle = '#ff5a5a'; c.font = 'bold 14px "Courier New",monospace'; c.fillText('!', W * 0.66 - 2, gy - 44);
+        } },
+        // ===== Scène 3 – De strijd =====
+        { theme: 'jungle', dur: 2200, cap: 'Koba zet een stap naar voren en de grond beeft onder zijn gewicht.', draw: (t) => {
+          const c = this.ctx, p = Math.min(1, t / 2200), kx = (W * 0.72) - p * (W * 0.08), jit = Math.round(Math.sin(clk() / 22) * 2);
+          Sprites.drawCharacter(c, P(0.26), Math.round(gy - 2) + Math.abs(jit), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          koba(c, kx, gy - 2, -1, clk() / 45, {});
+          for (let k = 0; k < 4; k++) Sprites.px(c, '#3d6b2e', Math.round(kx - 20 - k * 8), gy - 1 - (k % 2) * 2, 4, 2);   // opspattende aarde
+        } },
+        { theme: 'jungle', dur: 2000, cap: 'Ontsnappen is geen optie — het gevecht is begonnen.', draw: () => {
+          const c = this.ctx, bob = Math.abs(Math.sin(clk() / 80)) * 2;
+          Sprites.drawCharacter(c, P(0.3), Math.round(gy - 2), 1, ch.palette, Object.assign({ ducking: true, weapon: null }, pose0));
+          koba(c, W * 0.66, gy - 2 - bob, -1, clk() / 50, { attacking: true });
+        } },
+        { theme: 'jungle', dur: 1700, cap: 'Versla KOBA om je weg dieper de jungle in vrij te maken — VECHT!', draw: () => {
+          const c = this.ctx, bob = Math.abs(Math.sin(clk() / 80)) * 2.5;
+          Sprites.drawCharacter(c, P(0.28), Math.round(gy - 2), 1, ch.palette, Object.assign({ attacking: true, weapon: null }, pose0));
+          koba(c, W * 0.66, gy - 2 - bob, -1, 0, {});
+          c.fillStyle = '#ffef9a'; c.font = 'bold 16px "Courier New",monospace'; c.textAlign = 'center'; c.fillText('VS', P(0.47), gy - 52); c.textAlign = 'left';
+        } },
+      ];
+    }
     const sc = this._storyData; if (!sc) return [];
     const px = Math.round(W * 0.30), fxT = W * 0.68;
     return [
