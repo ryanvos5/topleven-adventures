@@ -11,9 +11,9 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#0d0f14" />
   <title>Tiny Power Smashers</title>
-  <link rel="icon" type="image/svg+xml" href="icon.svg?v=menu148" />
-  <link rel="apple-touch-icon" href="icon.svg?v=menu148" />
-  <link rel="stylesheet" href="css/style.css?v=menu148" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg?v=menu149" />
+  <link rel="apple-touch-icon" href="icon.svg?v=menu149" />
+  <link rel="stylesheet" href="css/style.css?v=menu149" />
 </head>
 <body>
   <div id="game-root">
@@ -35,6 +35,7 @@
         <symbol id="ic-bolt" viewBox="0 0 16 16"><rect x="7" y="2" width="4" height="5" fill="#ffe27a"/><rect x="5" y="6" width="5" height="2" fill="#ffd24a"/><rect x="6" y="8" width="4" height="5" fill="#ffe27a"/><rect x="4" y="8" width="3" height="2" fill="#ffd24a"/></symbol>
         <symbol id="ic-backpack" viewBox="0 0 16 16"><rect x="6" y="1" width="4" height="2" fill="#6b4420"/><rect x="4" y="3" width="8" height="2" fill="#8a5a2a"/><rect x="3" y="4" width="10" height="10" fill="#3a7a4a"/><rect x="3" y="4" width="10" height="2" fill="#54a066"/><rect x="3" y="4" width="2" height="10" fill="#2c5c38"/><rect x="11" y="4" width="2" height="10" fill="#2c5c38"/><rect x="5" y="8" width="6" height="5" fill="#2c5c38"/><rect x="7" y="9" width="2" height="3" fill="#ffd24a"/></symbol>
         <symbol id="ic-hammer" viewBox="0 0 16 16"><rect x="8" y="2" width="6" height="4" fill="#9aa3ad"/><rect x="8" y="2" width="6" height="1" fill="#cfd6df"/><rect x="7" y="3" width="2" height="2" fill="#7a828a"/><rect x="6" y="5" width="3" height="2" fill="#8a5a2a"/><rect x="4" y="7" width="3" height="2" fill="#8a5a2a"/><rect x="2" y="9" width="3" height="4" fill="#6b4420"/></symbol>
+        <symbol id="ic-undo" viewBox="0 0 16 16"><g fill="#ff5a4a"><rect x="2" y="6" width="2" height="2"/><rect x="3" y="4" width="2" height="2"/><rect x="3" y="8" width="2" height="2"/><rect x="4" y="6" width="7" height="2"/><rect x="9" y="7" width="2" height="3"/><rect x="6" y="9" width="4" height="2"/></g></symbol>
         <!-- ===== eigen pixel-iconen (vervangen standaard emoji) ===== -->
         <symbol id="ic-heart" viewBox="0 0 16 16"><rect x="3" y="3" width="4" height="2" fill="#e5484d"/><rect x="9" y="3" width="4" height="2" fill="#e5484d"/><rect x="2" y="4" width="12" height="4" fill="#e5484d"/><rect x="3" y="8" width="10" height="2" fill="#e5484d"/><rect x="4" y="10" width="8" height="1" fill="#e5484d"/><rect x="5" y="11" width="6" height="1" fill="#e5484d"/><rect x="6" y="12" width="4" height="1" fill="#e5484d"/><rect x="7" y="13" width="2" height="1" fill="#e5484d"/><rect x="4" y="4" width="2" height="2" fill="#ff9a9e"/></symbol>
         <symbol id="ic-flag" viewBox="0 0 16 16"><rect x="3" y="2" width="2" height="12" fill="#b8bec8"/><rect x="5" y="3" width="8" height="6" fill="#eceff3"/><rect x="5" y="3" width="2" height="2" fill="#23262b"/><rect x="9" y="3" width="2" height="2" fill="#23262b"/><rect x="7" y="5" width="2" height="2" fill="#23262b"/><rect x="11" y="5" width="2" height="2" fill="#23262b"/><rect x="5" y="7" width="2" height="2" fill="#23262b"/><rect x="9" y="7" width="2" height="2" fill="#23262b"/></symbol>
@@ -68,7 +69,7 @@
     </div>
 
     <!-- ===== Splash bij opstarten (logo, fadet vanzelf weg) ===== -->
-    <div id="splash"><img src="logo.svg?v=menu148" alt="Tiny Power Smashers" /></div>
+    <div id="splash"><img src="logo.svg?v=menu149" alt="Tiny Power Smashers" /></div>
 
     <!-- ===== Canvas (de spelwereld) ===== -->
     <canvas id="game-canvas"></canvas>
@@ -140,7 +141,7 @@
               <span id="menu-ruby-count">0</span>
             </span>
           </div>
-          <img class="menu-logo-img" src="logo.svg?v=menu148" alt="Tiny Power Smashers" />
+          <img class="menu-logo-img" src="logo.svg?v=menu149" alt="Tiny Power Smashers" />
           <div class="menu-hud">
             <span id="menu-userline" class="menu-userline">Gast | Lvl 1</span>
             <button id="btn-settings" class="stone-icon" title="Instellingen" aria-label="Instellingen">
@@ -274,7 +275,7 @@
           <button class="shop-tab active" data-tab="chars"><svg class="ic"><use href="#ic-char"/></svg> Characters</button>
           <button class="shop-tab" data-tab="hats"><svg class="ic"><use href="#ic-hat"/></svg> Hoeden</button>
           <button class="shop-tab" data-tab="powerups"><svg class="ic"><use href="#ic-bolt"/></svg> Power-ups</button>
-          <button class="corner-back shop-back" data-back="menu" aria-label="Terug"><svg class="ic"><use href="#ic-arrow-l"/></svg></button>
+          <button class="corner-back shop-back" data-back="menu" aria-label="Terug"><svg class="ic"><use href="#ic-undo"/></svg></button>
         </div>
         <div class="shop-coins">Munten: <span id="shop-coin-count">0</span> <svg class="ic"><use href="#ic-coin"/></svg></div>
         <div id="shop-grid" class="shop-grid"></div>
@@ -291,7 +292,7 @@
           <button class="shop-tab" data-invtab="hats"><svg class="ic"><use href="#ic-hat"/></svg> Hoeden</button>
           <button class="shop-tab" data-invtab="armor"><svg class="ic"><use href="#ic-hammer"/></svg> Harnas</button>
           <button class="shop-tab" data-invtab="materials"><svg class="ic"><use href="#ic-hammer"/></svg> Materiaal</button>
-          <button class="corner-back" id="btn-inventory-back" aria-label="Terug"><svg class="ic"><use href="#ic-arrow-l"/></svg></button>
+          <button class="corner-back" id="btn-inventory-back" aria-label="Terug"><svg class="ic"><use href="#ic-undo"/></svg></button>
         </div>
         <div class="inv-hint hidden" id="inv-hint"></div>
         <div id="inv-grid" class="shop-grid"></div>
@@ -308,7 +309,7 @@
           <button class="shop-tab active" data-bstab="leather">Schildknaap</button>
           <button class="shop-tab" data-bstab="iron">Ridder</button>
           <button class="shop-tab" data-bstab="steel">Royal Knight</button>
-          <button class="corner-back" data-back="menu" aria-label="Terug"><svg class="ic"><use href="#ic-arrow-l"/></svg></button>
+          <button class="corner-back" data-back="menu" aria-label="Terug"><svg class="ic"><use href="#ic-undo"/></svg></button>
         </div>
         <div id="bs-grid" class="shop-grid"></div>
       </div>
@@ -611,17 +612,17 @@
     </div>
   </div>
 
-  <script src="vendor/supabase.min.js?v=menu148"></script>
-  <script src="js/config.js?v=menu148"></script>
-  <script src="js/storage.js?v=menu148"></script>
-  <script src="js/audio.js?v=menu148"></script>
-  <script src="js/net.js?v=menu148"></script>
-  <script src="js/input.js?v=menu148"></script>
-  <script src="js/sprites.js?v=menu148"></script>
-  <script src="js/menubg.js?v=menu148"></script>
-  <script src="js/entities.js?v=menu148"></script>
-  <script src="js/ui.js?v=menu148"></script>
-  <script src="js/game.js?v=menu148"></script>
-  <script src="js/main.js?v=menu148"></script>
+  <script src="vendor/supabase.min.js?v=menu149"></script>
+  <script src="js/config.js?v=menu149"></script>
+  <script src="js/storage.js?v=menu149"></script>
+  <script src="js/audio.js?v=menu149"></script>
+  <script src="js/net.js?v=menu149"></script>
+  <script src="js/input.js?v=menu149"></script>
+  <script src="js/sprites.js?v=menu149"></script>
+  <script src="js/menubg.js?v=menu149"></script>
+  <script src="js/entities.js?v=menu149"></script>
+  <script src="js/ui.js?v=menu149"></script>
+  <script src="js/game.js?v=menu149"></script>
+  <script src="js/main.js?v=menu149"></script>
 </body>
 </html>
