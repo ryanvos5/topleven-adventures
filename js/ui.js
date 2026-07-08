@@ -91,13 +91,6 @@ const UI = {
     $('btn-jdeath-checkpoint').onclick = () => this.journeyCheckpointRestart();
     $('btn-jdeath-menu').onclick = () => { document.getElementById('jdeath-screen').classList.add('hidden'); Game.quitToMenu(); };
 
-    // nieuw spel (wist alle voortgang)
-    $('btn-newgame').onclick = () => {
-      if (confirm(tl('Nieuw spel starten? Al je munten, wapens, characters en levelvoortgang worden gewist.'))) {
-        Storage.reset();
-        this.show('menu');
-      }
-    };
 
     // ---- instellingen (overlay met account / update / nieuw spel) ----
     $('btn-settings').onclick = () => document.getElementById('settings-screen').classList.remove('hidden');
@@ -2180,7 +2173,7 @@ const UI = {
       const cl = document.createElement('div'); cl.className = 'armor-cost';
       cl.innerHTML = Object.keys(cost).map((k) => { const short = (Storage.materials()[k] || 0) < cost[k]; return '<span' + (short ? ' class="short"' : '') + '>' + cost[k] + ' ' + MATERIALS[k].name + '</span>'; }).join(' · ') + ' · ' + this._fmtDur(ms);
       card.appendChild(cl);
-      const btn = document.createElement('button'); btn.className = 'shop-card-btn';
+      const btn = document.createElement('button'); btn.className = 'bs-craft-btn';
       if (owned && dur >= p.maxDur) { btn.className += ' owned'; btn.textContent = t('made'); btn.disabled = true; }
       else if (busy) { btn.className += ' locked'; btn.textContent = t('smith_busy'); btn.disabled = true; }
       else {

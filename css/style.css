@@ -391,8 +391,9 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
 }
 #menu-screen { padding: 0; background: transparent; }
 /* op deze schermen scrolt alleen de lijst, niet het paneel */
-#shop-screen .screen-inner, #inventory-screen .screen-inner, #leaderboard-screen .screen-inner, #chat-screen .screen-inner { overflow: hidden; }
+#shop-screen .screen-inner, #inventory-screen .screen-inner, #leaderboard-screen .screen-inner, #chat-screen .screen-inner, #blacksmith-screen .screen-inner { overflow: hidden; }
 #shop-grid, #inv-grid, #lb-list, .chat-messages { flex: 1 1 auto; min-height: 0; overflow-y: auto; width: 100%; }
+#bs-grid { flex: 1 1 auto; min-height: 0; align-content: center; }
 /* chat: online-balk vast bovenaan, berichten flexen + scrollen (geen overlap) */
 #chat-screen .chat-online { flex: 0 0 auto; max-height: 50px; width: 100%; margin-bottom: 6px; }
 #chat-screen .chat-messages { flex: 1 1 auto; min-height: 56px; max-height: none; }
@@ -473,8 +474,11 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
   flex: 1 1 auto; display: grid; grid-template-columns: 1fr 1fr 1fr;
   gap: clamp(8px, 2.2vw, 22px); align-items: center; justify-items: stretch; min-height: 0; padding: clamp(4px, 2vh, 18px) 0;
 }
-.menu-bottom { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.menu-bottom { display: flex; align-items: flex-end; justify-content: space-between; gap: clamp(6px, 1.6vw, 16px); flex-wrap: nowrap; }
 .menu-bottom-right { display: flex; gap: clamp(8px, 1.6vw, 16px); }
+/* Blacksmith recht boven Shop, Training recht boven Leaderboard (zelfde breedte via stretch) */
+.mb-stack { display: flex; flex-direction: column; gap: clamp(4px, 1vh, 8px); align-items: stretch; min-width: 0; }
+.mb-stack .stone-btn { width: 100%; }
 
 /* ---- Inventaris + power-ups ---- */
 .inv-hint { font-size: 12px; color: var(--text-dim); margin: 2px 0 8px; line-height: 1.4; }
@@ -908,6 +912,38 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
 .armor-card .armor-dur.low > span { background: linear-gradient(180deg, #ff8a6a, #c0392b); }
 .armor-cost { font-size: 11px; color: #d8c9a8; margin-top: 2px; }
 .armor-cost .short { color: #ff8a7a; }
+/* FORGE-knop: een steen met de tekst erin geslagen */
+.bs-craft-btn {
+  width: 100%; margin-top: 5px; cursor: pointer;
+  padding: 8px 6px; border-radius: 8px; border: 2px solid #2c2620;
+  font-family: var(--pixel-font); font-weight: 900; letter-spacing: 2px; font-size: clamp(12px, 1.7vw, 15px);
+  color: #cdb890;
+  text-shadow: 0 -1px 0 rgba(0,0,0,.7), 0 1px 0 rgba(240,220,170,.20);   /* ingeslagen letters */
+  background:
+    repeating-linear-gradient(118deg, rgba(255,255,255,.035) 0 5px, rgba(0,0,0,.05) 5px 11px),
+    linear-gradient(180deg, #8a7e6b, #514637 58%, #3a332b);              /* ruwe steen */
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.15), inset 0 -5px 9px rgba(0,0,0,.55), 0 2px 4px rgba(0,0,0,.5);
+}
+.bs-craft-btn.equip { color: #ffe6a0; border-color: #7a5a2a;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.15), inset 0 -5px 9px rgba(0,0,0,.55), 0 0 11px rgba(255,150,40,.4); }  /* smeedbaar: warme gloed */
+.bs-craft-btn.owned { color: #9ad89a; }
+.bs-craft-btn.locked, .bs-craft-btn:disabled { opacity: .5; cursor: default; }
+.bs-craft-btn:not(:disabled):active { transform: translateY(1px); box-shadow: inset 0 3px 7px rgba(0,0,0,.65); }
+/* Blacksmith compact op iOS-landscape zodat alles past (geen verticale scroll) */
+@media (max-height: 520px) {
+  #blacksmith-screen .screen-title { font-size: 15px; margin-bottom: 2px; }
+  #blacksmith-screen #bs-tabs { margin-bottom: 3px; }
+  .bs-mats { gap: 5px; margin: 1px 0 3px; }
+  .mat-chip { font-size: 11px; padding: 2px 8px; }
+  .bs-forge { padding: 4px 10px; margin: 1px auto 4px; }
+  #bs-grid { gap: 6px; }
+  #bs-grid .shop-card { padding: 6px; gap: 3px; }
+  #bs-grid .shop-card canvas { max-height: 54px; }
+  #bs-grid .shop-card-name { font-size: 12px; }
+  #bs-grid .armor-hp { font-size: 10px; }
+  #bs-grid .armor-cost { font-size: 9px; margin-top: 1px; }
+  .bs-craft-btn { padding: 5px 4px; font-size: 12px; margin-top: 3px; }
+}
 #btn-vs-quit {
   position: absolute; right: max(10px, env(safe-area-inset-right)); top: 4px;
   pointer-events: auto; width: 34px; height: 34px; border-radius: 8px;

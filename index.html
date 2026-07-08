@@ -11,9 +11,9 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#0d0f14" />
   <title>Tiny Power Smashers</title>
-  <link rel="icon" type="image/svg+xml" href="icon.svg?v=menu158" />
-  <link rel="apple-touch-icon" href="icon.svg?v=menu158" />
-  <link rel="stylesheet" href="css/style.css?v=menu158" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg?v=menu159" />
+  <link rel="apple-touch-icon" href="icon.svg?v=menu159" />
+  <link rel="stylesheet" href="css/style.css?v=menu159" />
 </head>
 <body>
   <div id="game-root">
@@ -69,7 +69,7 @@
     </div>
 
     <!-- ===== Splash bij opstarten (logo, fadet vanzelf weg) ===== -->
-    <div id="splash"><img src="logo.svg?v=menu158" alt="Tiny Power Smashers" /></div>
+    <div id="splash"><img src="logo.svg?v=menu159" alt="Tiny Power Smashers" /></div>
 
     <!-- ===== Canvas (de spelwereld) ===== -->
     <canvas id="game-canvas"></canvas>
@@ -141,7 +141,7 @@
               <span id="menu-ruby-count">0</span>
             </span>
           </div>
-          <img class="menu-logo-img" src="logo.svg?v=menu158" alt="Tiny Power Smashers" />
+          <img class="menu-logo-img" src="logo.svg?v=menu159" alt="Tiny Power Smashers" />
           <div class="menu-hud">
             <span id="menu-userline" class="menu-userline">Gast | Lvl 1</span>
             <button id="btn-settings" class="stone-icon" data-i18n-title="settings_word" data-i18n-aria="settings_word" title="Settings" aria-label="Settings">
@@ -173,16 +173,15 @@
           <button class="chest-slot" data-chest="2"></button>
         </div>
 
-        <div class="menu-utility-row">
-          <button id="btn-training" class="stone-btn train-lobby-btn"><svg class="ic"><use href="#ic-char"/></svg> <span data-i18n="training_lobby">Training Lobby</span></button>
-          <button id="btn-blacksmith" class="stone-btn train-lobby-btn"><svg class="ic"><use href="#ic-hammer"/></svg> <span data-i18n="blacksmith">Blacksmith</span></button>
-        </div>
-
         <footer class="menu-bottom">
-          <button id="btn-shop" class="stone-btn"><svg class="ic"><use href="#ic-cart"/></svg> <span data-i18n="shop">Shop</span></button>
+          <div class="mb-stack">
+            <button id="btn-blacksmith" class="stone-btn"><svg class="ic"><use href="#ic-hammer"/></svg> <span data-i18n="blacksmith">Blacksmith</span></button>
+            <button id="btn-shop" class="stone-btn"><svg class="ic"><use href="#ic-cart"/></svg> <span data-i18n="shop">Shop</span></button>
+          </div>
           <button id="btn-inventory" class="stone-btn"><svg class="ic"><use href="#ic-backpack"/></svg> <span data-i18n="inventory">Inventory</span></button>
-          <div class="menu-bottom-right">
-            <button id="btn-chat" class="stone-btn"><svg class="ic"><use href="#ic-char"/></svg> <span data-i18n="friends">Friends</span></button>
+          <button id="btn-chat" class="stone-btn"><svg class="ic"><use href="#ic-char"/></svg> <span data-i18n="friends">Friends</span></button>
+          <div class="mb-stack">
+            <button id="btn-training" class="stone-btn"><svg class="ic"><use href="#ic-char"/></svg> <span data-i18n="training_lobby">Training Lobby</span></button>
             <button id="btn-leaderboard" class="stone-btn" data-i18n="leaderboard">Leaderboard</button>
           </div>
         </footer>
@@ -214,7 +213,6 @@
             </div>
             <button id="btn-sound" class="big-btn secondary">Sound: On</button>
             <button id="btn-update" class="big-btn secondary"><svg class="ic"><use href="#ic-refresh"/></svg> <span data-i18n="update_fresh">Update (fresh version)</span></button>
-            <button id="btn-newgame" class="text-btn" data-i18n="new_game">New game (wipe progress)</button>
           </div>
         </div>
         <button id="btn-settings-close" class="big-btn" data-i18n="close">Close</button>
@@ -623,18 +621,18 @@
     </div>
   </div>
 
-  <script src="vendor/supabase.min.js?v=menu158"></script>
-  <script src="js/i18n.js?v=menu158"></script>
-  <script src="js/config.js?v=menu158"></script>
-  <script src="js/storage.js?v=menu158"></script>
-  <script src="js/audio.js?v=menu158"></script>
-  <script src="js/net.js?v=menu158"></script>
-  <script src="js/input.js?v=menu158"></script>
-  <script src="js/sprites.js?v=menu158"></script>
-  <script src="js/menubg.js?v=menu158"></script>
-  <script src="js/entities.js?v=menu158"></script>
-  <script src="js/ui.js?v=menu158"></script>
-  <script src="js/game.js?v=menu158"></script>
-  <script src="js/main.js?v=menu158"></script>
+  <script src="vendor/supabase.min.js?v=menu159"></script>
+  <script src="js/i18n.js?v=menu159"></script>
+  <script src="js/config.js?v=menu159"></script>
+  <script src="js/storage.js?v=menu159"></script>
+  <script src="js/audio.js?v=menu159"></script>
+  <script src="js/net.js?v=menu159"></script>
+  <script src="js/input.js?v=menu159"></script>
+  <script src="js/sprites.js?v=menu159"></script>
+  <script src="js/menubg.js?v=menu159"></script>
+  <script src="js/entities.js?v=menu159"></script>
+  <script src="js/ui.js?v=menu159"></script>
+  <script src="js/game.js?v=menu159"></script>
+  <script src="js/main.js?v=menu159"></script>
 </body>
 </html>
