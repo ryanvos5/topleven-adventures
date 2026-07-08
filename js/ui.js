@@ -111,6 +111,7 @@ const UI = {
     }
     // taal (Engels/Nederlands)
     if (window.I18N) {
+      I18N.applyContent();   // config-content naar de gekozen taal (standaard Engels)
       I18N.apply();
       const markLang = () => document.querySelectorAll('.lang-btn').forEach((b) => b.classList.toggle('active', b.dataset.lang === I18N.lang));
       markLang();
@@ -2041,12 +2042,12 @@ const UI = {
       if (mode === 'shop') {
         const afford = Storage.data.coins >= pu.cost;
         btn.classList.add(afford ? 'buy' : 'cant');
-        btn.textContent = 'KOOP — ' + pu.cost + ' ●';
+        btn.textContent = t('buy') + ' — ' + pu.cost + ' ●';
         this._tap(btn, () => { if (Storage.buyPowerup(id)) this.renderShop(); });
       } else {                              // inventaris: loadout-toggle
-        if (inLo) { btn.classList.add('equipped'); btn.innerHTML = count > 0 ? this._ic('check') + ' IN LOADOUT' : this._ic('x') + ' UIT LOADOUT'; card.classList.add('in-loadout'); if (count <= 0) card.classList.add('depleted'); this._tap(btn, () => { Storage.toggleLoadout(id); this.renderInventory(); }); }
-        else if (count <= 0) { card.classList.add('locked'); btn.classList.add('cant'); btn.textContent = 'Koop in shop'; }
-        else { btn.classList.add('equip'); btn.textContent = 'KIES'; this._tap(btn, () => { if (!Storage.toggleLoadout(id)) this.flashLoadoutFull(); this.renderInventory(); }); }
+        if (inLo) { btn.classList.add('equipped'); btn.innerHTML = count > 0 ? this._ic('check') + ' ' + t('in_loadout') : this._ic('x') + ' ' + t('out_loadout'); card.classList.add('in-loadout'); if (count <= 0) card.classList.add('depleted'); this._tap(btn, () => { Storage.toggleLoadout(id); this.renderInventory(); }); }
+        else if (count <= 0) { card.classList.add('locked'); btn.classList.add('cant'); btn.textContent = t('buy_in_shop'); }
+        else { btn.classList.add('equip'); btn.textContent = t('choose'); this._tap(btn, () => { if (!Storage.toggleLoadout(id)) this.flashLoadoutFull(); this.renderInventory(); }); }
       }
       card.appendChild(btn);
       grid.appendChild(card);
@@ -2098,9 +2099,9 @@ const UI = {
       const hp = document.createElement('div'); hp.className = 'armor-hp'; hp.innerHTML = '+' + p.hp + ' HP · ' + ARMOR_SLOT_NAME[slot]; card.appendChild(hp);
       const durw = document.createElement('div'); durw.className = 'armor-dur' + (dur / p.maxDur < 0.34 ? ' low' : ''); const dspan = document.createElement('span'); dspan.style.width = Math.round(100 * dur / p.maxDur) + '%'; durw.appendChild(dspan); card.appendChild(durw);
       const btn = document.createElement('button'); btn.className = 'shop-card-btn';
-      if (broken) { btn.className += ' equip'; btn.textContent = 'REPAREER'; this._tap(btn, () => { this.openBlacksmith(); this._bsTab = set; this.renderBlacksmith(); }); }
+      if (broken) { btn.className += ' equip'; btn.textContent = t('repair_btn'); this._tap(btn, () => { this.openBlacksmith(); this._bsTab = set; this.renderBlacksmith(); }); }
       else if (equipped) { btn.className += ' equipped'; btn.innerHTML = this._ic('check') + ' AAN'; this._tap(btn, () => { Storage.equipArmor(id); this.renderInventory(); }); }
-      else { btn.className += ' equip'; btn.textContent = 'UITRUSTEN'; this._tap(btn, () => { Storage.equipArmor(id); this.renderInventory(); }); }
+      else { btn.className += ' equip'; btn.textContent = t('equip'); this._tap(btn, () => { Storage.equipArmor(id); this.renderInventory(); }); }
       card.appendChild(btn); grid.appendChild(card);
     }
     if (!any) { const e = document.createElement('p'); e.className = 'screen-sub'; e.textContent = 'Nog geen harnas. Smeed er een bij de Blacksmith.'; grid.appendChild(e); }
@@ -2180,11 +2181,11 @@ const UI = {
       cl.innerHTML = Object.keys(cost).map((k) => { const short = (Storage.materials()[k] || 0) < cost[k]; return '<span' + (short ? ' class="short"' : '') + '>' + cost[k] + ' ' + MATERIALS[k].name + '</span>'; }).join(' · ') + ' · ' + this._fmtDur(ms);
       card.appendChild(cl);
       const btn = document.createElement('button'); btn.className = 'shop-card-btn';
-      if (owned && dur >= p.maxDur) { btn.className += ' owned'; btn.textContent = 'GEMAAKT'; btn.disabled = true; }
-      else if (busy) { btn.className += ' locked'; btn.textContent = 'SMID BEZIG'; btn.disabled = true; }
+      if (owned && dur >= p.maxDur) { btn.className += ' owned'; btn.textContent = t('made'); btn.disabled = true; }
+      else if (busy) { btn.className += ' locked'; btn.textContent = t('smith_busy'); btn.disabled = true; }
       else {
         const can = Storage.canCraft(id, repair);
-        btn.className += can ? ' equip' : ' locked'; btn.textContent = repair ? 'REPAREER' : 'SMEED';
+        btn.className += can ? ' equip' : ' locked'; btn.textContent = repair ? t('repair_btn') : t('forge_btn');
         if (can) this._tap(btn, () => { if (Storage.startCraft(id, repair)) { if (window.Sfx) Sfx.play('pickup'); this.renderBlacksmith(); } });
         else btn.disabled = true;
       }
@@ -2199,7 +2200,7 @@ const UI = {
     const p = ARMOR_PIECES[f.id];
     const nm = document.createElement('span'); nm.className = 'bs-forge-name'; nm.textContent = (f.repair ? 'Repareren: ' : 'Smeden: ') + p.name; el.appendChild(nm);
     if (Storage.forgeReady()) {
-      const btn = document.createElement('button'); btn.className = 'bs-collect'; btn.textContent = 'OPHALEN';
+      const btn = document.createElement('button'); btn.className = 'bs-collect'; btn.textContent = t('collect');
       this._tap(btn, () => { const r = Storage.collectForge(); if (r) { if (window.Sfx) Sfx.play('coin'); this.renderBlacksmith(); } });
       el.appendChild(btn);
     } else {
@@ -2345,8 +2346,8 @@ const UI = {
       const card = this._spriteCard(c.palette, { weapon: c.startMelee || c.forcedMelee || 'bat', build: c.build, hair: c.hair, hat: Storage.data.equippedHat, outfit: c.outfit }, '<div class="w-name">' + c.name + '</div>', true);
       card.appendChild(this._charLevelBlock(cid));      // level + XP-balk + upgrade + stats
       const btn = document.createElement('button'); btn.className = 'shop-buy';
-      if (equipped) { btn.classList.add('equipped'); btn.textContent = 'UITGERUST'; }
-      else { btn.classList.add('equip'); btn.textContent = 'UITRUSTEN'; this._tap(btn, () => { Storage.equipCharacter(cid); this.renderInventory(); }); }
+      if (equipped) { btn.classList.add('equipped'); btn.textContent = t('equipped'); }
+      else { btn.classList.add('equip'); btn.textContent = t('equip'); this._tap(btn, () => { Storage.equipCharacter(cid); this.renderInventory(); }); }
       card.appendChild(btn); grid.appendChild(card);
     });
   },
@@ -2489,7 +2490,7 @@ const UI = {
       const cv = document.createElement('canvas'); cv.width = 48; cv.height = 40; cv.className = 'chest-ico';
       this._drawChestIcon(cv, c.r, ready);
       const lbl = document.createElement('span'); lbl.className = 'chest-lbl';
-      lbl.textContent = ready ? 'OPHALEN!' : (c.u <= 0 ? t.name : this._fmtChestTime(Storage.chestSecondsLeft(i)));
+      lbl.textContent = ready ? t('collect_ready') : (c.u <= 0 ? t.name : this._fmtChestTime(Storage.chestSecondsLeft(i)));
       slot.appendChild(cv); slot.appendChild(lbl);
       // bezig met openen -> robijn-knop om de wachttijd te skippen
       if (!ready && c.u > 0) {
@@ -2584,17 +2585,17 @@ const UI = {
       const btn = document.createElement('button');
       btn.className = 'shop-buy';
       if (equipped) {
-        btn.classList.add('equipped'); btn.textContent = 'UITGERUST';
+        btn.classList.add('equipped'); btn.textContent = t('equipped');
       } else if (owned) {
-        btn.classList.add('equip'); btn.textContent = 'UITRUSTEN';
+        btn.classList.add('equip'); btn.textContent = t('equip');
         btn.onclick = () => { Storage.equipWeapon(wid); this.renderShop(); };
       } else if (Storage.data.coins >= w.cost) {
-        btn.classList.add('buy'); btn.textContent = `KOOP — ${w.cost} ●`;
+        btn.classList.add('buy'); btn.textContent = t('buy') + ` — ${w.cost} ●`;
         btn.onclick = () => {
           if (Storage.buyWeapon(wid)) { Storage.equipWeapon(wid); this.renderShop(); }
         };
       } else {
-        btn.classList.add('cant'); btn.textContent = `${w.cost} ● (te weinig)`;
+        btn.classList.add('cant'); btn.textContent = `${w.cost} ● ${t('too_few')}`;
       }
 
       card.appendChild(canvas);
@@ -2621,10 +2622,10 @@ const UI = {
     if (Storage.data.ammo >= AMMO_MAX) {
       aBtn.classList.add('cant'); aBtn.textContent = 'VOORRAAD VOL';
     } else if (Storage.data.coins >= AMMO_PACK.cost) {
-      aBtn.classList.add('buy'); aBtn.textContent = `KOOP +${AMMO_PACK.amount} — ${AMMO_PACK.cost} ●`;
+      aBtn.classList.add('buy'); aBtn.textContent = t('buy') + ` +${AMMO_PACK.amount} — ${AMMO_PACK.cost} ●`;
       aBtn.onclick = () => { if (Storage.buyAmmo()) this.renderShop(); };
     } else {
-      aBtn.classList.add('cant'); aBtn.textContent = `${AMMO_PACK.cost} ● (te weinig)`;
+      aBtn.classList.add('cant'); aBtn.textContent = `${AMMO_PACK.cost} ● ${t('too_few')}`;
     }
     aCard.appendChild(aCanvas);
     aCard.appendChild(aInfo);
@@ -2646,10 +2647,10 @@ const UI = {
       const rBtn = document.createElement('button');
       rBtn.className = 'shop-buy';
       if (Storage.data.coins >= ROCKET_COST) {
-        rBtn.classList.add('buy'); rBtn.textContent = `KOOP +1 — ${ROCKET_COST} ●`;
+        rBtn.classList.add('buy'); rBtn.textContent = t('buy') + ` +1 — ${ROCKET_COST} ●`;
         rBtn.onclick = () => { if (Storage.buyRocket()) this.renderShop(); };
       } else {
-        rBtn.classList.add('cant'); rBtn.textContent = `${ROCKET_COST} ● (te weinig)`;
+        rBtn.classList.add('cant'); rBtn.textContent = `${ROCKET_COST} ● ${t('too_few')}`;
       }
       rCard.appendChild(rCanvas);
       rCard.appendChild(rInfo);
@@ -2688,19 +2689,19 @@ const UI = {
       const btn = document.createElement('button');
       btn.className = 'shop-buy';
       if (equipped) {
-        btn.classList.add('equipped'); btn.textContent = 'UITGERUST';
+        btn.classList.add('equipped'); btn.textContent = t('equipped');
       } else if (owned) {
-        btn.classList.add('equip'); btn.textContent = 'UITRUSTEN';
+        btn.classList.add('equip'); btn.textContent = t('equip');
         btn.onclick = () => { Storage.equipCharacter(cid); this.renderShop(); };
       } else if (c.journeyOnly) {
         card.classList.add('locked'); btn.classList.add('cant'); btn.innerHTML = this._ic('lock') + ' Journey';
       } else if (myLvl < (c.lvl || 0)) {
         card.classList.add('locked'); btn.classList.add('cant'); btn.innerHTML = this._ic('lock') + ' Level ' + c.lvl;
       } else if (Storage.data.coins >= c.cost) {
-        btn.classList.add('buy'); btn.textContent = `KOOP — ${c.cost} ●`;
+        btn.classList.add('buy'); btn.textContent = t('buy') + ` — ${c.cost} ●`;
         btn.onclick = () => { if (Storage.buyCharacter(cid)) { Storage.equipCharacter(cid); this.renderShop(); } };
       } else {
-        btn.classList.add('cant'); btn.textContent = `${c.cost} ● (te weinig)`;
+        btn.classList.add('cant'); btn.textContent = `${c.cost} ● ${t('too_few')}`;
       }
 
       card.appendChild(canvas);
@@ -2742,10 +2743,10 @@ const UI = {
       } else if (myLvl < (h.lvl || 0)) {
         card.classList.add('locked'); btn.classList.add('cant'); btn.innerHTML = this._ic('lock') + ' Level ' + h.lvl;
       } else if (Storage.data.coins >= h.cost) {
-        btn.classList.add('buy'); btn.textContent = `KOOP — ${h.cost} ●`;
+        btn.classList.add('buy'); btn.textContent = t('buy') + ` — ${h.cost} ●`;
         btn.onclick = () => { if (Storage.buyHat(hid)) { Storage.equipHat(hid); this.renderShop(); } };
       } else {
-        btn.classList.add('cant'); btn.textContent = `${h.cost} ● (te weinig)`;
+        btn.classList.add('cant'); btn.textContent = `${h.cost} ● ${t('too_few')}`;
       }
 
       card.appendChild(canvas);
