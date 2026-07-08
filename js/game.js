@@ -2263,6 +2263,81 @@ const Game = {
         } },
       ];
     }
+    // ===== TEMPLE BEWAKER / GUARDIAN (Wereld 2, level 5) — de ingang van de grote tempel =====
+    if (script === 'guardian') {
+      const P = (x) => Math.round(W * x);
+      const gx = W * 0.72;                                   // hart van de tempelpoort
+      // hoge stenen pilaar met kapiteel + gegraveerde symbolen
+      const pillar = (c, x) => { c.fillStyle = '#7a5a38'; c.fillRect(x, gy - 92, 16, 92); c.fillStyle = '#8a6a44'; c.fillRect(x - 3, gy - 96, 22, 6); c.fillRect(x - 2, gy - 6, 20, 6); c.fillStyle = '#5a4028'; for (let y = gy - 84; y < gy - 8; y += 12) Sprites.px(c, '#5a4028', x + 2, y, 12, 2); c.fillStyle = '#c98a3a'; Sprites.px(c, '#c98a3a', x + 5, gy - 60, 6, 6); Sprites.px(c, '#c98a3a', x + 5, gy - 42, 6, 6); };   // gouden glyphs
+      // de grote poort met twee schuivende deuren (open = 0..1)
+      const gate = (c, open) => {
+        const gw = 104, gh = 104, bx = gx - gw / 2, by = gy - gh;
+        c.fillStyle = '#7a5a38'; c.fillRect(bx, by, gw, gh);
+        c.fillStyle = '#8a6a44'; c.fillRect(bx, by, gw, 6);
+        c.strokeStyle = '#5a4028'; c.lineWidth = 1; for (let y = by + 12; y < gy; y += 16) { c.beginPath(); c.moveTo(bx, y); c.lineTo(bx + gw, y); c.stroke(); }
+        c.fillStyle = '#c98a3a'; c.fillRect(bx + 8, by + 8, gw - 16, 5);           // gouden latei
+        c.fillStyle = '#b8912e'; Sprites.px(c, '#b8912e', gx - 3, by + 18, 6, 8); Sprites.px(c, '#b8912e', gx - 10, by + 20, 4, 5); Sprites.px(c, '#b8912e', gx + 6, by + 20, 4, 5);   // mysterieus symbool
+        const oh = gh - 22, ow = 46, ox = gx - ow / 2, oy = gy - oh;
+        c.fillStyle = '#160f08'; c.fillRect(ox, oy, ow, oh);                        // duistere doorgang
+        const slide = Math.round(open * (ow / 2));
+        c.fillStyle = '#4a3826'; c.fillRect(ox, oy, ow / 2 - slide, oh); c.fillRect(ox + ow / 2 + slide, oy, ow / 2 - slide, oh);   // schuifdeuren
+        c.fillStyle = '#3a2c1c'; c.fillRect(ox + ow / 2 - slide - 2, oy, 2, oh); c.fillRect(ox + ow / 2 + slide, oy, 2, oh);
+      };
+      const guardian = (c, x, fy, dir, ph, opts) => this._storyFighter(c, 'guardian', x, fy, dir, ph, 1.32, Object.assign({ weapon: 'katana' }, opts || {}));
+      const glowEyes = (c, x, y) => { const gl = 0.55 + 0.45 * Math.abs(Math.sin(clk() / 160)); c.fillStyle = 'rgba(120,230,255,' + gl.toFixed(2) + ')'; c.fillRect(x, y, 3, 2); c.fillRect(x + 6, y, 3, 2); };
+      return [
+        // ===== Scène 1 – De Tempel =====
+        { theme: 'temple', dur: 2400, cap: 'Na een lange reis bereik je de ingang van een gigantische eeuwenoude tempel.', draw: (t) => {
+          const c = this.ctx, p = Math.min(1, t / 2400); pillar(c, W * 0.42); pillar(c, W * 0.9); gate(c, 0);
+          Sprites.drawCharacter(c, P(0.14) + Math.round(p * 26), Math.round(gy - 2), 1, ch.palette, Object.assign({ walkPhase: clk() / 70, weapon: null }, pose0));
+        } },
+        { theme: 'temple', dur: 2300, cap: 'Hoge stenen pilaren en mysterieuze symbolen wijzen erop dat niemand hier welkom is.', draw: () => {
+          const c = this.ctx; pillar(c, W * 0.42); pillar(c, W * 0.9); gate(c, 0);
+          Sprites.drawCharacter(c, P(0.26), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          c.fillStyle = '#c98a3a'; c.font = 'bold 10px "Courier New",monospace'; c.fillText('☥', W * 0.42 + 3, gy - 30); c.fillText('☸', W * 0.9 + 3, gy - 30);
+        } },
+        { theme: 'temple', dur: 2200, cap: 'De zware tempeldeuren beginnen langzaam open te schuiven…', draw: (t) => {
+          const c = this.ctx, p = Math.min(1, t / 2200); pillar(c, W * 0.42); pillar(c, W * 0.9); gate(c, p * 0.6);
+          Sprites.drawCharacter(c, P(0.26), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          c.fillStyle = '#8fd0ff'; c.fillRect(P(0.26) + 8, gy - 30, 2, 3);   // zweetdruppel
+        } },
+        // ===== Scène 2 – De Bewaker =====
+        { theme: 'temple', dur: 2400, cap: 'Uit de duisternis verschijnt de TEMPLE BEWAKER, gehuld in eeuwenoud pantser.', draw: (t) => {
+          const c = this.ctx, p = Math.min(1, t / 2400); pillar(c, W * 0.42); pillar(c, W * 0.9); gate(c, 1);
+          Sprites.drawCharacter(c, P(0.2), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          c.globalAlpha = 0.4 + 0.6 * p; guardian(c, gx, gy - 2, -1, 0, {}); c.globalAlpha = 1;   // vervaagt uit de duisternis
+        } },
+        { theme: 'temple', dur: 2300, cap: 'Hij heft zijn wapen en gaat zwijgend voor de ingang staan.', draw: () => {
+          const c = this.ctx; pillar(c, W * 0.42); pillar(c, W * 0.9); gate(c, 1);
+          Sprites.drawCharacter(c, P(0.2), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          guardian(c, gx - 6, gy - 2, -1, 0, { attacking: true });
+        } },
+        { theme: 'temple', dur: 2100, cap: 'Niemand mag de tempel betreden zolang hij nog leeft.', draw: () => {
+          const c = this.ctx; pillar(c, W * 0.42); pillar(c, W * 0.9); gate(c, 1);
+          Sprites.drawCharacter(c, P(0.22), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          guardian(c, gx - 8, gy - 2, -1, 0, {});
+          c.fillStyle = '#ff5a5a'; c.font = 'bold 14px "Courier New",monospace'; c.fillText('!', gx - 10, gy - 44);
+        } },
+        // ===== Scène 3 – De Uitdaging =====
+        { theme: 'temple', dur: 2200, cap: 'De TEMPLE BEWAKER zet een stap naar voren en sluit de doorgang af.', draw: (t) => {
+          const c = this.ctx, p = Math.min(1, t / 2200), kx = (gx - 8) - p * (W * 0.1); pillar(c, W * 0.42); pillar(c, W * 0.9); gate(c, 1);
+          Sprites.drawCharacter(c, P(0.24), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          guardian(c, kx, gy - 2, -1, clk() / 55, { attacking: true });
+        } },
+        { theme: 'temple', dur: 2000, cap: 'Zijn ogen lichten op terwijl hij zich klaarmaakt voor de strijd.', draw: () => {
+          const c = this.ctx, bob = Math.abs(Math.sin(clk() / 90)) * 2; pillar(c, W * 0.42); pillar(c, W * 0.9); gate(c, 1);
+          Sprites.drawCharacter(c, P(0.26), Math.round(gy - 2), 1, ch.palette, Object.assign({ ducking: true, weapon: null }, pose0));
+          guardian(c, W * 0.6, gy - 2 - bob, -1, 0, { attacking: true });
+          glowEyes(c, W * 0.6 - 4, gy - 42);
+        } },
+        { theme: 'temple', dur: 1800, cap: 'Versla de TEMPLE BEWAKER en baan je een weg naar de geheimen van de tempel — VECHT!', draw: () => {
+          const c = this.ctx, bob = Math.abs(Math.sin(clk() / 80)) * 2.5; pillar(c, W * 0.9); gate(c, 1);
+          Sprites.drawCharacter(c, P(0.3), Math.round(gy - 2), 1, ch.palette, Object.assign({ attacking: true, weapon: null }, pose0));
+          guardian(c, W * 0.62, gy - 2 - bob, -1, 0, { attacking: true });
+          c.fillStyle = '#ffef9a'; c.font = 'bold 16px "Courier New",monospace'; c.textAlign = 'center'; c.fillText('VS', P(0.47), gy - 50); c.textAlign = 'left';
+        } },
+      ];
+    }
     const sc = this._storyData; if (!sc) return [];
     const px = Math.round(W * 0.30), fxT = W * 0.68;
     return [

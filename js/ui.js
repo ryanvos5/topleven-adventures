@@ -380,9 +380,9 @@ const UI = {
     if (world === 1) {
       const script = this._journeyStoryFor(n);
       if (script) { this.playStory(script, n); return; }
-    } else if (world === 2 && n === 1) {
-      // Wereld 2 begint met de slot-cutscene van wereld 1 (de overgang van de jungle naar de tempel).
-      this.playStory('kongwin', n); return;
+    } else if (world === 2) {
+      const script = this._journeyStory2For(n);
+      if (script) { this.playStory(script, n); return; }
     }
     this.startJourneyLevel(n);
   },
@@ -394,6 +394,12 @@ const UI = {
     if (n === 10) return 'koba';     // Koba (baas 2)
     if (n === 15) return 'kong';     // Gorilla King (eindbaas)
     return null;
+  },
+  // Wereld 2-verhalen: opening = slot-cutscene van wereld 1, plus de tempel-bazen.
+  _journeyStory2For(n) {
+    if (n === 1) return 'kongwin';   // overgang jungle -> tempel (slot van wereld 1)
+    if (n === 5) return 'guardian';  // Temple Bewaker (baas 1)
+    return null;                      // Monnik (10) en Ninja (15) volgen later
   },
   // verhaal-cutscene op het canvas afspelen, daarna het level starten
   playStory(script, n) {
