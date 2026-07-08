@@ -38,6 +38,14 @@ const I18N = {
       you: 'YOU', vs: 'VS', you_vs: 'YOU · VS',
       // ---- blacksmith ----
       set_squire: 'Squire', set_knight: 'Knight', set_royal: 'Royal Knight',
+      // ---- journey / beloningen ----
+      world_map: 'WORLD MAP', both_defeated: 'You were both defeated — level failed.',
+      unlock_gk_pre: 'Beat the GORILLA KING first to unlock ', level_word: 'Level',
+      unlocked: 'UNLOCKED!', new_char: 'New character: ', new_hat: 'New hat: ',
+      reward_powerup: 'POWER-UP', reward_material: 'MATERIAL', new_chest: 'NEW CHEST!',
+      chest_open_suffix: ' chest — open it in the menu!', level_up: 'LEVEL UP!', reward: 'REWARD',
+      coins_word: 'coins', xp_word: 'XP', rubies_word: 'rubies',
+      coop: 'Play together (co-op)', coop_hint: 'Invite an online friend, then pick a level together.',
     },
     nl: {
       back: 'Terug', close: 'Sluiten', cancel: 'Annuleren', save: 'Opslaan', ok: 'OK', play: 'Play',
@@ -63,6 +71,13 @@ const I18N = {
       journey_title: 'JOURNEY', world: 'Wereld', story_next: 'Verder', story_skip: 'Overslaan',
       you: 'JIJ', vs: 'VS', you_vs: 'JIJ · TEGEN',
       set_squire: 'Schildknaap', set_knight: 'Ridder', set_royal: 'Royal Knight',
+      world_map: 'WERELDKAART', both_defeated: 'Jullie zijn allebei verslagen — level mislukt.',
+      unlock_gk_pre: 'Versla eerst de GORILLA KING om ', level_word: 'Level',
+      unlocked: 'VRIJGESPEELD!', new_char: 'Nieuw character: ', new_hat: 'Nieuwe hoed: ',
+      reward_powerup: 'POWER-UP', reward_material: 'MATERIAAL', new_chest: 'NIEUWE KIST!',
+      chest_open_suffix: '-kist — open in het menu!', level_up: 'LEVEL UP!', reward: 'BELONING',
+      coins_word: 'munten', xp_word: 'XP', rubies_word: 'robijnen',
+      coop: 'Samen spelen (co-op)', coop_hint: 'Nodig een online vriend uit; kies daarna samen een level.',
     },
   },
   init() {
@@ -199,6 +214,11 @@ I18N.CONTENT = {
     materials: { leather: { name: 'Leather' }, nails: { name: 'Nails' }, iron: { name: 'Iron' }, steel: { name: 'Steel' } },
     sets: { leather: { name: 'Squire' }, iron: { name: 'Knight' }, steel: { name: 'Royal Knight' } },
     slots: { hat: 'Helmet', chest: 'Chestplate', bottom: 'Legplate', feet: 'Boots' },
+    worlds: { 1: 'Uninhabited Island', 2: 'Lost Temple' },
+    levels: {
+      1: ['Washed Ashore', 'Breakers', 'Palm Reef', 'Monkey Business', 'BONZO', 'Lagoon', 'Clifftops', 'Sandbank', 'Forbidden Beach', 'KOBA', 'Coconut Palace', 'Storm Cape', 'Spring Tide', 'Ape Hill', 'GORILLA KING'],
+      2: ['Gate', 'Courtyard', 'Colonnade', 'Altar', 'TEMPLE GUARDIAN', 'Cloister', 'Meditation Garden', 'Bell Tower', 'Hidden Chamber', 'MONK', 'Roof Gardens', 'Shadow Path', 'Trap Halls', 'Dojo', 'NINJA'],
+    },
   },
 };
 I18N._maps = [
@@ -237,6 +257,19 @@ I18N.applyContent = function () {
     const sl = useEn ? EN.slots : (this._origSlots || {});
     for (const k in sl) ARMOR_SLOT_NAME[k] = sl[k];
     for (const id in ARMOR_PIECES) { const p = ARMOR_PIECES[id]; if (ARMOR_SETS[p.set]) p.name = ARMOR_SETS[p.set].name + ' ' + ARMOR_SLOT_NAME[p.slot]; }
+  }
+  // Journey: wereld- + level-namen (genest)
+  if (typeof JOURNEY !== 'undefined') {
+    if (!this._origJourney) {
+      this._origJourney = { worlds: {}, levels: {} };
+      for (const w of [1, 2]) { if (!JOURNEY[w]) continue; this._origJourney.worlds[w] = JOURNEY[w].name; this._origJourney.levels[w] = (JOURNEY[w].levels || []).map(function (l) { return l.name; }); }
+    }
+    for (const w of [1, 2]) {
+      if (!JOURNEY[w]) continue;
+      JOURNEY[w].name = (useEn && EN.worlds && EN.worlds[w]) ? EN.worlds[w] : this._origJourney.worlds[w];
+      const lv = (useEn && EN.levels && EN.levels[w]) ? EN.levels[w] : this._origJourney.levels[w];
+      (JOURNEY[w].levels || []).forEach(function (l, i) { if (lv && lv[i] != null) l.name = lv[i]; });
+    }
   }
 };
 

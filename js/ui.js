@@ -333,13 +333,13 @@ const UI = {
         b.className = 'shop-tab' + (w === world ? ' active' : '') + (locked ? ' locked' : '');
         b.innerHTML = (locked ? this._ic('lock') + ' ' : '') + JOURNEY[w].name;
         b.onclick = locked
-          ? () => { const s = document.getElementById('journey-world'); if (s) s.textContent = 'Versla eerst de GORILLA KING om ' + JOURNEY[w].name + ' vrij te spelen!'; }
+          ? () => { const s = document.getElementById('journey-world'); if (s) s.textContent = t('unlock_gk_pre') + JOURNEY[w].name + (I18N.lang==='nl' ? ' vrij te spelen!' : '!'); }
           : () => { this._journeyWorld = w; this.renderJourney(); };
         tabs.appendChild(b);
       });
     }
     const sub = document.getElementById('journey-world');
-    if (sub) sub.textContent = 'Wereld ' + world + ' — ' + JOURNEY[world].name;
+    if (sub) sub.textContent = t('world') + ' ' + world + ' — ' + JOURNEY[world].name;
     const cb = document.getElementById('coop-bar'); if (cb) cb.classList.add('hidden');   // journey = singleplayer smash-duels
     const grid = document.getElementById('journey-grid');
     if (!grid) return;
@@ -458,7 +458,7 @@ const UI = {
     const btn = document.getElementById('btn-jdeath-checkpoint');
     if (coopOver) {
       // co-op: allebei tegelijk verslagen -> level mislukt, alleen terug naar menu
-      if (sub) sub.textContent = 'Jullie zijn allebei verslagen — level mislukt.';
+      if (sub) sub.textContent = t('both_defeated');
       if (btn) btn.classList.add('hidden');
     } else {
       if (btn) btn.classList.remove('hidden');
@@ -503,7 +503,7 @@ const UI = {
       else { Game.journey = null; this.openJourney(); }
     };
     const again = document.getElementById('btn-vs-again');
-    again.textContent = 'WERELDKAART';
+    again.textContent = t('world_map');
     again.onclick = () => { document.getElementById('versus-result').classList.add('hidden'); Game.journey = null; if (window.Net) Net.leaveVersus(); this.openJourney(); };
     document.getElementById('btn-vs-menu').onclick = () => { document.getElementById('versus-result').classList.add('hidden'); Game.journey = null; this.show('menu'); };
     document.getElementById('versus-result').classList.remove('hidden');
@@ -611,49 +611,49 @@ const UI = {
     const cv = document.getElementById('reward-canvas'), ctx = cv.getContext('2d');
     ctx.imageSmoothingEnabled = false; ctx.clearRect(0, 0, cv.width, cv.height);
     if (r.type === 'char') {
-      title.textContent = 'VRIJGESPEELD!';
+      title.textContent = t('unlocked');
       const c = CHARACTERS[r.id] || CHARACTERS.ryan;
       ctx.save(); ctx.translate(cv.width / 2, 8); ctx.scale(2.5, 2.5);
       Sprites.drawCharacter(ctx, 0, 42, 1, c.palette, { weapon: c.startMelee || c.forcedMelee || 'bat', build: c.build, hair: c.hair, hat: 'none', outfit: c.outfit });
       ctx.restore();
-      nameEl.textContent = 'Nieuw character: ' + (r.name || c.name);
+      nameEl.textContent = t('new_char') + (r.name || c.name);
     } else if (r.type === 'hat') {
-      title.textContent = 'VRIJGESPEELD!';
+      title.textContent = t('unlocked');
       const cc = CHARACTERS[Storage.data.equippedCharacter] || CHARACTERS.ryan;
       ctx.save(); ctx.translate(cv.width / 2, 8); ctx.scale(2.5, 2.5);
       Sprites.drawCharacter(ctx, 0, 42, 1, cc.palette, { weapon: cc.forcedMelee || 'bat', build: cc.build, hair: cc.hair, hat: r.id, outfit: cc.outfit });
       ctx.restore();
-      nameEl.textContent = 'Nieuwe hoed: ' + (r.name || (HATS[r.id] && HATS[r.id].name) || '');
+      nameEl.textContent = t('new_hat') + (r.name || (HATS[r.id] && HATS[r.id].name) || '');
     } else if (r.type === 'pu') {   // power-up uit een kist
-      title.innerHTML = this._ic('bolt') + ' POWER-UP';
+      title.innerHTML = this._ic('bolt') + ' ' + t('reward_powerup');
       const pu = SHOP_POWERUPS[r.id] || {};
       ctx.save(); ctx.translate(cv.width / 2, cv.height / 2 - 6); ctx.scale(2.6, 2.6);
       if (Game && Game.drawDrop) Game.drawDrop(ctx, { kind: pu.kind, x: 0, y: 0, id: 0 });
       ctx.restore();
       nameEl.textContent = (pu.name || r.id) + (r.n > 1 ? '  x' + r.n : '');
     } else if (r.type === 'mat') {   // smeed-materiaal uit een kist
-      title.innerHTML = this._ic('hammer') + ' MATERIAAL';
+      title.innerHTML = this._ic('hammer') + ' ' + t('reward_material');
       const mt = (typeof MATERIALS !== 'undefined' && MATERIALS[r.id]) || { name: r.id, col: '#b0a080' };
       ctx.save(); ctx.translate(cv.width / 2, cv.height / 2 - 4); this._matArt(ctx, r.id, 3.2); ctx.restore();
       nameEl.textContent = (mt.name || r.id) + (r.n > 1 ? '  x' + r.n : '');
     } else if (r.type === 'chest') {   // nieuwe kist uit een match
-      title.innerHTML = this._ic('chest') + ' NIEUWE KIST!';
+      title.innerHTML = this._ic('chest') + ' ' + t('new_chest');
       ctx.save(); ctx.translate(cv.width / 2, cv.height / 2 - 6); ctx.scale(2.8, 2.8);
       this._chestArt(ctx, r.rarity); ctx.restore();
-      nameEl.textContent = (CHEST_TYPES[r.rarity] || {}).name + '-kist — open in het menu!';
+      nameEl.textContent = (CHEST_TYPES[r.rarity] || {}).name + t('chest_open_suffix');
     } else if (r.type === 'levelup') {   // level omhoog
-      title.innerHTML = this._ic('star') + ' LEVEL UP!';
+      title.innerHTML = this._ic('star') + ' ' + t('level_up');
       ctx.fillStyle = '#ffd23a'; this._star(ctx, cv.width / 2, cv.height / 2 - 6, 30, 5);
       ctx.fillStyle = '#7a5600'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(r.level, cv.width / 2, cv.height / 2 - 4);
-      nameEl.textContent = 'Level ' + r.level + '  ·  +' + r.coins + ' munten';
+      nameEl.textContent = t('level_word') + ' ' + r.level + '  ·  +' + r.coins + ' ' + t('coins_word');
     } else { // 'earn' — munten + xp (+ robijnen)
-      title.innerHTML = this._ic('trophy') + ' BELONING';
+      title.innerHTML = this._ic('trophy') + ' ' + t('reward');
       this._drawCoinXp(ctx, cv, r.coins || 0, r.xp || 0, r.rubies || 0);
       const parts = [];
-      if (r.xp) parts.push('+' + r.xp + ' XP');
-      if (r.coins) parts.push('+' + r.coins + ' munten');
-      if (r.rubies) parts.push('+' + r.rubies + ' robijnen');
+      if (r.xp) parts.push('+' + r.xp + ' ' + t('xp_word'));
+      if (r.coins) parts.push('+' + r.coins + ' ' + t('coins_word'));
+      if (r.rubies) parts.push('+' + r.rubies + ' ' + t('rubies_word'));
       nameEl.textContent = parts.join('   ·   ');
     }
   },
@@ -1964,13 +1964,13 @@ const UI = {
       const open = this.worldUnlocked(w.id);
       const tab = document.createElement('button');
       tab.className = 'world-tab' + (w.id === this.viewWorld ? ' active' : '') + (open ? '' : ' locked');
-      if (open) tab.textContent = 'Wereld ' + w.id; else tab.innerHTML = 'Wereld ' + w.id + ' ' + this._ic('lock');
+      if (open) tab.textContent = t('world') + ' ' + w.id; else tab.innerHTML = t('world') + ' ' + w.id + ' ' + this._ic('lock');
       if (open) tab.onclick = () => { this.viewWorld = w.id; this.renderLevels(); };
       tabs.appendChild(tab);
     });
 
     const world = WORLDS.find((w) => w.id === this.viewWorld);
-    document.getElementById('world-sub').textContent = 'Wereld ' + world.id + ' — ' + world.name;
+    document.getElementById('world-sub').textContent = t('world') + ' ' + world.id + ' — ' + world.name;
 
     const grid = this.el.levelGrid;
     grid.innerHTML = '';

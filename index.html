@@ -11,9 +11,9 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#0d0f14" />
   <title>Tiny Power Smashers</title>
-  <link rel="icon" type="image/svg+xml" href="icon.svg?v=menu151" />
-  <link rel="apple-touch-icon" href="icon.svg?v=menu151" />
-  <link rel="stylesheet" href="css/style.css?v=menu151" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg?v=menu152" />
+  <link rel="apple-touch-icon" href="icon.svg?v=menu152" />
+  <link rel="stylesheet" href="css/style.css?v=menu152" />
 </head>
 <body>
   <div id="game-root">
@@ -69,7 +69,7 @@
     </div>
 
     <!-- ===== Splash bij opstarten (logo, fadet vanzelf weg) ===== -->
-    <div id="splash"><img src="logo.svg?v=menu151" alt="Tiny Power Smashers" /></div>
+    <div id="splash"><img src="logo.svg?v=menu152" alt="Tiny Power Smashers" /></div>
 
     <!-- ===== Canvas (de spelwereld) ===== -->
     <canvas id="game-canvas"></canvas>
@@ -141,7 +141,7 @@
               <span id="menu-ruby-count">0</span>
             </span>
           </div>
-          <img class="menu-logo-img" src="logo.svg?v=menu151" alt="Tiny Power Smashers" />
+          <img class="menu-logo-img" src="logo.svg?v=menu152" alt="Tiny Power Smashers" />
           <div class="menu-hud">
             <span id="menu-userline" class="menu-userline">Gast | Lvl 1</span>
             <button id="btn-settings" class="stone-icon" title="Instellingen" aria-label="Instellingen">
@@ -224,14 +224,14 @@
     <!-- ===== Journey: levelkaart (wereld 1) ===== -->
     <div id="journey-screen" class="screen hidden">
       <div class="screen-inner">
-        <h2 class="screen-title">JOURNEY</h2>
-        <p class="screen-sub" id="journey-world">Wereld 1 — Onbewoond Eiland</p>
+        <h2 class="screen-title" data-i18n="journey_title">JOURNEY</h2>
+        <p class="screen-sub" id="journey-world">World 1 — Uninhabited Island</p>
         <div id="journey-worlds" class="shop-tabs"></div>
         <!-- CO-OP: samen levels spelen -->
         <div id="coop-bar">
-          <button id="btn-coop" class="text-btn"><svg class="ic"><use href="#ic-char"/></svg> Samen spelen (co-op)</button>
+          <button id="btn-coop" class="text-btn"><svg class="ic"><use href="#ic-char"/></svg> <span data-i18n="coop">Play together (co-op)</span></button>
           <div id="coop-panel" class="hidden">
-            <p class="screen-sub">Nodig een online vriend uit; kies daarna samen een level.</p>
+            <p class="screen-sub" data-i18n="coop_hint">Invite an online friend, then pick a level together.</p>
             <div id="coop-friends"></div>
             <p id="coop-status" class="screen-sub"></p>
           </div>
@@ -244,8 +244,8 @@
     <!-- ===== Journey: verhaal-cutscene (speelt op het canvas) ===== -->
     <div id="journey-story" class="hidden">
       <div id="journey-cap" class="journey-cap"></div>
-      <button id="btn-journey-next" class="journey-next hidden">Verder <svg class="ic"><use href="#ic-arrow-r"/></svg></button>
-      <button id="btn-journey-skip" class="journey-skip">Overslaan <svg class="ic"><use href="#ic-arrow-r"/></svg></button>
+      <button id="btn-journey-next" class="journey-next hidden"><span data-i18n="story_next">Next</span> <svg class="ic"><use href="#ic-arrow-r"/></svg></button>
+      <button id="btn-journey-skip" class="journey-skip"><span data-i18n="story_skip">Skip</span> <svg class="ic"><use href="#ic-arrow-r"/></svg></button>
     </div>
 
     <!-- ===== Account (inloggen / registreren) ===== -->
@@ -623,18 +623,18 @@
     </div>
   </div>
 
-  <script src="vendor/supabase.min.js?v=menu151"></script>
-  <script src="js/i18n.js?v=menu151"></script>
-  <script src="js/config.js?v=menu151"></script>
-  <script src="js/storage.js?v=menu151"></script>
-  <script src="js/audio.js?v=menu151"></script>
-  <script src="js/net.js?v=menu151"></script>
-  <script src="js/input.js?v=menu151"></script>
-  <script src="js/sprites.js?v=menu151"></script>
-  <script src="js/menubg.js?v=menu151"></script>
-  <script src="js/entities.js?v=menu151"></script>
-  <script src="js/ui.js?v=menu151"></script>
-  <script src="js/game.js?v=menu151"></script>
-  <script src="js/main.js?v=menu151"></script>
+  <script src="vendor/supabase.min.js?v=menu152"></script>
+  <script src="js/i18n.js?v=menu152"></script>
+  <script src="js/config.js?v=menu152"></script>
+  <script src="js/storage.js?v=menu152"></script>
+  <script src="js/audio.js?v=menu152"></script>
+  <script src="js/net.js?v=menu152"></script>
+  <script src="js/input.js?v=menu152"></script>
+  <script src="js/sprites.js?v=menu152"></script>
+  <script src="js/menubg.js?v=menu152"></script>
+  <script src="js/entities.js?v=menu152"></script>
+  <script src="js/ui.js?v=menu152"></script>
+  <script src="js/game.js?v=menu152"></script>
+  <script src="js/main.js?v=menu152"></script>
 </body>
 </html>
