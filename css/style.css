@@ -1607,3 +1607,58 @@ body.is-touch.portrait.in-game #rotate-hint { display: flex; }
 /* rondes-keuze (vriend-kamer) */
 #vs-rounds-opt { margin: 6px 0 2px; }
 #vs-rounds-slider:disabled { opacity: 0.5; }
+
+/* ===== Journey wereldkaart (levels langs een slingerpad, thema per wereld) ===== */
+.journey-map {
+  position: relative; width: 100%; max-width: 640px; margin: 12px auto;
+  height: clamp(240px, 58vh, 470px);
+  border-radius: 14px; overflow: hidden;
+  border: 3px solid #241a10; box-shadow: inset 0 0 44px rgba(0,0,0,0.45), 0 6px 20px rgba(0,0,0,0.4);
+}
+.journey-map.island { background: linear-gradient(180deg, #6fb6e8 0%, #8ad0f0 28%, #4a9ad0 50%, #e3c882 66%, #caa860 100%); }
+.journey-map.temple { background: linear-gradient(180deg, #f2b96a 0%, #d68f4e 42%, #7a5a38 70%, #5a4028 100%); }
+/* zonnewaas */
+.journey-map::before { content: ''; position: absolute; width: 74px; height: 74px; border-radius: 50%; top: 6%; right: 7%; pointer-events: none; z-index: 0; }
+.journey-map.island::before { background: radial-gradient(circle, #fff6c8 0%, rgba(255,231,122,0.55) 48%, transparent 72%); }
+.journey-map.temple::before { background: radial-gradient(circle, #ffe0a0 0%, rgba(230,150,80,0.5) 48%, transparent 72%); }
+/* decoratie: piramides (tempel) / struiken (eiland) achter het pad */
+.map-decor { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.map-decor::before, .map-decor::after { content: ''; position: absolute; bottom: 0; width: 0; }
+.journey-map.temple .map-decor::before { left: 8%; border-left: 62px solid transparent; border-right: 62px solid transparent; border-bottom: 96px solid rgba(90,64,40,0.5); }
+.journey-map.temple .map-decor::after  { right: 6%; border-left: 82px solid transparent; border-right: 82px solid transparent; border-bottom: 124px solid rgba(70,48,30,0.45); }
+.journey-map.island .map-decor::before { left: 6%; border-left: 42px solid transparent; border-right: 42px solid transparent; border-bottom: 58px solid rgba(46,100,44,0.42); }
+.journey-map.island .map-decor::after  { right: 7%; border-left: 34px solid transparent; border-right: 34px solid transparent; border-bottom: 46px solid rgba(40,90,40,0.4); }
+.journey-path { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+.journey-path .path-base { fill: none; stroke: rgba(0,0,0,0.34); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 2 7; }
+.journey-path .path-done { fill: none; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+.journey-map.island .path-done { stroke: #ffe9ac; }
+.journey-map.temple .path-done { stroke: #e0cba0; }
+.map-node {
+  position: absolute; transform: translate(-50%, -50%); z-index: 2;
+  width: 46px; height: 46px; border-radius: 50%;
+  border: 3px solid #fff; background: rgba(28,34,48,0.92); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--pixel-font); font-weight: bold; font-size: 18px; cursor: pointer;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.55); -webkit-user-select: none; user-select: none;
+}
+.map-node .map-node-num { display: flex; align-items: center; line-height: 1; }
+.map-node .map-node-num .ic { width: 22px; height: 22px; }
+.map-node:active { transform: translate(-50%, -50%) scale(0.92); }
+.map-node.boss { width: 58px; height: 58px; border-color: var(--gold); background: rgba(70,32,20,0.94); }
+.map-node.boss .map-node-num .ic { width: 28px; height: 28px; }
+.map-node.cleared { border-color: #5aff7a; background: rgba(22,58,32,0.92); }
+.map-node.locked { opacity: 0.5; cursor: not-allowed; filter: grayscale(0.55); }
+.map-node.current { border-color: #ffe27a; animation: mapPulse 1.15s ease-in-out infinite; }
+@keyframes mapPulse {
+  0%,100% { box-shadow: 0 3px 8px rgba(0,0,0,0.55), 0 0 0 0 rgba(255,226,122,0.65); }
+  50%     { box-shadow: 0 3px 8px rgba(0,0,0,0.55), 0 0 0 9px rgba(255,226,122,0); }
+}
+.map-node-mark { position: absolute; bottom: -7px; right: -6px; display: flex; }
+.map-node-mark .ic { width: 16px; height: 16px; color: var(--gold); }
+.map-node-mark.lock .ic { color: #cfd6df; }
+@media (max-height: 520px) {
+  .journey-map { height: clamp(180px, 74vh, 320px); max-width: 560px; margin: 8px auto; }
+  .map-node { width: 38px; height: 38px; font-size: 14px; border-width: 2px; }
+  .map-node .map-node-num .ic { width: 18px; height: 18px; }
+  .map-node.boss { width: 46px; height: 46px; }
+}

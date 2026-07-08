@@ -332,17 +332,46 @@ const UI = {
     const cb = document.getElementById('coop-bar'); if (cb) cb.classList.add('hidden');   // journey = singleplayer smash-duels
     const grid = document.getElementById('journey-grid');
     if (!grid) return;
+    // ===== wereldkaart: levels als knopen langs een slingerpad, in het thema van de wereld =====
+    grid.className = 'journey-map ' + (world === 2 ? 'temple' : 'island');
     grid.innerHTML = '';
-    JOURNEY[world].levels.forEach((lv, i) => {
+    const levels = JOURNEY[world].levels;
+    const cols = 5, x0 = 12, dx = 19, y0 = 20, dyr = 30, jit = [0, 5, -3, 6, -2];
+    const pos = levels.map((lv, i) => {
+      const row = Math.floor(i / cols), inRow = i % cols;
+      const col = (row % 2 === 0) ? inRow : (cols - 1 - inRow);     // slingerend heen en weer
+      return { x: x0 + col * dx, y: y0 + row * dyr + jit[col] };
+    });
+    let doneCount = 0; for (let i = 0; i < levels.length; i++) if (Storage.journeyCleared(i + 1, world)) doneCount = i + 1;
+    // themadecoratie (piramides / struiken achterin)
+    const decor = document.createElement('div'); decor.className = 'map-decor'; grid.appendChild(decor);
+    // het pad (SVG)
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('class', 'journey-path'); svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('preserveAspectRatio', 'none');
+    const mkLine = (to, cls) => {
+      const pl = document.createElementNS(svgNS, 'polyline');
+      pl.setAttribute('points', pos.slice(0, to).map((p) => p.x + ',' + p.y).join(' '));
+      pl.setAttribute('class', cls); pl.setAttribute('vector-effect', 'non-scaling-stroke');
+      svg.appendChild(pl);
+    };
+    mkLine(levels.length, 'path-base');                                          // hele route (gestippeld)
+    if (doneCount >= 1) mkLine(Math.min(levels.length, doneCount + 1), 'path-done');   // voltooid deel + naar de volgende
+    grid.appendChild(svg);
+    // de level-knopen
+    levels.forEach((lv, i) => {
       const n = i + 1;
       const cleared = Storage.journeyCleared(n, world);
       const open = Storage.journeyUnlocked(n, world);
-      const cell = document.createElement('button');
-      cell.className = 'level-cell' + (cleared ? ' cleared' : '') + (open ? '' : ' locked');
       const isBoss = lv.bossFight || lv.boss;
-      cell.innerHTML = '<span class="lvl-badge">' + (isBoss ? 'BAAS' : ('Lvl ' + n)) + '</span><span class="num">' + (isBoss ? this._ic('crown') : n) + '</span><span class="stars">' + (cleared ? this._ic('star') : (open ? '' : this._ic('lock'))) + '</span>';
-      if (open) cell.onclick = () => this.pickJourneyLevel(n);
-      grid.appendChild(cell);
+      const current = open && !cleared;
+      const node = document.createElement('button');
+      node.className = 'map-node' + (cleared ? ' cleared' : '') + (open ? '' : ' locked') + (isBoss ? ' boss' : '') + (current ? ' current' : '');
+      node.style.left = pos[i].x + '%'; node.style.top = pos[i].y + '%';
+      node.innerHTML = '<span class="map-node-num">' + (isBoss ? this._ic('crown') : n) + '</span>' +
+        (cleared ? '<span class="map-node-mark">' + this._ic('star') + '</span>' : (open ? '' : '<span class="map-node-mark lock">' + this._ic('lock') + '</span>'));
+      if (open) node.onclick = () => this.pickJourneyLevel(n);
+      grid.appendChild(node);
     });
   },
   pickJourneyLevel(n) {
