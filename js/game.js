@@ -1730,8 +1730,9 @@ const Game = {
       const layout = interior
         ? TEMPLE_INTERIOR_LAYOUTS[(lv.layout || 0) % TEMPLE_INTERIOR_LAYOUTS.length]   // smalle vloer met afgrond aan de zijkanten
         : TEMPLE_JOURNEY_LAYOUTS[(lv.layout || 0) % TEMPLE_JOURNEY_LAYOUTS.length];
+      const treasure = idx === 15;   // eindbaas: donkere schatkamer vol goud & juwelen
       mapObj = {
-        id: 'templeJ', name: lv.name, sky: interior ? ['#2c2016', '#0d0906'] : ['#f2b96a', '#9a5a4a'], void: '#0a0604', plat: 'stone', stone: true, temple: true, templeIn: interior, noPortals: true,
+        id: 'templeJ', name: lv.name, sky: interior ? ['#2c2016', '#0d0906'] : ['#f2b96a', '#9a5a4a'], void: '#0a0604', plat: 'stone', stone: true, temple: true, templeIn: interior, treasure: treasure, noPortals: true,
         w: 360, fallY: 214, spawnL: { x: 120, y: 150 }, spawnR: { x: 240, y: 150 }, platforms: layout,
       };
       this.journey = { world: worldId, idx, lv };
@@ -2407,6 +2408,87 @@ const Game = {
           const c = this.ctx, bob = Math.abs(Math.sin(clk() / 80)) * 2.5; hall(c); torches(c);
           Sprites.drawCharacter(c, P(0.3), Math.round(gy - 2), 1, ch.palette, Object.assign({ attacking: true, weapon: null }, pose0));
           monk(c, W * 0.62, gy - 2 - bob, -1, 0, { weapon: 'spear' });
+          c.fillStyle = '#ffef9a'; c.font = 'bold 16px "Courier New",monospace'; c.textAlign = 'center'; c.fillText('VS', P(0.47), gy - 48); c.textAlign = 'left';
+        } },
+      ];
+    }
+    // ===== DE NINJA (Wereld 2, level 15) — de donkere schatkamer =====
+    if (script === 'ninja') {
+      const P = (x) => Math.round(W * x);
+      // donkere schatkamer: stenen wand + goudstapels, juwelen, kisten en relikwieën
+      const vault = (c, dark) => {
+        c.fillStyle = dark ? '#120d09' : '#241a12'; c.fillRect(0, 0, W, gy);                       // wand
+        if (!dark) for (let y = 4; y < gy; y += 16) { const off = ((y / 16) % 2) * 16; for (let x = -off; x < W; x += 32) Sprites.px(c, '#2c2117', x + 1, y, 30, 14); }
+        const A = dark ? 0.35 : 1; c.globalAlpha = A;
+        // goudstapels langs de achterwand
+        const gold = (gx) => { c.fillStyle = '#e8b431'; for (let r = 0; r < 5; r++) { const rw = 30 - r * 5; Sprites.px(c, '#e8b431', gx - rw / 2, gy - 6 - r * 4, rw, 4); } c.fillStyle = '#fff0a0'; Sprites.px(c, '#fff0a0', gx - 12, gy - 6, 4, 2); };
+        gold(60); gold(150); gold(300);
+        // schatkist
+        c.fillStyle = '#6a4326'; Sprites.px(c, '#6a4326', 96, gy - 20, 30, 20); c.fillStyle = '#8a5a30'; Sprites.px(c, '#8a5a30', 96, gy - 24, 30, 6); c.fillStyle = '#e8b431'; Sprites.px(c, '#e8b431', 108, gy - 22, 6, 8);
+        // juwelen (gekleurde edelstenen)
+        const gem = (gx, gy2, col) => { c.fillStyle = col; c.fillRect(gx, gy2, 4, 4); c.fillStyle = '#ffffff'; c.fillRect(gx + 1, gy2, 1, 1); };
+        gem(48, gy - 4, '#e8425a'); gem(140, gy - 3, '#42a0e8'); gem(210, gy - 5, '#57e08a'); gem(290, gy - 3, '#c060e0'); gem(330, gy - 4, '#e8b431');
+        // groot relikwie/afgodsbeeld op de achtergrond
+        c.fillStyle = '#b89440'; Sprites.px(c, '#b89440', W * 0.5 - 8, gy - 44, 16, 40); Sprites.px(c, '#d8b048', W * 0.5 - 10, gy - 48, 20, 6); c.fillStyle = '#3a2e18'; Sprites.px(c, '#3a2e18', W * 0.5 - 4, gy - 40, 3, 3); Sprites.px(c, '#3a2e18', W * 0.5 + 2, gy - 40, 3, 3);
+        c.globalAlpha = 1;
+      };
+      const torch = (c, tx, ty, on) => { Sprites.px(c, '#3a2a18', tx - 1, ty, 3, 12); if (!on) return; const fl = 3 + Math.round(Math.sin(clk() / 90 + tx) * 1.6); c.globalAlpha = 0.3; c.fillStyle = '#ff9a2a'; c.beginPath(); c.arc(tx, ty - 4, fl + 6, 0, 6.2832); c.fill(); c.globalAlpha = 1; c.fillStyle = '#ffb23a'; c.beginPath(); c.arc(tx, ty - 6, fl, 0, 6.2832); c.fill(); c.fillStyle = '#ffe27a'; c.beginPath(); c.arc(tx, ty - 6, fl * 0.5, 0, 6.2832); c.fill(); };
+      const torches = (c, on) => { torch(c, 108, 66, on); torch(c, 250, 68, on); };
+      const star = (c, x, y) => { c.fillStyle = '#e8e8ee'; c.beginPath(); for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + clk() / 200; c.lineTo(x + Math.cos(a) * 4, y + Math.sin(a) * 4); c.lineTo(x + Math.cos(a + 0.78) * 1.6, y + Math.sin(a + 0.78) * 1.6); } c.closePath(); c.fill(); };   // werpster
+      const ninja = (c, x, fy, dir, ph, opts) => this._storyFighter(c, 'ninja', x, fy, dir, ph, 1.1, opts || {});
+      const redEyes = (c, x, y) => { c.fillStyle = '#ff2a2a'; c.fillRect(x, y, 2, 2); c.fillRect(x + 6, y, 2, 2); };
+      return [
+        // ===== Scène 1 – De Schatkamer =====
+        { theme: 'temple', dur: 2400, cap: 'Je bereikt een donkere schatkamer vol goud, juwelen en oude relikwieën.', draw: (t) => {
+          const c = this.ctx, p = Math.min(1, t / 2400); vault(c, false); torches(c, true);
+          Sprites.drawCharacter(c, P(0.14) + Math.round(p * 24), Math.round(gy - 2), 1, ch.palette, Object.assign({ walkPhase: clk() / 70, weapon: null }, pose0));
+        } },
+        { theme: 'temple', dur: 2300, cap: 'Alles lijkt verlaten, maar de stilte voelt onheilspellend aan.', draw: () => {
+          const c = this.ctx; vault(c, false); torches(c, true);
+          Sprites.drawCharacter(c, P(0.28), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          c.fillStyle = '#8fd0ff'; c.fillRect(P(0.28) + 8, gy - 30, 2, 3);   // zweetdruppel
+        } },
+        { theme: 'temple', dur: 2200, cap: 'Terwijl je een stap vooruit zet, doven de fakkels plotseling uit…', draw: (t) => {
+          const c = this.ctx, p = Math.min(1, t / 2200); vault(c, p > 0.5); torches(c, p <= 0.5);
+          Sprites.drawCharacter(c, P(0.3), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          if (p > 0.5) { c.globalAlpha = 0.5; c.fillStyle = '#000'; c.fillRect(0, 0, W, gy); c.globalAlpha = 1; }
+        } },
+        // ===== Scène 2 – De Verschijning =====
+        { theme: 'temple', dur: 2400, cap: 'Uit de schaduwen verschijnt geruisloos een mysterieuze NINJA.', draw: (t) => {
+          const c = this.ctx, p = Math.min(1, t / 2400); vault(c, true); torches(c, false);
+          Sprites.drawCharacter(c, P(0.24), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          c.globalAlpha = 0.3 + 0.7 * p; ninja(c, W * 0.66, gy - 2, -1, 0, {}); c.globalAlpha = 1;
+          redEyes(c, Math.round(W * 0.66) - 5, gy - 24);
+        } },
+        { theme: 'temple', dur: 2200, cap: 'Met zijn zwaard in de hand blokkeert hij de enige uitgang.', draw: () => {
+          const c = this.ctx; vault(c, true); torches(c, false);
+          Sprites.drawCharacter(c, P(0.24), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          ninja(c, W * 0.64, gy - 2, -1, 0, { attacking: true, weapon: 'katana' });
+        } },
+        { theme: 'temple', dur: 2000, cap: 'Hij is de bewaker van de schat en zal niemand laten ontsnappen.', draw: () => {
+          const c = this.ctx; vault(c, true); torches(c, false);
+          Sprites.drawCharacter(c, P(0.26), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          ninja(c, W * 0.62, gy - 2, -1, 0, { weapon: 'katana' });
+          redEyes(c, Math.round(W * 0.62) - 5, gy - 24);
+          c.fillStyle = '#ff5a5a'; c.font = 'bold 14px "Courier New",monospace'; c.fillText('!', W * 0.62 - 2, gy - 40);
+        } },
+        // ===== Scène 3 – Het Eindgevecht =====
+        { theme: 'temple', dur: 2200, cap: 'De NINJA pakt zijn ninja sterren en neemt een gevechtshouding aan.', draw: () => {
+          const c = this.ctx, bob = Math.abs(Math.sin(clk() / 100)) * 2; vault(c, true); torches(c, false);
+          Sprites.drawCharacter(c, P(0.28), Math.round(gy - 2), 1, ch.palette, Object.assign({ weapon: null }, pose0));
+          ninja(c, W * 0.62, gy - 2 - bob, -1, 0, { attacking: true });
+          star(c, W * 0.55, gy - 22); star(c, W * 0.5, gy - 30);
+        } },
+        { theme: 'temple', dur: 2000, cap: 'Zijn snelheid en precisie maken hem een levensgevaarlijke tegenstander.', draw: () => {
+          const c = this.ctx; vault(c, true); torches(c, false);
+          Sprites.drawCharacter(c, P(0.3), Math.round(gy - 2), 1, ch.palette, Object.assign({ ducking: true, weapon: null }, pose0));
+          ninja(c, W * 0.6, gy - 2, -1, clk() / 40, { attacking: true, weapon: 'katana' });
+          for (let k = 0; k < 3; k++) Sprites.px(c, 'rgba(255,255,255,0.6)', Math.round(W * 0.66 + k * 6), gy - 18 - k * 2, 5, 1);   // snelheidsstrepen
+        } },
+        { theme: 'temple', dur: 1800, cap: 'Versla de NINJA en claim de schat als jouw beloning — VECHT!', draw: () => {
+          const c = this.ctx, bob = Math.abs(Math.sin(clk() / 80)) * 2.5; vault(c, false); torches(c, true);
+          Sprites.drawCharacter(c, P(0.3), Math.round(gy - 2), 1, ch.palette, Object.assign({ attacking: true, weapon: null }, pose0));
+          ninja(c, W * 0.62, gy - 2 - bob, -1, 0, { weapon: 'katana' });
           c.fillStyle = '#ffef9a'; c.font = 'bold 16px "Courier New",monospace'; c.textAlign = 'center'; c.fillText('VS', P(0.47), gy - 48); c.textAlign = 'left';
         } },
       ];
@@ -5025,7 +5107,8 @@ const Game = {
     if (map.jbg) this.drawJungleBg(ctx);                // Journey-jungle: zelfde oerwoud-achtergrond (zonder kooi-gimmick)
     if (map.dohyo) this.drawDohyoBg(ctx);               // Japanse dojo + hangend dak met kwasten
     if (map.beach) this.drawBeachBg(ctx);               // strand: zee + golven achter
-    if (map.templeIn) this.drawTempleInteriorBg(ctx);   // tempel van BINNEN: donkere zaal, pilaren, wandfakkels
+    if (map.treasure) this.drawTreasureBg(ctx);         // schatkamer: goud, juwelen, kisten, afgodsbeeld
+    else if (map.templeIn) this.drawTempleInteriorBg(ctx);   // tempel van BINNEN: donkere zaal, pilaren, wandfakkels
     else if (map.temple) this.drawTempleBg(ctx);        // stenen tempel (buiten): verre piramide + fakkels
 
     // afgrond onderin (map-thema), camera-bewust (volle zichtbare breedte bij uitzoomen)
@@ -5606,6 +5689,34 @@ const Game = {
       ctx.fillStyle = '#ffe27a'; ctx.beginPath(); ctx.arc(tx, ty - 6, fl * 0.5, 0, 6.2832); ctx.fill();
     };
     torch(108, 70); torch(232, 72); torch(285, 66);
+  },
+
+  // schatkamer-BINNENkant: donkere kamer met goudstapels, kisten, juwelen en een gouden afgodsbeeld
+  drawTreasureBg(ctx) {
+    const W = this.vsMapW, gy = CONFIG.GROUND_Y, cx = Math.round(W / 2);
+    // donkere kamerwand met metselwerk
+    ctx.fillStyle = '#1e1610'; ctx.fillRect(0, 0, W, gy);
+    for (let y = 4; y < gy; y += 16) { const off = ((y / 16) % 2) * 16; for (let x = -off; x < W; x += 32) Sprites.px(ctx, '#271c13', x + 1, y, 30, 14); }
+    // warme gouden gloed langs de vloer
+    const g = ctx.createLinearGradient(0, gy - 72, 0, gy); g.addColorStop(0, 'rgba(230,180,60,0)'); g.addColorStop(1, 'rgba(230,180,60,0.20)'); ctx.fillStyle = g; ctx.fillRect(0, gy - 72, W, 72);
+    // groot gouden afgodsbeeld centraal op de achtergrond
+    Sprites.px(ctx, '#8a6a2c', cx - 13, gy - 56, 26, 52); Sprites.px(ctx, '#b89440', cx - 13, gy - 56, 20, 52); Sprites.px(ctx, '#d8b048', cx - 15, gy - 60, 30, 6);
+    ctx.fillStyle = '#e83030'; ctx.fillRect(cx - 6, gy - 50, 3, 3); ctx.fillRect(cx + 4, gy - 50, 3, 3);   // robijn-ogen
+    Sprites.px(ctx, '#3a2e18', cx - 4, gy - 42, 8, 2);
+    // goudstapels tegen de wand (binnen de vloer, achter de spelers)
+    const gold = (x) => { for (let r = 0; r < 5; r++) { const rw = 34 - r * 6; Sprites.px(ctx, '#e8b431', x - rw / 2, gy - 8 - r * 4, rw, 4); } Sprites.px(ctx, '#fff0a0', x - 14, gy - 8, 5, 2); };
+    gold(66); gold(300);
+    // schatkisten
+    const chest = (x) => { Sprites.px(ctx, '#6a4326', x, gy - 18, 28, 18); Sprites.px(ctx, '#8a5a30', x, gy - 22, 28, 6); Sprites.px(ctx, '#c98a3a', x - 1, gy - 16, 30, 2); Sprites.px(ctx, '#e8b431', x + 11, gy - 20, 6, 8); };
+    chest(92); chest(244);
+    // losse juwelen
+    const gem = (x, y, col) => { ctx.fillStyle = col; ctx.fillRect(x, y, 4, 4); ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 1, y, 1, 1); };
+    gem(128, gy - 5, '#e8425a'); gem(160, gy - 6, '#42a0e8'); gem(206, gy - 5, '#57e08a'); gem(228, gy - 6, '#c060e0');
+    // wandfakkels (flakkerend)
+    const torch = (tx, ty) => { Sprites.px(ctx, '#3a2a18', tx - 1, ty, 3, 13); const fl = 3 + Math.round(Math.sin(this.time / 90 + tx) * 1.7); ctx.globalAlpha = 0.3; ctx.fillStyle = '#ff9a2a'; ctx.beginPath(); ctx.arc(tx, ty - 4, fl + 7, 0, 6.2832); ctx.fill(); ctx.globalAlpha = 1; ctx.fillStyle = '#ffb23a'; ctx.beginPath(); ctx.arc(tx, ty - 6, fl, 0, 6.2832); ctx.fill(); ctx.fillStyle = '#ffe27a'; ctx.beginPath(); ctx.arc(tx, ty - 6, fl * 0.5, 0, 6.2832); ctx.fill(); };
+    torch(70, 74); torch(290, 74);
+    // fonkelingen op het goud
+    ctx.fillStyle = '#fff6c8'; for (let i = 0; i < 5; i++) { const sx = (i * 71 + 40) % W, ph = (this.time / 260 + i) % 3; if (ph < 1) Sprites.px(ctx, '#fff6c8', sx, gy - 10 - (i % 3) * 4, 1, 1); }
   },
 
   // piratenschip-achtergrond: water + zeil + (langzaam opkomend) zeemonster op de achtergrond
