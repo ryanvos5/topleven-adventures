@@ -163,6 +163,12 @@
       </div>
 
       <div class="card">
+        <div class="hd">Melee-wapens op deze map</div>
+        <div class="pu-grid" id="meleeGrid"></div>
+        <div class="mini-note">Welke melee-wapens kunnen hier als drop verschijnen. Niks aangevinkt = willekeurig / je eigen wapen.</div>
+      </div>
+
+      <div class="card">
         <div class="hd">Achtergrond &amp; thema — voor Claude</div>
         <label>Beschrijf de sfeer, achtergrond, kleuren, decor…</label>
         <textarea id="mBg" placeholder="bijv. Een zwevend stenen fort boven de wolken bij zonsondergang. Op de achtergrond drijvende eilandjes en verre bergtoppen. Warme oranje/paarse lucht."></textarea>
@@ -197,18 +203,41 @@
   <p class="foot">Tiny Power Smashers · Map Maker — alles blijft lokaal in je browser tot je op “Kopieer voor Claude” klikt.</p>
 
 <!-- de echte game-config: geeft toegang tot VERSUS_MAPS zodat je bestaande maps kunt laden -->
-<script src="js/config.js?v=menu174"></script>
+<script src="js/config.js?v=menu176"></script>
 <script>
 (function(){
   "use strict";
   var $ = function(id){ return document.getElementById(id); };
   var GRID = 4, GROUND_REF = 173;
-  var POWERUPS = [
-    ['heal','Medipack','❤'],['shield','Shield','🛡'],['speed','Speed','⚡'],['rage','Rage','⚔'],
+  // ---- power-ups: dynamisch uit de echte game-config (SHOP_POWERUPS) + extra kinds die niet in de shop staan ----
+  var FALLBACK_PU = [
+    ['heal','Medipack','➕'],['shield','Shield','🛡'],['speed','Speed','⚡'],['rage','Rage','⚔'],
     ['fireball','Fireball','🔥'],['dragon','Dragon','🐉'],['ak47','AK47','🔫'],['rocket','Rocket','🚀'],
     ['cannon','Cannon','💣'],['beachball','Beach ball','🏐'],['coco','Coconut bomb','🥥'],['boom','Boomerang','🪃'],
-    ['dart','Poison dart','🎯'],['rock','Falling rock','🪨'],['lightning','Lightning','🌩'],['ninjastar','Ninja stars','🌟'],['crossbow','Crossbow','🏹']
+    ['dart','Poison dart','🎯'],['rock','Falling rock','🪨'],['lightning','Lightning','🌩'],['ninjastar','Ninja stars','🌟'],
+    ['deagle','Desert Eagle','🔫'],['crossbow','Crossbow','🏹'],['chainsaw','Chainsaw','🪚'],['giant','Giant','👊']
   ];
+  var EXTRA_PU = [['giant','Reus','👊'],['heli','Gevechtsheli','🚁'],['nuke','Nuke','☢']];   // bestaan in de game maar niet in de shop
+  function buildPowerups(){
+    if (typeof SHOP_POWERUPS === 'undefined') return FALLBACK_PU;
+    var order = (typeof TRAINING_POWERUP_ORDER !== 'undefined') ? TRAINING_POWERUP_ORDER.slice() : [];
+    Object.keys(SHOP_POWERUPS).forEach(function(k){ if(order.indexOf(k)<0) order.push(k); });   // ontbrekende (chainsaw ed.) achteraan
+    var list = order.filter(function(k){return SHOP_POWERUPS[k];})
+      .map(function(k){ return [k, SHOP_POWERUPS[k].name, SHOP_POWERUPS[k].icon || '•']; });
+    EXTRA_PU.forEach(function(e){ if(!list.some(function(l){return l[0]===e[0];})) list.push(e); });
+    return list;
+  }
+  var POWERUPS = buildPowerups();
+  // ---- melee-wapens: dynamisch uit WEAPONS (type melee) ----
+  function buildMelee(){
+    if (typeof WEAPONS === 'undefined') return [];
+    // de echt-selecteerbare melee-wapens (chainsaw staat al bij de power-ups; zap-mes/shield zijn ability-wapens)
+    var order = (typeof TRAINING_MELEE_ORDER !== 'undefined') ? TRAINING_MELEE_ORDER.slice()
+      : Object.keys(WEAPONS).filter(function(k){ return WEAPONS[k].type==='melee'; });
+    return order.filter(function(k){ return k!=='chainsaw' && WEAPONS[k] && WEAPONS[k].type==='melee'; })
+      .map(function(k){ return [k, WEAPONS[k].name]; });
+  }
+  var MELEE = buildMelee();
   var TYPE_COL = { ground:'#b0813f', platform:'#7be07a', wall:'#9aa4ae', mast:'#caa060' };
   var TYPE_H   = { ground:14, platform:9, wall:44, mast:60 };
 
@@ -229,6 +258,7 @@
         {id:nid(),x:500,y:120,w:90,type:'platform'}
       ],
       powerups:['heal','shield','speed','rage'],
+      melee:[],
       background:'', events:''
     };
   }
@@ -426,6 +456,22 @@
       g.appendChild(el);
     });
   }
+  function renderMelee(){
+    var g=$('meleeGrid'); if(!g) return; g.innerHTML='';
+    if(!MELEE.length){ g.innerHTML='<div class="mini-note">Melee-lijst niet geladen.</div>'; return; }
+    MELEE.forEach(function(w){
+      state.melee=state.melee||[];
+      var el=document.createElement('div'); el.className='pu'+(state.melee.indexOf(w[0])>=0?' on':'');
+      el.innerHTML='<span class="emo">🗡</span> '+w[1];
+      el.addEventListener('click', function(){
+        state.melee=state.melee||[];
+        var i=state.melee.indexOf(w[0]);
+        if(i>=0) state.melee.splice(i,1); else state.melee.push(w[0]);
+        el.classList.toggle('on'); commit();
+      });
+      g.appendChild(el);
+    });
+  }
 
   // ---------- settings bindings ----------
   function bindText(id, key, isNum, cb){
@@ -494,6 +540,8 @@
     L.push('');
     L.push('GATEN in de grond: '+(gaps.length? gaps.map(function(g){return 'x'+g[0]+'–'+g[1];}).join(', ') : 'geen (dichte vloer)'));
     L.push('POWER-UPS: '+(puNames.length?puNames.join(', '):'geen'));
+    var meNames=(state.melee||[]).map(function(id){var f=MELEE.find(function(w){return w[0]===id;});return f?f[1]:id;});
+    L.push('MELEE-WAPENS: '+(meNames.length?meNames.join(', '):'willekeurig / eigen wapen'));
     L.push('');
     L.push('ACHTERGROND / THEMA (voor Claude):');
     L.push('  '+(state.background.trim()||'(niet ingevuld)'));
@@ -512,6 +560,7 @@
       spawnL:state.spawnL, spawnR:state.spawnR,
       platforms:state.platforms.map(function(p){return {x:p.x,y:p.y,w:p.w,type:p.type};}),
       powerups:state.powerups.slice(),
+      melee:(state.melee||[]).slice(),
       background:state.background, events:state.events
     };
   }
@@ -529,9 +578,9 @@
       if(o.sky){ state.skyTop=o.sky[0]||state.skyTop; state.skyBottom=o.sky[1]||state.skyBottom; }
       state.spawnL=o.spawnL||{x:160,y:176}; state.spawnR=o.spawnR||{x:560,y:176};
       state.platforms=(o.platforms||[]).map(function(p){return {id:nid(),x:p.x,y:p.y,w:p.w,type:p.type||'platform'};});
-      state.powerups=o.powerups||[]; state.background=o.background||''; state.events=o.events||'';
+      state.powerups=o.powerups||[]; state.melee=o.melee||[]; state.background=o.background||''; state.events=o.events||'';
       selId=null;
-      pushSettingsToUI(); buildPU(); syncProp(); layout(); commit();
+      pushSettingsToUI(); buildPU(); renderMelee(); syncProp(); layout(); commit();
     }catch(e){ alert('Kon deze JSON niet laden.'); }
   }
   $('btnCopy').addEventListener('click', function(){
@@ -560,7 +609,7 @@
   });
   $('btnClear').addEventListener('click', function(){
     if(!confirm('Hele map leegmaken en opnieuw beginnen?')) return;
-    uid=1; state=defaultState(); pushSettingsToUI(); buildPU(); syncProp(); layout(); commit();
+    uid=1; state=defaultState(); pushSettingsToUI(); buildPU(); renderMelee(); syncProp(); layout(); commit();
   });
 
   // ---------- bestaande maps laden (uit de echte game-config) ----------
@@ -620,7 +669,7 @@
     populateLoad();
     var saved=null; try{ saved=JSON.parse(localStorage.getItem(SAVE)); }catch(e){}
     if(saved && saved.platforms){ loadObj(saved); }
-    else { pushSettingsToUI(); buildPU(); syncProp(); layout(); commit(); }
+    else { pushSettingsToUI(); buildPU(); renderMelee(); syncProp(); layout(); commit(); }
   })();
 })();
 </script>
