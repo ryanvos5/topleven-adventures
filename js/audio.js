@@ -6,7 +6,7 @@
 const Sfx = {
   ctx: null, master: null, musicGain: null, sfxGain: null,
   enabled: true,
-  _curTheme: null, _step: 0, _timer: null, _theme: null,
+  _curTheme: null, _step: 0, _timer: null, _theme: null, _intensity: 0,
 
   init() {
     try { this.enabled = localStorage.getItem('tps_sound') !== '0'; } catch (e) { this.enabled = true; }
@@ -143,6 +143,11 @@ const Sfx = {
       scale: [0, 1, 3, 5, 7, 8, 11, 12, 13, 15], prog: [0, 1, 5, 3],
       riff: [5, -1, 4, -1, 3, -1, 1, -1, 0, -1, 1, -1, 3, -1, 4, -1],
       kick: [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0], snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0] },
+    // Sky Castle: episch, dramatisch mineur, drijvende kick
+    castle: { root: 174.6, bpm: 140, lead: 'sawtooth', bass: 'square',
+      scale: [0, 2, 3, 5, 7, 8, 10, 12, 14, 15], prog: [0, 7, 8, 5],
+      riff: [0, -1, 7, -1, 5, -1, 3, -1, 2, 3, 5, -1, 7, -1, 3, -1],
+      kick: [1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0], snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1] },
     // Arena (Knock-out): snel en agressief
     arena: { root: 130.8, bpm: 152, lead: 'sawtooth', bass: 'square',
       scale: [0, 2, 3, 5, 7, 8, 10, 12, 14, 15], prog: [0, 3, 5, 7],
@@ -164,15 +169,24 @@ const Sfx = {
     if (!this.THEMES[theme]) theme = 'menu';
     if (this._curTheme === theme) return;
     this._curTheme = theme; this._theme = this.THEMES[theme]; this._step = 0;
+    this._intensity = 0;                          // nieuw thema = terug naar normaal tempo (versus zet 'm daarna hoger)
     this._ensure();
     this._stopLoop();
     if (this.ctx && this.ctx.state === 'running') this._startLoop();
   },
-  stopMusic() { this._curTheme = null; this._theme = null; this._stopLoop(); },
+  // 0 = normaal, 1 = uitdagender (sneller + drijvender), 2 = een-na-laatste-ronde (nog sneller)
+  setMusicIntensity(level) {
+    level = Math.max(0, level | 0);
+    if (this._intensity === level) return;
+    this._intensity = level;
+    if (this._timer) { this._stopLoop(); this._startLoop(); }   // herstart de loop op het nieuwe tempo
+  },
+  stopMusic() { this._curTheme = null; this._theme = null; this._intensity = 0; this._stopLoop(); },
   _stopLoop() { if (this._timer) { clearInterval(this._timer); this._timer = null; } },
   _startLoop() {
     if (!this._theme || this._timer || !this.ctx) return;
-    const stepMs = 60000 / this._theme.bpm / 4;   // 16e noten (strakker, energieker)
+    const mul = 1 + 0.16 * (this._intensity || 0);   // 1.0 / 1.16 / 1.32 -> sneller bij hogere intensiteit
+    const stepMs = 60000 / (this._theme.bpm * mul) / 4;   // 16e noten (strakker, energieker)
     this._timer = setInterval(() => this._tick(), stepMs);
   },
   _f(root, semi) { return root * Math.pow(2, semi / 12); },
@@ -183,9 +197,12 @@ const Sfx = {
     const kick = th.kick || this._kickP, snare = th.snare || this._snareP, riff = th.riff || this._riff;
     const chord = prog[Math.floor(step / 4) % 4];
     // drums
+    const inten = this._intensity || 0;
     if (kick[step]) this._kick();
     if (snare[step]) this._snare();
     if (step % 2 === 0) this._hat(step % 4 === 0 ? 0.1 : 0.07);
+    if (inten >= 1 && step % 2 === 1) this._hat(0.06);                                   // drijvender: hats op elke stap
+    if (inten >= 2 && (step === 2 || step === 6 || step === 10 || step === 14)) this._kick();   // extra stampende kick op de een-na-laatste ronde
     // drijvende bas (8e noten)
     if (step % 2 === 0) this._mnote(this._f(th.root / 2, chord), 0.18, th.bass, 0.42);
     // riff (eigen toonladder per map)

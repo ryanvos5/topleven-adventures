@@ -2615,7 +2615,8 @@ const Game = {
     const mode = (opts.mode === 'both') ? 'both' : (opts.mode === 'smash') ? 'smash' : 'melee';
     this.vsMap = map; this.vsMode = mode;
     this.vsMapW = map.w || CONFIG.VIEW_W;
-    if (window.Sfx) Sfx.music((opts.bossFight || opts.boss) ? 'boss' : map.id);   // boss = snel & uitdagend, anders map-thema
+    this._vsChallengeMusic = !opts.journey && !opts.bossFight && !opts.boss && mode === 'smash';   // online Power Smash-potje
+    if (window.Sfx) { Sfx.music((opts.bossFight || opts.boss) ? 'boss' : map.id); if (this._vsChallengeMusic) Sfx.setMusicIntensity(1); }   // boss = snel; online = snellere/uitdagendere muziek
     this.vsFallY = map.fallY || FALL_DEATH_Y;
     this.vsCamX = 0; this.vsCamY = 0; this.vsCamZoom = 1;
     this.worldId = -1;
@@ -5117,6 +5118,7 @@ const Game = {
     // absolute score meesturen -> zelfherstellend tegen verloren/dubbele meldingen
     if (window.Net && !this.vsBot) Net.versusSend('fell', { winScore: this.vs.oppScore });
     if (this.vs.oppScore >= this.vs.target) { this.endVersus(false); return; }
+    this._vsMusicTick();
     this.beginRoundFreeze('TEGENSTANDER wint de ronde');
   },
   respawnLocal() {
@@ -5151,7 +5153,14 @@ const Game = {
     else this.vs.myScore++;
     if (this.vs.myScore > before) this.triggerKO(this.vs.remote.x, this.vs.remote.y, true);   // KO-cinematic (tegenstander eraf)
     if (this.vs.myScore >= this.vs.target) { this.endVersus(true); return; }
+    this._vsMusicTick();
     if (this.vs.roundFreezeUntil <= this.time) this.beginRoundFreeze('JIJ wint de ronde!');
+  },
+  // online-muziek: standaard uitdagend (1), en nog uitdagender zodra iemand op de een-na-laatste ronde staat (2)
+  _vsMusicTick() {
+    if (!window.Sfx || !this._vsChallengeMusic || !this.vs || this.vs.over) return;
+    const near = Math.max(this.vs.myScore || 0, this.vs.oppScore || 0) >= (this.vs.target - 1);
+    Sfx.setMusicIntensity(near ? 2 : 1);
   },
 
   // tegenstander meldt dat het potje voorbij is (vangnet als de laatste 'fell' verloren ging)
