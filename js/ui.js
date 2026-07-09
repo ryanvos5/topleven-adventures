@@ -580,6 +580,8 @@ const UI = {
       const ok = document.getElementById('btn-reward-ok'); if (ok) ok.style.visibility = '';
       this._nextReward();
     };
+    const easeOutBack = (x) => { const c1 = 1.9, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
+    const SHAKE_END = 0.4, OPEN_END = 0.72;   // rammelen -> deksel klapt open -> nagloeien
     const step = () => {
       if (done) return;
       const now = (window.performance && performance.now) ? performance.now() : t0 + DUR;
@@ -587,13 +589,34 @@ const UI = {
       ctx.clearRect(0, 0, cv.width, cv.height);
       const cx = cv.width / 2, cy = cv.height / 2 + 6;
       const band = (CHEST_TYPES[rarity] || {}).band || '#ffd24a';
-      const gr = ctx.createRadialGradient(cx, cy, 2, cx, cy, 70); gr.addColorStop(0, 'rgba(255,240,160,' + (0.3 + t * 0.6).toFixed(2) + ')'); gr.addColorStop(1, 'rgba(255,200,60,0)');
+      // deksel-opening (met kleine overshoot-pop)
+      const openRaw = t <= SHAKE_END ? 0 : Math.min(1, (t - SHAKE_END) / (OPEN_END - SHAKE_END));
+      const lidOpen = openRaw <= 0 ? 0 : Math.max(0, easeOutBack(openRaw));
+      // achtergrondgloed groeit mee met het openen
+      const glowT = Math.max(0, Math.min(1, (t - SHAKE_END * 0.6) / 0.45));
+      const gr = ctx.createRadialGradient(cx, cy - 4, 2, cx, cy - 4, 72);
+      gr.addColorStop(0, 'rgba(255,244,180,' + (0.25 + glowT * 0.65).toFixed(2) + ')'); gr.addColorStop(1, 'rgba(255,200,60,0)');
       ctx.fillStyle = gr; ctx.fillRect(0, 0, cv.width, cv.height);
+      // eind-fade naar de volgende beloning
+      const fade = t > 0.84 ? Math.max(0, 1 - (t - 0.84) / 0.16 * 0.85) : 1;
       ctx.save(); ctx.translate(cx, cy);
-      if (t < 0.62) { ctx.rotate(Math.sin(t * 40) * 0.06 * (t / 0.62)); ctx.scale(3, 3); this._chestArt(ctx, rarity); }
-      else { const b = (t - 0.62) / 0.38; ctx.scale(3 + b * 0.6, 3 + b * 0.6); ctx.globalAlpha = 1 - b * 0.7; this._chestArt(ctx, rarity);
-        ctx.globalAlpha = 1; for (let k = 0; k < 12; k++) { const a = k * 0.5236, rr = b * 26; ctx.fillStyle = k % 2 ? '#fff0a0' : '#ffd24a'; ctx.fillRect(Math.round(Math.cos(a) * rr - 1), Math.round(Math.sin(a) * rr - 1), 3, 3); } }
+      if (t < SHAKE_END) { const s = t / SHAKE_END; ctx.translate(Math.sin(t * 58) * 2.2 * s, 0); ctx.rotate(Math.sin(t * 52) * 0.055 * s); }   // rammelen, bouwt op
+      ctx.globalAlpha = fade; ctx.scale(3.1, 3.1);
+      this._chestArt(ctx, rarity, Math.min(1, lidOpen));
       ctx.restore();
+      // uitspattende sparkles/munten zodra het deksel losklapt
+      if (openRaw > 0) {
+        const pj = Math.min(1, (t - SHAKE_END) / 0.5);
+        ctx.save(); ctx.translate(cx, cy - 6);
+        for (let k = 0; k < 16; k++) {
+          const a = -Math.PI / 2 + ((k / 15) - 0.5) * 2.3;   // kegel naar boven
+          const rr = pj * (18 + (k % 5) * 9);
+          ctx.globalAlpha = Math.max(0, 1 - pj) * fade;
+          ctx.fillStyle = k % 3 ? '#fff0a0' : band;
+          ctx.fillRect(Math.round(Math.cos(a) * rr - 1), Math.round(Math.sin(a) * rr - pj * 6 - 1), 3, 3);
+        }
+        ctx.restore();
+      }
       if (t < 1 && !done) this._legRaf = requestAnimationFrame(step);
     };
     if (this._legRaf) cancelAnimationFrame(this._legRaf);
@@ -2542,16 +2565,40 @@ const UI = {
     if (m > 0) return m + 'm' + (sec < 10 ? '0' : '') + sec + 's';
     return sec + 's';
   },
-  _chestArt(ctx, rarity) {
+  // rarity-kist. lidOpen 0..1 = deksel dicht..helemaal open (deksel wordt los getekend en scharniert omhoog)
+  _chestArt(ctx, rarity, lidOpen) {
     const t = CHEST_TYPES[rarity] || CHEST_TYPES.common;
+    const open = Math.max(0, lidOpen || 0);
     const px = (c, x, y, w, h) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
-    px(t.col, -13, -2, 26, 12);                     // onderkant
-    px('rgba(0,0,0,0.35)', -13, 7, 26, 3);
-    px(t.col, -14, -10, 28, 8);                     // deksel
-    px('rgba(255,255,255,0.25)', -14, -10, 28, 2);
-    px(t.band, -14, -4, 28, 2);                     // gouden band horizontaal
-    px(t.band, -2, -10, 4, 20);                     // gouden band verticaal
-    px('#2a1c08', -3, -1, 6, 5); px('#ffd24a', -1, 1, 2, 2);   // slot
+    // ---- onderkant (body) ----
+    px('rgba(0,0,0,0.35)', -13, 7, 26, 3);          // grondschaduw
+    px(t.col, -13, -2, 26, 12);                     // body
+    px('rgba(255,255,255,0.14)', -13, -2, 26, 1);   // bovenrand-highlight
+    px(t.band, -13, 0, 26, 2);                      // gouden band op de body
+    px('#2a1c08', -3, 3, 6, 5); px('#ffd24a', -1, 5, 2, 2);   // slot op de body-voorkant
+    // ---- binnenkant + gloed die uit de kist komt (alleen als hij opengaat) ----
+    if (open > 0.03) {
+      px('#120c04', -11, -2, 22, 3);                // donkere binnenrand
+      ctx.save();
+      const gA = Math.min(1, open);
+      const g = ctx.createRadialGradient(0, -2, 1, 0, -2, 24);
+      g.addColorStop(0, '#fff8d0'); g.addColorStop(0.45, t.band); g.addColorStop(1, 'rgba(255,210,74,0)');
+      ctx.globalAlpha = gA; ctx.fillStyle = g; ctx.fillRect(-24, -28, 48, 30);
+      ctx.globalAlpha = gA * 0.5; ctx.fillStyle = '#fff2b0';   // lichtstralen omhoog
+      for (let i = -2; i <= 2; i++) { ctx.save(); ctx.rotate(i * 0.22); ctx.fillRect(-1, -26, 2, 24); ctx.restore(); }
+      ctx.restore();
+    }
+    // ---- deksel (los, scharniert omhoog + kantelt naar achteren) ----
+    ctx.save();
+    ctx.translate(0, -2 - open * 11);               // omhoog van de body af
+    ctx.scale(1, 1 - open * 0.5);                   // verkort = kantelt naar achteren
+    ctx.rotate(open * 0.1);                          // klein tikje kanteling
+    px(t.col, -14, -8, 28, 8);                      // deksel-body
+    px('rgba(255,255,255,0.28)', -14, -8, 28, 2);   // highlight bovenop
+    px(t.band, -14, -3, 28, 2);                     // gouden band op het deksel
+    px(t.band, -2, -8, 4, 8);                       // verticale band op het deksel
+    px('#3a2a10', -3, -2, 6, 2);                    // klepje aan de voorrand van het deksel
+    ctx.restore();
   },
   _drawChestIcon(canvas, rarity, ready) {
     const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false; ctx.clearRect(0, 0, canvas.width, canvas.height);
