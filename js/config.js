@@ -854,7 +854,7 @@ function buildArmorPieces() {
   const slotHp   = { chest: 1.0, bottom: 0.7, hat: 0.55, feet: 0.45 };   // borst geeft het meest
   const tierBase = { leather: 14, iron: 26, steel: 40 };                 // basis-HP per set
   const tierDur  = { leather: 60, iron: 110, steel: 170 };               // duurzaamheid (slijt langzaam)
-  const tierMs   = { leather: 5 * 60e3, iron: 20 * 60e3, steel: 45 * 60e3 };   // smeedtijd
+  const tierMs   = { leather: 60 * 60e3, iron: 180 * 60e3, steel: 360 * 60e3 };   // smeedtijd: 1u -> 3u -> 6u (hoe beter, hoe langer)
   // elke set heeft leer + ijzer nodig; hogere sets ook staal (meer naarmate het beter wordt)
   const cost = {
     leather: { hat: { iron: 2, leather: 2, nails: 2 }, chest: { iron: 4, leather: 3, nails: 3 }, bottom: { iron: 3, leather: 2, nails: 2 }, feet: { iron: 2, leather: 2, nails: 1 } },

@@ -363,7 +363,7 @@ const Storage = {
     if (!repair) return p.craft;
     const c = {}; for (const k in p.craft) c[k] = Math.max(1, Math.ceil(p.craft[k] / 2)); return c;   // reparatie = helft materiaal
   },
-  craftMs(id, repair) { const p = ARMOR_PIECES[id]; if (!p) return 0; return repair ? Math.round(p.craftMs * 0.4) : p.craftMs; },   // reparatie = kortere tijd
+  craftMs(id, repair) { const p = ARMOR_PIECES[id]; if (!p) return 0; return repair ? Math.round(p.craftMs / 6) : p.craftMs; },   // reparatie = 1/6 van de smeedtijd (10min -> 30min -> 60min)
   canCraft(id, repair) {
     if (this.data.forge) return false;                                  // maar 1 tegelijk
     const p = ARMOR_PIECES[id]; if (!p) return false;
