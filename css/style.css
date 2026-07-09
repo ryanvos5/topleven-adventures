@@ -918,7 +918,7 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
 .armor-cost .short { color: #ff8a7a; }
 /* FORGE-knop: een steen met de tekst erin geslagen */
 .bs-craft-btn {
-  width: 100%; margin-top: 5px; cursor: pointer;
+  width: 100%; margin-top: auto; cursor: pointer;   /* knop onderaan de kaart -> alle FORGE-knoppen lijnen uit */
   padding: 8px 6px; border-radius: 8px; border: 2px solid #2c2620;
   font-family: var(--pixel-font); font-weight: 900; letter-spacing: 2px; font-size: clamp(12px, 1.7vw, 15px);
   color: #cdb890;
@@ -946,7 +946,7 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
   #bs-grid .shop-card-name { font-size: 12px; }
   #bs-grid .armor-hp { font-size: 10px; }
   #bs-grid .armor-cost { font-size: 9px; margin-top: 1px; }
-  .bs-craft-btn { padding: 5px 4px; font-size: 12px; margin-top: 3px; }
+  .bs-craft-btn { padding: 5px 4px; font-size: 12px; margin-top: auto; }
 }
 #btn-vs-quit {
   position: absolute; right: max(10px, env(safe-area-inset-right)); top: 4px;
