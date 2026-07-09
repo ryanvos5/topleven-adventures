@@ -3850,6 +3850,16 @@ const Game = {
     }
     this.castleDragons = this.castleDragons.filter((d) => (this.time - d.born) < d.dur + 250);
   },
+  // Smoke Vanish: pluizige grijze rookwolk op (x,y)
+  spawnSmokePuff(x, y) {
+    const cols = ['#e2e6ea', '#c8ced6', '#aab0b8', '#8a9098'];
+    for (let i = 0; i < 24; i++) {
+      const a = Math.random() * 6.2832, sp = 0.4 + Math.random() * 1.8;
+      this.particles.push(new Particle(x + (Math.random() - 0.5) * 16, y + (Math.random() - 0.5) * 12, Math.cos(a) * sp, -0.4 - Math.random() * 1.5, cols[i % 4], 620 + Math.random() * 420, 3 + Math.round(Math.random() * 2)));
+    }
+    for (let i = 0; i < 4; i++) this.particles.push(new Particle(x + (Math.random() - 0.5) * 10, y - 6, (Math.random() - 0.5) * 1.6, -Math.random() * 1.2, '#b06bff', 460, 2));   // paarse vanish-vonkjes
+    this.shake = Math.max(this.shake, 4);
+  },
   // draak-duik raakt je -> harde knockback (van de map af) in de vliegrichting
   _skyDragonHit(e, d) {
     e.knockVx = d.dir * 52; e.vy = -8.5; e.onGround = false; e.combo = 0; e.stunUntil = this.time + 260;
@@ -4271,12 +4281,14 @@ const Game = {
       if (mid === 'cave') pool.push({ kind: 'rock', w: 8 });                          // steen alleen op Cave
       if (mid === 'pirate') pool.push({ kind: 'cannon', w: 9 });                      // kanonskogel alleen op Pirate Ship
       if (mid === 'pirate') pool.push({ kind: 'shield', w: 9 });                      // shield op Pirate Ship
+      if (mid === 'pirate') pool.push({ kind: 'smoke', w: 8 });                       // Smoke Vanish op Pirate Ship
       if (mid === 'airplane') {                                                       // Airplane: alle power-ups behalve reus/strandbal/ninjaster/rotsblok
         pool.push({ kind: 'lightning', w: 8 }); pool.push({ kind: 'cannon', w: 9 });
         pool.push({ kind: 'shield', w: 9 }); pool.push({ kind: 'ak47', w: 9 });
       }
       if (mid === 'beach') pool.push({ kind: 'beachball', w: 10 });                     // strandbal op Beach
       if (mid === 'temple') pool.push({ kind: 'ninjastar', w: 12 });                    // ninja-sterren op Temple
+      if (mid === 'temple') pool.push({ kind: 'smoke', w: 8 });                         // Smoke Vanish op Temple
       if (mid === 'jungle') { pool.push({ kind: 'ak47', w: 9 }); pool.push({ kind: 'crossbow', w: 9 }); }  // AK47 + Kruisboog op Jungle
       if (mid === 'castle') {                                                          // Sky Castle: door de speler gekozen power-ups
         pool.push({ kind: 'shield', w: 9 }); pool.push({ kind: 'crossbow', w: 9 }); pool.push({ kind: 'fireball', w: 8 });
@@ -4611,6 +4623,7 @@ const Game = {
     else if (d.kind === 'fireball') pl.fireballs = SMASH_FIREBALL_SHOTS;
     else if (d.kind === 'rocket') { pl.smashRockets = SMASH_ROCKETS; pl.rangedId = 'rocketlauncher'; pl.weaponId = 'rocketlauncher'; }   // echt een raketwerper vasthouden
     else if (d.kind === 'ninjastar') { pl.stars = SMASH_STARS; pl.rangedId = 'ninjastar'; pl.weaponId = 'ninjastar'; }                   // 3 ninja-sterren, ster in de hand
+    else if (d.kind === 'smoke') { pl._invisUntil = this.time + 3000; this.spawnSmokePuff(pl.x, pl.y - 12); if (window.Sfx) Sfx.play('swing'); }   // Smoke Vanish: 3s onzichtbaar + rookwolk
     else if (d.kind === 'health') pl.hp = Math.min(pl.maxHp, pl.hp + 40);
     else if (d.kind === 'rage') pl.buffs.rage = this.time + POWERUPS.rage.dur;
     else if (d.kind === 'speed') pl.buffs.speed = this.time + POWERUPS.speed.dur;
@@ -5746,6 +5759,14 @@ const Game = {
       Sprites.px(ctx, '#f2f6fa', x - 1, y - 5, 2, 3); Sprites.px(ctx, '#f2f6fa', x - 5, y - 1, 3, 2);      // glans
       Sprites.px(ctx, '#8a929c', x - 2, y - 2, 4, 4);            // naaf
       Sprites.px(ctx, '#2a2f36', x - 1, y - 1, 2, 2);            // gaatje
+    }
+    else if (d.kind === 'smoke') {
+      // Smoke Vanish: grijze rookwolk met een paars vanish-vonkje
+      Sprites.px(ctx, '#c8ced6', x - 5, y - 2, 10, 6); Sprites.px(ctx, '#e2e6ea', x - 5, y - 2, 10, 2);   // wolk-body + highlight
+      Sprites.px(ctx, '#aab0b8', x - 6, y, 3, 4); Sprites.px(ctx, '#aab0b8', x + 3, y, 3, 4);             // pluizige zijkanten
+      Sprites.px(ctx, '#dfe4ea', x - 2, y - 5, 5, 3);                                                     // bolletje bovenop
+      Sprites.px(ctx, '#9aa3ad', x - 4, y + 4, 8, 1);                                                     // onderrand-schaduw
+      Sprites.px(ctx, '#b06bff', x + 3, y - 6, 2, 2); Sprites.px(ctx, '#d9b8ff', x - 5, y - 5, 1, 1);     // vanish-vonkjes
     }
     else if (d.kind === 'crossbow') {
       // kruisboog (zelfde vorm als in de inventaris/shop)

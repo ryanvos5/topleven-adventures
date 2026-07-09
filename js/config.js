@@ -805,6 +805,7 @@ const SHOP_POWERUPS = {
   dart:      { name: 'Gifdart',     cost: 0, kind: 'dart',      icon: '🎯', desc: 'Snelle dart die verdooft. Alleen uit kisten.', chestOnly: true },
   rock:      { name: 'Rotsblok',    cost: 0, kind: 'rock',      icon: '🪨', desc: 'Laat rotsblokken op je tegenstander vallen. Alleen uit kisten.', chestOnly: true },
   lightning: { name: 'Bliksem',     cost: 0, kind: 'lightning', icon: '🌩', desc: 'Verdoof je tegenstander met de bliksem. Alleen uit kisten.', chestOnly: true },
+  smokevanish: { name: 'Smoke Vanish', cost: 0, kind: 'smoke', icon: '💨', desc: 'Word 3s onzichtbaar en laat een rookwolk achter.', chestOnly: true },
   // ---- alleen in de Training-lobby-computer ----
   ninjastar: { name: 'Ninja-sterren', cost: 0, kind: 'ninjastar', icon: '🌟', desc: '3 draaiende ninja-sterren.', trainingOnly: true },
   deagle:     { name: 'Desert Eagle',  cost: 0, kind: 'deagle',    icon: '🔫', desc: 'Fors pistool met terugslag: halve HP, 3 kogels.', trainingOnly: true },
@@ -813,7 +814,7 @@ const SHOP_POWERUPS = {
 };
 const POWERUP_ORDER = ['heal', 'shield', 'speed', 'rage', 'fireball', 'dragon', 'ak47', 'rocket', 'cannon', 'beachball', 'coco', 'boom', 'dart', 'rock', 'lightning'];
 // volgorde in de Training-lobby-computer: alles wat je kunt uitproberen (incl. training-only wapens)
-const TRAINING_POWERUP_ORDER = ['heal', 'shield', 'speed', 'rage', 'fireball', 'dragon', 'ak47', 'deagle', 'crossbow', 'rocket', 'cannon', 'ninjastar', 'beachball', 'coco', 'boom', 'dart', 'rock', 'lightning'];
+const TRAINING_POWERUP_ORDER = ['heal', 'shield', 'speed', 'rage', 'fireball', 'dragon', 'smokevanish', 'ak47', 'deagle', 'crossbow', 'rocket', 'cannon', 'ninjastar', 'beachball', 'coco', 'boom', 'dart', 'rock', 'lightning'];
 // melee-wapens die je in de Training-lobby-computer kunt kiezen (blijven na respawn)
 const TRAINING_MELEE_ORDER = ['bat', 'club', 'machete', 'sword', 'dagger', 'axe', 'spear', 'mace', 'flail', 'bostaff', 'katana', 'halberd', 'chainsaw'];
 

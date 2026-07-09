@@ -191,6 +191,15 @@ const Sprites = {
         P('#3a2f22', 0, 2, 2, 3);                                    // trekker/greep
         break;
       }
+      case 'smoke': {                                    // Smoke Vanish — grijze rookwolk + paars vonkje
+        const g = '#c8ced6', gl = '#e2e6ea', gd = '#9aa3ad';
+        P(g, -6, -2, 12, 7); P(gl, -6, -2, 12, 2);
+        P(g, -8, 0, 3, 5); P(g, 5, 0, 3, 5);             // pluizige zijkanten
+        P(gl, -3, -6, 6, 3);                             // bolletje bovenop
+        P(gd, -5, 5, 10, 1);                             // onderrand-schaduw
+        P('#b06bff', 4, -7, 2, 2); P('#d9b8ff', -6, -6, 2, 2);   // vanish-vonkjes
+        break;
+      }
       case 'chainsaw': {                                 // Kettingzaag
         P('#c8402a', -6, -3, 6, 7); P('#e05a3a', -6, -3, 6, 2);      // rode motor
         P('#2a2a2e', -2, 0, 3, 4);                                   // greep

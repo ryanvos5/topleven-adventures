@@ -227,6 +227,7 @@ I18N.CONTENT = {
       rage: { name: 'Rage', desc: 'A lot more hit damage for a bit.' },
       fireball: { name: 'Fireball', desc: '3 fireballs that also set enemies alight.' },
       dragon: { name: 'Dragon', desc: 'Summon a dragon that breathes fire at your opponent.' },
+      smokevanish: { name: 'Smoke Vanish', desc: 'Turn invisible for 3s and leave a smoke cloud behind.' },
       ak47: { desc: 'Machine gun with 50 bullets. Chests only.' },
       rocket: { name: 'Rocket', desc: 'Rocket launcher. Chests only.' },
       cannon: { name: 'Cannon', desc: 'Cannonball that homes in on your opponent. Chests only.' },
