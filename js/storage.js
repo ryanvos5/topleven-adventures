@@ -107,8 +107,16 @@ const Storage = {
     if ((!d.loadout || !d.loadout.length) && Array.isArray(cloud.loadout)) d.loadout = cloud.loadout.slice(0, 3);
     // kisten: neem de rij met de meeste kisten (anti-verlies)
     if (Array.isArray(cloud.chests) && cloud.chests.length > (d.chests || []).length) d.chests = cloud.chests;
-    d.mpWins = Math.max(d.mpWins || 0, cloud.mpWins || 0);
-    d.mpLosses = Math.max(d.mpLosses || 0, cloud.mpLosses || 0);
+    // W/L-stats: normaal het hoogste (anti-verlies), maar een admin-override (cloud.statsForce nieuwer dan lokaal
+    // toegepast) neemt de cloud-waarden exact over — zo kan een reset/correctie ook OMLAAG en blijft die staan.
+    if (cloud.statsForce && cloud.statsForce > (d.statsForceApplied || 0)) {
+      d.mpWins = cloud.mpWins || 0;
+      d.mpLosses = cloud.mpLosses || 0;
+      d.statsForceApplied = cloud.statsForce;
+    } else {
+      d.mpWins = Math.max(d.mpWins || 0, cloud.mpWins || 0);
+      d.mpLosses = Math.max(d.mpLosses || 0, cloud.mpLosses || 0);
+    }
     d.rp = Math.max(d.rp || 0, cloud.rp || 0);
     d.rankRewarded = Math.max(d.rankRewarded || 0, cloud.rankRewarded || 0);
     if (typeof cloud.winStreak === 'number' && (d.winStreak || 0) === 0) d.winStreak = cloud.winStreak;
