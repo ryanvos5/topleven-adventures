@@ -2691,6 +2691,7 @@ const Game = {
       timed: !!opts.timed, matchTimer: opts.timed ? MATCH_TIME_MS : 0, timeUp: false, suddenDeath: false, zoomTarget: null,   // matchmaking: 3-min tijdslimiet
       roundFreezeUntil: 0, roundMsg: '',
       roundPlayStart: 0, _fleeWarnAt: 0, myLastHit: 0, oppLastHit: 0,   // anti-vluchten: laatste pvp-schade per kant
+      _usedPU: {},                                                      // welke loadout-powerups deze match al zijn ingezet (max 1x elk)
       remote: {
         x: rb.x, y: rb.y, tx: rb.x, ty: rb.y,
         dir: meLeft ? -1 : 1, walkPhase: 0, attacking: false, swingWeapon: null, heldWeapon: 'bat',
@@ -4394,8 +4395,10 @@ const Game = {
     const p = this.player; if (!p || p.dead) return false;
     if (this.vs && (this.vs.countdown > 0 || this.vs.roundFreezeUntil > this.time)) return false;
     const pu = SHOP_POWERUPS[id]; if (!pu) return false;
+    if (this.vs) { this.vs._usedPU = this.vs._usedPU || {}; if (this.vs._usedPU[id]) return false; }   // max 1x per powerup per match (geen 20x heal)
     if (Storage.powerupCount(id) <= 0) return false;
     if (!Storage.usePowerup(id)) return false;
+    if (this.vs) this.vs._usedPU[id] = true;                                                          // deze powerup is deze match verbruikt
     this.applyDrop(p, { kind: pu.kind, x: p.x, y: p.y - 8, wid: 'bat' });
     if (window.UI && UI.renderLoadoutBar) UI.renderLoadoutBar();
     return true;

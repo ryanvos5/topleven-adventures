@@ -2564,8 +2564,11 @@ const UI = {
       const id = lo[i];
       if (!id) { slot.classList.add('empty'); slot.dataset.pu = ''; slot.innerHTML = ''; slot.disabled = true; return; }
       const pu = SHOP_POWERUPS[id]; const n = Storage.powerupCount(id);
-      slot.classList.remove('empty'); slot.dataset.pu = id; slot.disabled = n <= 0;
-      slot.classList.toggle('depleted', n <= 0);
+      const usedThisMatch = !!(Game.vs && Game.vs._usedPU && Game.vs._usedPU[id]);   // deze match al ingezet -> op (max 1x)
+      const off = n <= 0 || usedThisMatch;
+      slot.classList.remove('empty'); slot.dataset.pu = id; slot.disabled = off;
+      slot.classList.toggle('depleted', off);
+      slot.classList.toggle('used', usedThisMatch);
       slot.innerHTML = '';
       const cv = document.createElement('canvas'); cv.width = 30; cv.height = 30; cv.className = 'lo-ico';
       this._puIcon(cv, pu.kind);

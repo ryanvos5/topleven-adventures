@@ -505,6 +505,7 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
 .loadout-slot:active { transform: scale(0.92); }
 .loadout-slot.empty { display: none; }
 .loadout-slot.depleted { opacity: 0.4; }
+.loadout-slot.used { filter: grayscale(0.65); }   /* deze match al ingezet (max 1x per powerup) */
 .loadout-slot .lo-ico { width: 30px; height: 30px; image-rendering: pixelated; }
 .loadout-slot .lo-n { position: absolute; right: 3px; bottom: 1px; font-size: 11px; font-weight: bold; color: #7affa0; text-shadow: 1px 1px 0 #000; }
 /* controller-badge: welke D-pad-richting deze powerup inzet (↑ boven / → midden / ↓ onder) */
