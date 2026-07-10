@@ -2690,6 +2690,7 @@ const Game = {
       introUntil: this.time + VERSUS_INTRO_MS, introShown: false, musicStarted: false,   // map-intro vóór het aftellen
       timed: !!opts.timed, matchTimer: opts.timed ? MATCH_TIME_MS : 0, timeUp: false, suddenDeath: false, zoomTarget: null,   // matchmaking: 3-min tijdslimiet
       roundFreezeUntil: 0, roundMsg: '',
+      roundPlayStart: 0, stormWarned: false, myLastHit: 0, oppLastHit: 0,   // "ring sluit": laatste pvp-schade per kant
       remote: {
         x: rb.x, y: rb.y, tx: rb.x, ty: rb.y,
         dir: meLeft ? -1 : 1, walkPhase: 0, attacking: false, swingWeapon: null, heldWeapon: 'bat',
@@ -2742,7 +2743,7 @@ const Game = {
     } else if (window.Net) {
       Net.setVersusCallbacks({
         onState: (s) => this.onVersusState(s),
-        onHit: (p) => this.onVersusHit(p),
+        onHit: (p) => { if (p) p.pvp = 1; this.onVersusHit(p); },   // online: dit is een échte tegenstander-treffer (pvp)
         onParry: (p) => this.onVersusParry(p),
         onTide: (p) => this.onVersusTide(p),
         onBall: (p) => this.onVersusBall(p),
@@ -2866,6 +2867,7 @@ const Game = {
       const before = v.countdown; v.countdown -= dt;
       if (before > 0 && v.countdown <= 0) {                       // aftellen klaar -> ronde begint: "ring sluit"-klok resetten
         v.roundPlayStart = this.time; v.stormWarned = false; this.storm = null;
+        v.myLastHit = this.time; v.oppLastHit = this.time;        // schade-klok per ronde opnieuw (verse 15s)
         if (!v.musicStarted) {                                    // eerste ronde -> muziek start
           v.musicStarted = true;
           if (window.Sfx) { Sfx.music(this._pendingMusicTheme || 'menu'); if (this._vsChallengeMusic) Sfx.setMusicIntensity(1); }
@@ -4790,14 +4792,21 @@ const Game = {
     this.shake = Math.max(this.shake, 7);
   },
 
-  // "Ring sluit": sleept een ronde te lang zonder KO, dan komen er rode gevarenzones vanaf de zijkanten die naar het midden
-  // schuiven. Wie in de rode zone staat neemt oplopende schade + een duwtje naar binnen -> beide spelers móéten vechten.
+  // "Ring sluit" (tegen wegrennen): staat iemand minstens 2 rondes voor én heeft die binnen 15s geen schade aan de
+  // tegenstander gedaan, dan sluit de ring. Rode gevarenzones schuiven vanaf de zijkanten naar het midden; wie erin
+  // staat neemt oplopende schade + een duwtje naar binnen -> de vluchtende leider móét weer gaan vechten.
   updateStorm(dt) {
     const v = this.vs;
     if (!v || v.over || v.timeUp || v.countdown > 0 || !v.roundPlayStart) { this.storm = null; return; }
-    const elapsed = this.time - v.roundPlayStart;
-    if (elapsed <= STORM_START_MS) { this.storm = null; return; }
-    const closeT = Math.min(1, (elapsed - STORM_START_MS) / STORM_CLOSE_MS);   // 0 -> 1 terwijl hij dichttrekt
+    // wie staat 2+ rondes voor? -> pak diens laatste-schade-moment (die van de leider telt)
+    const lead = (v.myScore || 0) - (v.oppScore || 0);
+    let leaderLastHit;
+    if (lead >= 2) leaderLastHit = v.myLastHit || v.roundPlayStart;         // ik sta voor -> mijn uitgaande schade telt
+    else if (lead <= -2) leaderLastHit = v.oppLastHit || v.roundPlayStart;  // tegenstander staat voor -> diens schade aan mij telt
+    else { this.storm = null; return; }                                     // niemand staat 2+ voor -> geen ring
+    const idle = this.time - (leaderLastHit || v.roundPlayStart);
+    if (idle <= STORM_START_MS) { this.storm = null; return; }              // leider deed recent nog schade -> nog geen ring
+    const closeT = Math.min(1, (idle - STORM_START_MS) / STORM_CLOSE_MS);   // 0 -> 1 terwijl hij dichttrekt
     const center = this.vsMapW / 2;
     const halfSafe = center - (center - STORM_SAFE_HALF) * closeT;             // veilige halve breedte krimpt tot STORM_SAFE_HALF
     const dl = center - halfSafe, dr = center + halfSafe;                      // linker/rechter rand van de veilige zone
@@ -4955,7 +4964,7 @@ const Game = {
             Math.abs(bl.x - this.player.x) < rw && Math.abs(bl.y - (this.player.y - 16)) < rh) {
           bl.alive = false;
           const dmg = (bl.hitDmg != null) ? bl.hitDmg : Math.round((bl.damage || 20) * 0.4);
-          this.onVersusHit({ dir: Math.sign(bl.vx) || 1, power: (bl.power != null ? bl.power : 9), vy: bl.kind === 'cannon' ? -8 : -3.5, dmg: dmg });
+          this.onVersusHit({ dir: Math.sign(bl.vx) || 1, power: (bl.power != null ? bl.power : 9), vy: bl.kind === 'cannon' ? -8 : -3.5, dmg: dmg, pvp: 1 });
           this.spawnBlood(bl.x, bl.y);
         }
       }
@@ -4967,7 +4976,7 @@ const Game = {
       b._poundHit = false;
       if (Math.abs(this.player.x - b.x) < 40 && Math.abs(this.player.y - b.y) < 30 && this.player.respawnInvuln <= 0 && !this.player.dead) {
         const kd = this.player.x >= b.x ? 1 : -1;
-        this.onVersusHit({ dir: kd, power: 16, vy: -6, dmg: 24 });
+        this.onVersusHit({ dir: kd, power: 16, vy: -6, dmg: 24, pvp: 1 });
         this.shake = Math.max(this.shake, 8);
       }
     }
@@ -4985,7 +4994,7 @@ const Game = {
         const wd = (WEAPONS[b.meleeId] ? WEAPONS[b.meleeId].damage : 34) * (b.meleeMul || 1) * (b.hasBuff('rage', this.time) ? 1.6 : 1) * comboMul(b.combo);
         const kp = 15 + Math.max(0, b.combo - 1) * 8;                 // bot: vanaf x2 ook fors meer knockback
         const bsst = (b._stunStrikeUntil && this.time < b._stunStrikeUntil) ? 1000 : 0; if (bsst) b._stunStrikeUntil = 0;   // Monnik-boss: stun-slag
-        this.onVersusHit({ dir: kd, power: kp, vy: -5.5 - Math.max(0, b.combo - 1) * 0.7, dmg: Math.round(wd * 0.45), melee: 1, stun: bsst });
+        this.onVersusHit({ dir: kd, power: kp, vy: -5.5 - Math.max(0, b.combo - 1) * 0.7, dmg: Math.round(wd * 0.45), melee: 1, stun: bsst, pvp: 1 });
         if (b.ability) b.abCharge = Math.min(1, b.abCharge + (0.05 + 0.03 * Math.max(0, b.combo - 1)) / (b.abChargeMul || 1));   // combo's laden de bot-ability sneller
         this.shake = Math.max(this.shake, 6);
       }
@@ -5013,6 +5022,7 @@ const Game = {
       return;
     }
     b.combo = 0; b.comboUntil = 0;                    // geraakt worden verbreekt de combo
+    if (dmg > 0 && this.vs) this.vs.myLastHit = this.time;   // ik deed schade aan de tegenstander ("ring sluit"-klok)
     b.knockVx = dir * power * (blocking ? 0.10 : 1);
     if (!blocking) { b.vy = vy; b.onGround = false; }
     if (dmg) b.takeDamage(Math.round(dmg * (blocking ? 0.25 : 1)), 0, this, 0);
@@ -5191,6 +5201,7 @@ const Game = {
   onVersusHit(payload) {
     const p = this.player;
     if (p.respawnInvuln > 0 || p.dead) return;       // net gespawnd = even onkwetsbaar
+    if (payload && payload.pvp && payload.dmg > 0 && this.vs) this.vs.oppLastHit = this.time;   // tegenstander deed schade aan mij ("ring sluit"-klok; geen map-hazards)
     if (window.Sfx) Sfx.play('hit');
     const blocking = p.ducking && p.onGround && !p._guardBroken;   // bukken = blok
     const parry = blocking && !!payload.melee && (this.time - (p._blockStart || 0)) <= PARRY_WINDOW;   // perfect block alleen bij melee

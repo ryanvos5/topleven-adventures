@@ -377,6 +377,10 @@ const Net = {
 
   versusSend(event, payload) {
     if (this.versus && this.versus.channel) {
+      // "ring sluit": onthoud wanneer ik online schade aan de tegenstander deed (melee/kogels via 'hit', vuuraura via 'burn')
+      if ((event === 'hit' && payload && payload.dmg > 0) || event === 'burn') {
+        if (typeof Game !== 'undefined' && Game && Game.vs) Game.vs.myLastHit = Game.time;
+      }
       this.versus.channel.send({ type: 'broadcast', event, payload });
     }
   },
