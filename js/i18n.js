@@ -415,7 +415,7 @@ I18N.cut = function (s) { return this.lang === 'en' ? (this.CUT_EN[s] || s) : s;
 // ---- losse dynamische UI-teksten: NL blijft bron, Engelse overlay hieronder (tl('...')) ----
 I18N.UI_EN = {
   'Uit de match gezet — te lang weg (AFK). Je verliest.': 'Removed from the match — away too long (AFK). You lose.',
-  'TIJD!': 'TIME!', 'Jij': 'You', 'Tegenstander': 'Opponent', 'RING SLUIT!': 'RING CLOSING IN!',
+  'TIJD!': 'TIME!', 'Jij': 'You', 'Tegenstander': 'Opponent', 'NIET VLUCHTEN — VAL AAN!': "DON'T RUN — ATTACK!",
   // 1v1 uitslag-scherm (onder de Final score)
   'munten': 'coins', 'Winreeks': 'Win streak', 'Hogere rank verslagen': 'Beat a higher rank', 'NIEUWE RANK': 'NEW RANK',
   '(log in om je rank & munten mee te tellen)': '(log in to count your rank & coins)',

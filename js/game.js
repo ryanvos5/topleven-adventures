@@ -2690,7 +2690,7 @@ const Game = {
       introUntil: this.time + VERSUS_INTRO_MS, introShown: false, musicStarted: false,   // map-intro vóór het aftellen
       timed: !!opts.timed, matchTimer: opts.timed ? MATCH_TIME_MS : 0, timeUp: false, suddenDeath: false, zoomTarget: null,   // matchmaking: 3-min tijdslimiet
       roundFreezeUntil: 0, roundMsg: '',
-      roundPlayStart: 0, stormWarned: false, myLastHit: 0, oppLastHit: 0,   // "ring sluit": laatste pvp-schade per kant
+      roundPlayStart: 0, _fleeWarnAt: 0, myLastHit: 0, oppLastHit: 0,   // anti-vluchten: laatste pvp-schade per kant
       remote: {
         x: rb.x, y: rb.y, tx: rb.x, ty: rb.y,
         dir: meLeft ? -1 : 1, walkPhase: 0, attacking: false, swingWeapon: null, heldWeapon: 'bat',
@@ -2865,16 +2865,16 @@ const Game = {
 
     if (v.countdown > 0) {                             // korte aftelling vóór de start
       const before = v.countdown; v.countdown -= dt;
-      if (before > 0 && v.countdown <= 0) {                       // aftellen klaar -> ronde begint: "ring sluit"-klok resetten
-        v.roundPlayStart = this.time; v.stormWarned = false; this.storm = null;
-        v.myLastHit = this.time; v.oppLastHit = this.time;        // schade-klok per ronde opnieuw (verse 15s)
+      if (before > 0 && v.countdown <= 0) {                       // aftellen klaar -> ronde begint: anti-vlucht-klok resetten
+        v.roundPlayStart = this.time; v._fleeWarnAt = 0;
+        v.myLastHit = this.time; v.oppLastHit = this.time;        // schade-klok per ronde opnieuw (verse 10s)
         if (!v.musicStarted) {                                    // eerste ronde -> muziek start
           v.musicStarted = true;
           if (window.Sfx) { Sfx.music(this._pendingMusicTheme || 'menu'); if (this._vsChallengeMusic) Sfx.setMusicIntensity(1); }
         }
       }
     } else {
-      this.updateStorm(dt);                            // ring-sluit: gevarenzone dwingt spelers naar het midden (tegen wegrennen)
+      this.updateFleePunish(dt);                       // anti-vluchten: leider die niet aanvalt krijgt zelf schade
       if (this.player.respawnInvuln > 0) this.player.respawnInvuln -= dt;
       if (!this.player.dead && !this.player._trapCharges) this.player.abCharge = Math.min(1, this.player.abCharge + dt / (ABILITY_CHARGE_MS * (this.player.abChargeMul || 1)));   // ability laadt langzaam op (niet terwijl je nog vallen in de hand hebt)
       if (this.vsBot && this.bot && !this.bot.dead && this.bot.ability) this.bot.abCharge = Math.min(1, this.bot.abCharge + dt / (ABILITY_CHARGE_MS * (this.bot.abChargeMul || 1)));  // bot laadt óók op
@@ -4788,58 +4788,38 @@ const Game = {
     if (this.tentacle) { this.tentacle.state = 'idle'; this.tentacle.nextAt = this.time + PIRATE_TENT_EVERY; }
     if (this.tide) { this.tide.state = 'idle'; this.tide.level = 0; this.tide.nextAt = this.time + BEACH_TIDE_EVERY; }
     this.ball = null;
-    this.storm = null;                                  // ring-sluit stopt bij rondewissel
     this.shake = Math.max(this.shake, 7);
   },
 
-  // "Ring sluit" (tegen wegrennen): staat iemand minstens 2 rondes voor én heeft die binnen 15s geen schade aan de
-  // tegenstander gedaan, dan sluit de ring. Rode gevarenzones schuiven vanaf de zijkanten naar het midden; wie erin
-  // staat neemt oplopende schade + een duwtje naar binnen -> de vluchtende leider móét weer gaan vechten.
-  updateStorm(dt) {
+  // Anti-vluchten: staat iemand minstens 2 rondes voor én heeft die 10s geen schade aan de tegenstander gedaan, dan
+  // begint de leider zélf schade te krijgen (loopt op) + de melding "NIET VLUCHTEN — VAL AAN!". Zodra hij weer raakt,
+  // stopt het meteen. Geen ring/zones meer; alleen de vluchtende leider wordt gestraft.
+  updateFleePunish(dt) {
     const v = this.vs;
-    if (!v || v.over || v.timeUp || v.countdown > 0 || !v.roundPlayStart) { this.storm = null; return; }
-    // wie staat 2+ rondes voor? -> pak diens laatste-schade-moment (die van de leider telt)
+    if (!v || v.over || v.timeUp || v.countdown > 0 || !v.roundPlayStart) return;
     const lead = (v.myScore || 0) - (v.oppScore || 0);
-    let leaderLastHit;
-    if (lead >= 2) leaderLastHit = v.myLastHit || v.roundPlayStart;         // ik sta voor -> mijn uitgaande schade telt
-    else if (lead <= -2) leaderLastHit = v.oppLastHit || v.roundPlayStart;  // tegenstander staat voor -> diens schade aan mij telt
-    else { this.storm = null; return; }                                     // niemand staat 2+ voor -> geen ring
-    const idle = this.time - (leaderLastHit || v.roundPlayStart);
-    if (idle <= STORM_START_MS) { this.storm = null; return; }              // leider deed recent nog schade -> nog geen ring
-    const closeT = Math.min(1, (idle - STORM_START_MS) / STORM_CLOSE_MS);   // 0 -> 1 terwijl hij dichttrekt
-    const center = this.vsMapW / 2;
-    const halfSafe = center - (center - STORM_SAFE_HALF) * closeT;             // veilige halve breedte krimpt tot STORM_SAFE_HALF
-    const dl = center - halfSafe, dr = center + halfSafe;                      // linker/rechter rand van de veilige zone
-    this.storm = { dl, dr, closeT };
-    if (!v.stormWarned) { v.stormWarned = true; if (window.UI && UI.showBigMsg) UI.showBigMsg(tl('RING SLUIT!'), 'lose', 2000); if (window.Sfx) Sfx.play('drumroll'); this.shake = Math.max(this.shake, 6); }
-    const dps = STORM_DPS * (1 + closeT * 1.5);                                // 20 -> 50 dps naarmate hij sluit
-    const bite = (e, isMe) => {
-      if (!e || e.dead) return;
-      let dir = 0;
-      if (e.x < dl) dir = 1; else if (e.x > dr) dir = -1;
-      if (!dir) return;
-      e.hp = Math.max(0, e.hp - dps * dt / 1000);       // schade in de rode zone (KO wordt door de bestaande hp<=0-check afgehandeld)
-      e.knockVx = (e.knockVx || 0) + dir * 0.7 * (this.dtScale || 1);          // zacht naar het midden duwen
-      if (isMe) { this.hurtFlash = Math.max(this.hurtFlash || 0, 40); this.shake = Math.max(this.shake, 3); }
-    };
-    bite(this.player, true);                            // eigen speler wordt lokaal gebeten
-    if (this.vsBot) bite(this.bot, false);              // botmatch: bot ook (online doet de tegenstander dit op z'n eigen client)
-  },
-
-  drawStorm(ctx, camX, visW) {
-    const s = this.storm; if (!s) return;
-    const top = this.vsCamY - 260, botH = CONFIG.GROUND_Y - top + Math.abs(this.vsCamY) + 340;
-    const pulse = 0.26 + 0.16 * Math.abs(Math.sin(this.time / 170));
-    ctx.save();
-    ctx.fillStyle = 'rgba(210,40,36,' + pulse.toFixed(3) + ')';
-    ctx.fillRect(camX - 40, top, (s.dl - (camX - 40)), botH);                  // linker gevarenzone (van links tot de veilige rand)
-    ctx.fillRect(s.dr, top, (camX + visW + 40) - s.dr, botH);                  // rechter gevarenzone (van veilige rand tot rechts)
-    // felle, kloppende rand op de sluitlijnen
-    const edge = 0.55 + 0.35 * Math.abs(Math.sin(this.time / 120));
-    ctx.fillStyle = 'rgba(255,110,70,' + edge.toFixed(3) + ')';
-    ctx.fillRect(s.dl - 3, top, 4, botH);
-    ctx.fillRect(s.dr - 1, top, 4, botH);
-    ctx.restore();
+    let target = null, iAmFleer = false, since = 0;
+    if (lead >= 2) {                                    // ik sta voor -> mijn uitgaande schade telt
+      since = this.time - (v.myLastHit || v.roundPlayStart);
+      if (since > FLEE_PUNISH_MS) { target = this.player; iAmFleer = true; }
+    } else if (lead <= -2) {                            // tegenstander staat voor -> diens schade aan mij telt
+      since = this.time - (v.oppLastHit || v.roundPlayStart);
+      if (since > FLEE_PUNISH_MS) target = this.vsBot ? this.bot : null;   // online: de remote straft zichzelf op z'n eigen client
+    }
+    if (!target || target.dead || target.respawnInvuln > 0) return;
+    const over = since - FLEE_PUNISH_MS;                                    // hoe lang al aan het vluchten (na de 10s)
+    const dps = Math.min(FLEE_DPS_MAX, FLEE_DPS_BASE + over / 1000 * 4);    // schade loopt op hoe langer hij blijft rennen
+    target.hp = Math.max(0, target.hp - dps * dt / 1000);                   // KO bij hp<=0 wordt door de bestaande check afgehandeld
+    if (iAmFleer) {                                     // alleen de vluchtende leider zelf ziet de waarschuwing + voelt de flits
+      this.hurtFlash = Math.max(this.hurtFlash || 0, 60);
+      this.shake = Math.max(this.shake, 3);
+      if (Math.random() < 0.4) this.spawnBlood(this.player.x, this.player.y - 14);
+      if (!v._fleeWarnAt || this.time - v._fleeWarnAt > 2200) {
+        v._fleeWarnAt = this.time;
+        if (window.UI && UI.showBigMsg) UI.showBigMsg(tl('NIET VLUCHTEN — VAL AAN!'), 'lose', 1500);
+        if (window.Sfx) Sfx.play('hit');
+      }
+    }
   },
 
   checkVersusHit() {
@@ -5620,9 +5600,6 @@ const Game = {
       Sprites.px(ctx, p.color, p.x, p.y, p.size, p.size);
     }
     ctx.globalAlpha = 1;
-
-    // ring-sluit gevarenzones (rode wanden vanaf de zijkanten) — achter de spelers, over de wereld
-    if (this.storm) this.drawStorm(ctx, camX, visW);
 
     // tegenstander (ghost) — ROOD pijltje erboven; onzichtbare ninja tekenen we niet (jij ziet 'm niet)
     const r = this.vs.remote;
@@ -6545,7 +6522,7 @@ const Game = {
     this.abilityFx = []; this.impacts = []; this.floatTexts = []; this.ambient = []; this.zapFx = null; this.ko = null;
     this.hitStop = 0; this.hurtFlash = 0; this.smashFlash = 0; this._ambClock = 0;
     this.caveWall = null; this.rocks = []; this.ball = null; this.gorilla = null; this.jungleApe = null; this.birds = []; this._birdAt = 0; this.darts = []; this._dartAt = 0; this.castleDragons = []; this._cDragonAt = 0;
-    this.tentacle = null; this.vulcan = null; this.tide = null; this.nuke = null; this.storm = null;
+    this.tentacle = null; this.vulcan = null; this.tide = null; this.nuke = null;
     this.buildVersusPlatforms(map);
     // veilige stub zodat gedeelde helpers (applyDrop/smashFire) geen null-this.vs raken
     this.vs = { remote: { alive: false, x: -99999, y: 0, hp: 100, maxHp: 100 }, countdown: 0, roundFreezeUntil: 0, lastSwing: 0 };

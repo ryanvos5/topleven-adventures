@@ -576,11 +576,10 @@ const SMASH_ROUNDS = 8;
 const VERSUS_INTRO_MS = 2600;        // map-intro (zonder muziek, wat sfx) vóór het aftellen van de eerste ronde
 const AFK_KICK_MS = 15000;           // >15s geen input / uit de app -> uit de match gekickt (jij verliest, tegenstander wint)
 const MATCH_TIME_MS = 180000;        // matchmaking: 3 min tijdslimiet -> meeste rondes wint (gelijk = sudden death)
-// "Ring sluit" — tegen wegrennen: sleept een ronde te lang zonder KO, dan sluit een gevarenzone van de zijkanten naar het midden
-const STORM_START_MS = 15000;        // ronde duurt >15s zonder KO -> de ring begint te sluiten
-const STORM_CLOSE_MS = 12000;        // tijd om helemaal dicht te trekken tot de veilige middenstrook
-const STORM_SAFE_HALF = 120;         // veilige halve breedte rond het midden bij volledig gesloten (px)
-const STORM_DPS = 20;                // basis-schade per seconde in de rode zone (loopt op naarmate hij sluit)
+// Anti-vluchten: staat iemand 2+ voor en doet die 10s geen schade aan de tegenstander, dan krijgt de leider zélf schade ("val aan!")
+const FLEE_PUNISH_MS = 10000;        // leider deed 10s geen schade -> hij begint zelf schade te krijgen
+const FLEE_DPS_BASE = 14;            // start-schade per seconde
+const FLEE_DPS_MAX = 40;             // maximale schade per seconde (loopt op hoe langer hij blijft vluchten)
 const SMASH_DROP_EVERY = 5000;       // ms tussen drops (host bepaalt)
 const CLOUD_STAND_MS = 5000;         // Airplane: hoe lang je op een wolk-platform kunt staan
 const CLOUD_REFORM_MS = 2600;        // Airplane: hoe lang een ingezakte wolk weg blijft
