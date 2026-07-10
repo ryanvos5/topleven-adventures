@@ -1822,6 +1822,11 @@ const UI = {
     const them = document.getElementById('vs-score-them');
     if (me) me.textContent = v.myScore;
     if (them) them.textContent = v.oppScore;
+    // nicknames + rank-icoontje naast de eigen hp-balk
+    const myNick = (window.Net && Net.isLoggedIn && Net.isLoggedIn()) ? Net.nickname() : tl('Jij');
+    this._setVsName('me', myNick, Storage.rankIndex());
+    const oppNick = Game.vsBot ? 'Bot' : (v.oppName || tl('Tegenstander'));
+    this._setVsName('them', oppNick, Game.vsBot ? -1 : rankForRp(v.oppRp || 0));
     // matchmaking-tijdklok (mm:ss)
     const tm = document.getElementById('vs-timer');
     if (tm) {
@@ -1886,6 +1891,18 @@ const UI = {
     el.classList.remove('vmi-in'); void el.offsetWidth; el.classList.add('vmi-in');   // animatie herstarten
   },
   hideMapIntro() { const el = document.getElementById('vs-map-intro'); if (el) el.classList.add('hidden'); },
+  // nickname + rank-gem naast een hp-balk (alleen bij wijziging opnieuw zetten)
+  _setVsName(side, nick, rankIdx) {
+    const el = document.getElementById('vs-name-' + side); if (!el) return;
+    const key = (nick || '') + '|' + rankIdx;
+    if (el._key === key) return; el._key = key;
+    const txt = el.querySelector('.vn-txt'); if (txt) txt.textContent = nick || '';
+    const gem = el.querySelector('.vs-rank-gem');
+    if (gem) {
+      if (rankIdx == null || rankIdx < 0) { gem.style.display = 'none'; }
+      else { gem.style.display = ''; const rk = RANKS[rankIdx] || RANKS[0]; gem.style.background = rk.col; gem.title = rk.name; }
+    }
+  },
   // grote midden-banner (TIJD! / SUDDEN DEATH)
   showBigMsg(text, kind, autoHideMs) {
     const el = document.getElementById('vs-bigmsg'); if (!el) return;

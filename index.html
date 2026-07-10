@@ -11,9 +11,9 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#0d0f14" />
   <title>Tiny Power Smashers</title>
-  <link rel="icon" type="image/svg+xml" href="icon.svg?v=menu188" />
-  <link rel="apple-touch-icon" href="icon.svg?v=menu188" />
-  <link rel="stylesheet" href="css/style.css?v=menu188" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg?v=menu189" />
+  <link rel="apple-touch-icon" href="icon.svg?v=menu189" />
+  <link rel="stylesheet" href="css/style.css?v=menu189" />
 </head>
 <body>
   <div id="game-root">
@@ -69,7 +69,7 @@
     </div>
 
     <!-- ===== Splash bij opstarten (logo, fadet vanzelf weg) ===== -->
-    <div id="splash"><img src="logo.svg?v=menu188" alt="Tiny Power Smashers" /></div>
+    <div id="splash"><img src="logo.svg?v=menu189" alt="Tiny Power Smashers" /></div>
 
     <!-- ===== Canvas (de spelwereld) ===== -->
     <canvas id="game-canvas"></canvas>
@@ -141,7 +141,7 @@
               <span id="menu-ruby-count">0</span>
             </span>
           </div>
-          <img class="menu-logo-img" src="logo.svg?v=menu188" alt="Tiny Power Smashers" />
+          <img class="menu-logo-img" src="logo.svg?v=menu189" alt="Tiny Power Smashers" />
           <div class="menu-hud">
             <span id="menu-userline" class="menu-userline">Gast | Lvl 1</span>
             <button id="btn-settings" class="stone-icon" data-i18n-title="settings_word" data-i18n-aria="settings_word" title="Settings" aria-label="Settings">
@@ -495,14 +495,15 @@
     <!-- ===== 1 vs 1 score (tijdens het spel) ===== -->
     <div id="versus-hud" class="hidden">
       <div class="vs-side vs-side-me">
+        <span class="vs-name" id="vs-name-me"><span class="vn-txt"></span><i class="vs-rank-gem"></i></span>
         <span id="vs-score-me" class="vs-score">0</span>
         <div id="vs-shield-me" class="vs-shield hidden"><div class="vs-shield-fill"></div></div>
         <div class="vs-hp"><div id="vs-hp-me" class="vs-hp-fill me"></div></div>
         <div id="vs-armor-me" class="vs-armor hidden"><div class="vs-armor-fill"></div></div>
         <div id="vs-guard-me" class="vs-guard hidden"><div class="vs-guard-fill"></div></div>
       </div>
-      <span class="vs-score-vs" data-i18n="you_vs">YOU · VS</span>
       <div class="vs-side vs-side-them">
+        <span class="vs-name" id="vs-name-them"><i class="vs-rank-gem"></i><span class="vn-txt"></span></span>
         <span id="vs-score-them" class="vs-score">0</span>
         <div id="vs-shield-them" class="vs-shield hidden"><div class="vs-shield-fill"></div></div>
         <div class="vs-hp"><div id="vs-hp-them" class="vs-hp-fill them"></div></div>
@@ -634,18 +635,18 @@
     </div>
   </div>
 
-  <script src="vendor/supabase.min.js?v=menu188"></script>
-  <script src="js/i18n.js?v=menu188"></script>
-  <script src="js/config.js?v=menu188"></script>
-  <script src="js/storage.js?v=menu188"></script>
-  <script src="js/audio.js?v=menu188"></script>
-  <script src="js/net.js?v=menu188"></script>
-  <script src="js/input.js?v=menu188"></script>
-  <script src="js/sprites.js?v=menu188"></script>
-  <script src="js/menubg.js?v=menu188"></script>
-  <script src="js/entities.js?v=menu188"></script>
-  <script src="js/ui.js?v=menu188"></script>
-  <script src="js/game.js?v=menu188"></script>
-  <script src="js/main.js?v=menu188"></script>
+  <script src="vendor/supabase.min.js?v=menu189"></script>
+  <script src="js/i18n.js?v=menu189"></script>
+  <script src="js/config.js?v=menu189"></script>
+  <script src="js/storage.js?v=menu189"></script>
+  <script src="js/audio.js?v=menu189"></script>
+  <script src="js/net.js?v=menu189"></script>
+  <script src="js/input.js?v=menu189"></script>
+  <script src="js/sprites.js?v=menu189"></script>
+  <script src="js/menubg.js?v=menu189"></script>
+  <script src="js/entities.js?v=menu189"></script>
+  <script src="js/ui.js?v=menu189"></script>
+  <script src="js/game.js?v=menu189"></script>
+  <script src="js/main.js?v=menu189"></script>
 </body>
 </html>

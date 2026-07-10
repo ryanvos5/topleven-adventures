@@ -905,7 +905,10 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
 }
 .vs-side-me .vs-score { color: #6fd06a; }
 .vs-side-them .vs-score { color: #ff6a6a; }
-.vs-score-vs { font-size: 11px; color: var(--text-dim); letter-spacing: 1px; align-self: flex-start; margin-top: 6px; }
+.vs-name { display: flex; align-items: center; gap: 4px; font-family: var(--pixel-font); font-weight: bold; font-size: clamp(10px, 2vw, 14px); color: #fff; text-shadow: 0 2px 0 #000; max-width: 130px; }
+.vs-name .vn-txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vs-side-me .vs-name { color: #bff0bb; } .vs-side-them .vs-name { color: #ffc4bd; }
+.vs-rank-gem { flex: 0 0 auto; width: 9px; height: 9px; transform: rotate(45deg); border-radius: 2px; background: #cd7f32; box-shadow: inset 0 0 0 1px rgba(0,0,0,.45), 0 0 4px rgba(255,255,255,.25); }
 .vs-hp {
   width: 84px; height: 8px; background: #11151e; border: 1px solid #000; border-radius: 4px; overflow: hidden;
 }

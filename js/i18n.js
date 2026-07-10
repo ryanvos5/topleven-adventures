@@ -415,7 +415,7 @@ I18N.cut = function (s) { return this.lang === 'en' ? (this.CUT_EN[s] || s) : s;
 // ---- losse dynamische UI-teksten: NL blijft bron, Engelse overlay hieronder (tl('...')) ----
 I18N.UI_EN = {
   'Uit de match gezet — te lang weg (AFK). Je verliest.': 'Removed from the match — away too long (AFK). You lose.',
-  'TIJD!': 'TIME!',
+  'TIJD!': 'TIME!', 'Jij': 'You', 'Tegenstander': 'Opponent',
   // map-intro-hints
   'Stun-darts schieten door de arena': 'Stun darts fly across the arena',
   'Pas op voor de zeemonster-tentakel': 'Watch out for the sea-monster tentacle',
