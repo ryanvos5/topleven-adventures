@@ -134,8 +134,8 @@ const Input = {
   // Elke frame aanroepen: leest de controller en vertaalt de knoppen naar Input.state.
   // Standaard-mapping (positie-gebaseerd, klopt voor Backbone/Xbox/PS):
   //  linker joystick X = links/rechts · knop 0 (X/Cross) = springen ·
-  //  knop 2 (vierkant) = bukken/schild · knop 1 (rondje) = slaan ·
-  //  R2 (7) = schieten/powerup afvuren · L2 (6) = speciale ability · Start (9) = pauze
+  //  knop 2 (vierkant) of L2 = bukken/schild · knop 1 (rondje) = slaan ·
+  //  R2 (7) = schieten/powerup afvuren · L1 (4) = speciale ability · Start (9) = pauze
   pollGamepad() {
     if (typeof navigator === 'undefined' || !navigator.getGamepads) return;
     let gp = null;
@@ -155,17 +155,17 @@ const Input = {
     this._pad.left   = ax < -DEAD;                       // linker joystick naar links
     this._pad.right  = ax > DEAD;                        // linker joystick naar rechts
     this._pad.jump   = btn(0);                           // X / Cross = springen
-    this._pad.duck   = btn(2);                           // Vierkant = bukken/schild
+    this._pad.duck   = btn(2) || btn(6);                 // Vierkant of L2 = bukken/schild
     this._pad.melee  = btn(1);                           // Rondje = slaan
     this._pad.attack = btn(7) || btn(5);                 // R2 (of R1) = schieten / powerup afvuren
     this._apply();
     // edge-triggers (1x per druk)
     const rise = (i) => { const now = btn(i); const was = !!this._padPrev[i]; this._padPrev[i] = now; return now && !was; };
-    const abL2 = rise(6), abL1 = rise(4);               // L2/L1 = speciale character-ability
+    const abL1 = rise(4);                               // L1 = speciale character-ability
     const dUp = rise(12), dRight = rise(15), dDown = rise(13);   // D-pad = powerups uit de loadout (↑=boven, →=midden, ↓=onder)
     const start = rise(9);                              // Start = pauze
     if (typeof Game !== 'undefined') {
-      if ((abL2 || abL1) && Game.abilityButton) Game.abilityButton();
+      if (abL1 && Game.abilityButton) Game.abilityButton();
       if (Game.deployLoadout) { if (dUp) Game.deployLoadout(0); if (dRight) Game.deployLoadout(1); if (dDown) Game.deployLoadout(2); }
       if (start && Game.togglePause && (Game.state === 'versus' || Game.state === 'training' || Game.state === 'playing')) Game.togglePause();
     }
