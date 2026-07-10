@@ -1190,7 +1190,7 @@ const UI = {
       if (sortBy === 'xp') return (r.xp || 0) + ' XP';
       return (r.rp || 0) + ' RP';
     };
-    const rankChip = (rp) => { const rk = RANKS[rankForRp(rp || 0)]; return '<span class="lb-rankbadge" style="color:' + rk.col + ';border-color:' + rk.col + '">' + rk.name + '</span>'; };
+    const rankChip = (rp) => { const idx = rankForRp(rp || 0), rk = RANKS[idx]; return '<span class="lb-rankbadge" style="color:' + rk.col + ';border-color:' + rk.col + '"><span class="lb-shield">' + rankShieldSVG(idx) + '</span>' + rk.name + '</span>'; };
     const makeRow = (r, rankText, me) => {
       const row = document.createElement('div');
       row.className = 'lb-row' + (me ? ' me' : '');
@@ -1227,7 +1227,7 @@ const UI = {
     const el = document.getElementById('tile-rank'); if (!el) return;
     const pr = Storage.rankProgress(), rk = pr.rank;
     el.innerHTML =
-      '<span class="tr-badge" style="color:' + rk.col + '">' + rk.name + '</span>' +
+      '<span class="tr-badge" style="color:' + rk.col + '"><span class="tr-shield">' + rankShieldSVG(pr.idx) + '</span>' + rk.name + '</span>' +
       '<span class="tr-bar"><span style="width:' + Math.round(pr.pct * 100) + '%;background:' + rk.col + '"></span></span>' +
       '<span class="tr-rp">' + pr.rp + ' RP' + (pr.next ? (' · ' + pr.toNext + ' → ' + pr.next.name) : ' · MAX') + '</span>';
   },
@@ -1909,8 +1909,8 @@ const UI = {
     const txt = el.querySelector('.vn-txt'); if (txt) txt.textContent = nick || '';
     const gem = el.querySelector('.vs-rank-gem');
     if (gem) {
-      if (rankIdx == null || rankIdx < 0) { gem.style.display = 'none'; }
-      else { gem.style.display = ''; const rk = RANKS[rankIdx] || RANKS[0]; gem.style.background = rk.col; gem.title = rk.name; }
+      if (rankIdx == null || rankIdx < 0) { gem.style.display = 'none'; gem.innerHTML = ''; }
+      else { gem.style.display = ''; const rk = RANKS[rankIdx] || RANKS[0]; gem.innerHTML = rankShieldSVG(rankIdx); gem.title = rk.name; }
     }
   },
   // grote midden-banner (TIJD! / SUDDEN DEATH)

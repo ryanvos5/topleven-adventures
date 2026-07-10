@@ -848,6 +848,43 @@ const RANKS = [
 ];
 const RANK_RP = { win: 30, loss: -15, streakBonus: 10, higherRankBonus: 5, quit: -30 };
 function rankForRp(rp) { rp = rp || 0; let idx = 0; for (let i = 0; i < RANKS.length; i++) if (rp >= RANKS[i].rp) idx = i; return idx; }
+// bijpassende edelsteen-kleur per tier
+const RANK_GEM = { bronze: '#ff9a3c', silver: '#d3ecff', gold: '#ffe14a', platinum: '#4ff0d6', diamond: '#8fd6ff', champion: '#c88bff', elite: '#ff5a6a' };
+function rankShade(hex, amt) {
+  hex = (hex || '#888888').replace('#', ''); if (hex.length === 3) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+  let r = parseInt(hex.slice(0, 2), 16), g = parseInt(hex.slice(2, 4), 16), b = parseInt(hex.slice(4, 6), 16);
+  const to = amt < 0 ? 0 : 255, p = Math.abs(amt);
+  r = Math.round(r + (to - r) * p); g = Math.round(g + (to - g) * p); b = Math.round(b + (to - b) * p);
+  return '#' + [r, g, b].map((x) => ('0' + Math.max(0, Math.min(255, x)).toString(16)).slice(-2)).join('');
+}
+// rank-embleem: schildje met edelsteen; hoe hoger de rank, hoe rijker versierd
+function rankShieldSVG(idx, px) {
+  const rk = RANKS[idx] || RANKS[0], i = idx;
+  const metal = rk.col, mlt = rankShade(metal, 0.55), mdk = rankShade(metal, -0.5), trim = rankShade(metal, -0.7);
+  const gem = RANK_GEM[rk.tier] || '#ffffff', glt = rankShade(gem, 0.55), gdk = rankShade(gem, -0.45), glow = rk.glow;
+  const mg = 'rkm' + i, gg = 'rkg' + i, fg = 'rkf' + i;
+  const shield = 'M24 10 L40 15 L40 30 C40 45 32 52 24 55 C16 52 8 45 8 30 L8 15 Z';
+  const dim = px ? (' width="' + px + '" height="' + Math.round(px * 60 / 48) + '"') : ' width="100%" height="100%"';
+  let o = '<svg viewBox="0 0 48 60"' + dim + ' xmlns="http://www.w3.org/2000/svg" class="rank-shield" preserveAspectRatio="xMidYMid meet">';
+  o += '<defs><linearGradient id="' + mg + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + mlt + '"/><stop offset="0.5" stop-color="' + metal + '"/><stop offset="1" stop-color="' + mdk + '"/></linearGradient>'
+    + '<radialGradient id="' + gg + '" cx="0.5" cy="0.36" r="0.72"><stop offset="0" stop-color="' + glt + '"/><stop offset="0.6" stop-color="' + gem + '"/><stop offset="1" stop-color="' + gdk + '"/></radialGradient>';
+  if (i >= 10) o += '<filter id="' + fg + '" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="1.7"/></filter>';
+  o += '</defs>';
+  if (i >= 10) o += '<path d="' + shield + '" fill="' + glow + '" opacity="0.6" filter="url(#' + fg + ')"/>';                 // gloed (Diamond+)
+  if (i >= 12) { o += '<g stroke="' + glow + '" stroke-width="1.5" opacity="0.75">'; for (let a = 0; a < 12; a++) { const an = a * Math.PI / 6, c = Math.cos(an), s = Math.sin(an); o += '<line x1="' + (24 + c * 15).toFixed(1) + '" y1="' + (32 + s * 17).toFixed(1) + '" x2="' + (24 + c * 21).toFixed(1) + '" y2="' + (32 + s * 23).toFixed(1) + '"/>'; } o += '</g>'; }   // stralen (Elite)
+  if (i >= 9) o += '<g fill="' + mlt + '" stroke="' + trim + '" stroke-width="0.8"><path d="M9 15 C-1 14 -3 22 2 27 C5 22 9 22 11 23 Z"/><path d="M39 15 C49 14 51 22 46 27 C43 22 39 22 37 23 Z"/></g>';   // vleugels (Platinum+)
+  if (i >= 6) o += '<g><path d="M15 11 L15 4 L20 8 L24 2 L28 8 L33 4 L33 11 Z" fill="#ffd24a" stroke="#a9781a" stroke-width="0.8" stroke-linejoin="round"/><circle cx="24" cy="5.4" r="1.5" fill="' + gem + '"/><circle cx="16.4" cy="6.2" r="1" fill="' + gem + '"/><circle cx="31.6" cy="6.2" r="1" fill="' + gem + '"/></g>';   // kroontje (Gold+)
+  o += '<path d="' + shield + '" fill="url(#' + mg + ')" stroke="' + trim + '" stroke-width="2.4" stroke-linejoin="round"/>';
+  o += '<path d="M24 12.5 L37 16.5 L37 22 C30 20 18 20 11 22 L11 16.5 Z" fill="#ffffff" opacity="0.2"/>';                    // bevel-highlight
+  if (i >= 6) o += '<path d="' + shield + '" fill="none" stroke="' + glow + '" stroke-width="1" opacity="0.9" transform="translate(24 33) scale(0.8) translate(-24 -33)"/>';   // binnenrand (Gold+)
+  if (i >= 3) o += '<g fill="' + glt + '" stroke="' + trim + '" stroke-width="0.5"><circle cx="12" cy="19" r="1.5"/><circle cx="36" cy="19" r="1.5"/><circle cx="24" cy="50" r="1.5"/></g>';   // klinknagels (Silver+)
+  o += '<g><polygon points="24,21 33,30 24,42 15,30" fill="url(#' + gg + ')" stroke="' + gdk + '" stroke-width="0.6"/>'
+    + '<polygon points="24,21 33,30 24,30 15,30" fill="' + glt + '" opacity="0.5"/>'
+    + '<line x1="24" y1="21" x2="24" y2="42" stroke="' + gdk + '" stroke-width="0.4" opacity="0.5"/><line x1="15" y1="30" x2="33" y2="30" stroke="' + gdk + '" stroke-width="0.4" opacity="0.5"/>'
+    + '<circle cx="20.5" cy="27" r="1.5" fill="#ffffff" opacity="0.85"/></g>';   // edelsteen
+  o += '</svg>';
+  return o;
+}
 const CHEST_WIN_CHANCE = 0.5, CHEST_LOSS_CHANCE = 0.15;               // kans op een kist na een online match
 const CHEST_RARITY_WEIGHTS = { common: 62, rare: 26, epic: 9, legendary: 3 };   // betere kisten veel zeldzamer
 const CHEST_SLOTS = 3;                                                // je kunt er max 3 hebben

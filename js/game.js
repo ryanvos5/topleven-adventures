@@ -6435,34 +6435,30 @@ const Game = {
     ctx.fillStyle = color;
     ctx.beginPath(); ctx.moveTo(x - 4, ty); ctx.lineTo(x + 4, ty); ctx.lineTo(x, ty + 5); ctx.closePath(); ctx.fill();
   },
-  // rank-embleem boven de speler (met gloed + effecten bij hogere ranks)
+  // gerasteriseerd schild-embleem per rank (uit rankShieldSVG), 1x gecachet
+  _rankImg(idx) {
+    this._rankImgCache = this._rankImgCache || {};
+    if (this._rankImgCache[idx]) return this._rankImgCache[idx];
+    const img = new Image();
+    try { img.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(rankShieldSVG(idx, 48)); } catch (e) {}
+    this._rankImgCache[idx] = img;
+    return img;
+  },
+  // rank-embleem (schildje met edelsteen) boven de speler
   drawRankBadge(ctx, x, footY, build, idx) {
     const rk = RANKS[idx]; if (!rk) return;
     const head = build === 'tall' ? 46 : (build === 'small' ? 28 : 36);
     const bob = Math.round(Math.sin(this.time / 280) * 1.5);
-    const cy = footY - head - 17 + bob;                 // midden van het embleem, boven het pijltje
-    const px = (c, xx, yy, w, h) => Sprites.px(ctx, c, Math.round(xx), Math.round(yy), w, h);
-    const col = rk.col, glow = rk.glow, high = idx >= 6;   // Gold I (idx 6) en hoger -> gloed
-    if (high) {
-      const g = ctx.createRadialGradient(x, cy, 1, x, cy, 15);
-      g.addColorStop(0, glow); g.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.save(); ctx.globalAlpha = 0.4 + 0.32 * Math.abs(Math.sin(this.time / 240));
-      ctx.fillStyle = g; ctx.fillRect(x - 15, cy - 15, 30, 30); ctx.restore();
-    }
-    // edelsteen / schild
-    px('#12100a', x - 5, cy - 6, 10, 12);               // donkere rand
-    px(col, x - 4, cy - 5, 8, 10);                       // body
-    px(glow, x - 4, cy - 5, 8, 2);                       // top-highlight
-    px('rgba(0,0,0,0.30)', x - 4, cy + 3, 8, 2);         // onderrand-schaduw
-    px('#12100a', x - 2, cy + 6, 4, 2); px(col, x - 1, cy + 6, 2, 1);   // punt onderaan
-    if (rk.sub >= 1) {                                   // Brons/Silver/Gold: I/II/III als pipjes
-      const n = rk.sub, sx = x - (n * 2 - 1);
-      for (let i = 0; i < n; i++) px('#fff', sx + i * 4, cy + 9, 2, 2);
-    } else {                                             // Platinum+: kroontje van gloed-kleur
-      px(glow, x - 1, cy - 9, 2, 2); px(glow, x - 4, cy - 8, 2, 2); px(glow, x + 2, cy - 8, 2, 2);
-    }
-    if (idx >= 11) {                                     // Champion/Elite: fonkelingen eromheen
-      for (let i = 0; i < 3; i++) { const a = this.time / 300 + i * 2.1; px('#ffffff', x + Math.cos(a) * 11, cy + Math.sin(a) * 11, 1, 1); }
+    const cy = footY - head - 18 + bob;                 // midden van het embleem, boven het pijltje
+    const img = this._rankImg(idx);
+    if (img && img.complete && img.naturalWidth) {
+      const h = 22, w = h * 48 / 60;
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(img, Math.round(x - w / 2), Math.round(cy - h / 2), Math.round(w), h);
+      ctx.imageSmoothingEnabled = false;
+    } else {                                            // nog niet geladen -> klein edelsteentje
+      const px = (c, xx, yy, w, h) => Sprites.px(ctx, c, Math.round(xx), Math.round(yy), w, h);
+      px('#12100a', x - 5, cy - 6, 10, 12); px(rk.col, x - 4, cy - 5, 8, 10); px(rk.glow, x - 4, cy - 5, 8, 2);
     }
   },
 
