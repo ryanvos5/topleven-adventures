@@ -4412,6 +4412,7 @@ const Game = {
       case 'traps': p._trapCharges = 3; this._abFx(p, '#caa84a'); this.addFloatText(p.x, p.y - 22, '3 VALLEN', '#ffd24a', false); break;   // 3 vallen in de hand — zelf plaatsen
       case 'stunstrike': p._stunStrikeUntil = now + 5000 * dm; this._abFx(p, '#8fd0ff'); break;
       case 'stunpulse': this.stunPulse(p, 'me'); break;
+      case 'souldrain': this.soulDrain(p, 'me'); break;
       case 'invisible': p._invisUntil = now + 6000 * dm; this._abFx(p, '#b06bff'); break;
       default: break;
     }
@@ -4452,7 +4453,7 @@ const Game = {
   _abilityColor(ab) {
     return ({ heal: '#5aff7a', highjump: '#8fd0ff', triplejump: '#8fd0ff', fireaura10: '#ff8a2a',
       rage10: '#ff5a3a', rage8: '#ff5a3a', ultrarage: '#ff2a2a', rage3: '#ff3a2a', zapdash: '#ffe27a',
-      earthquake: '#c8a060', knife: '#bfe6ff', katanacombo: '#e8edf2', stunstrike: '#8fd0ff', stunpulse: '#8fd0ff', invisible: '#b06bff' })[ab] || '#c9a6ff';
+      earthquake: '#c8a060', knife: '#bfe6ff', katanacombo: '#e8edf2', stunstrike: '#8fd0ff', stunpulse: '#8fd0ff', souldrain: '#a45bff', invisible: '#b06bff' })[ab] || '#c9a6ff';
   },
   // Monnik-ability: energiegolf die iedereen binnen bereik verdooft (werkt tegen bot én online)
   stunPulse(src, who) {
@@ -4488,6 +4489,38 @@ const Game = {
       opp.stunUntil = Math.max(opp.stunUntil || 0, now + stunMs);
       opp.knockVx = kdir * 12; opp.vy = Math.min(opp.vy || 0, -4); opp.onGround = false; opp.combo = 0;
     }
+  },
+  // Soul Drain (Skeleton Knight): steelt HP van de tegenstander — 20 schade aan de vijand + jij herstelt 20 HP.
+  soulDrain(src, who) {
+    if (!src) return;
+    const drain = 20;
+    const before = src.hp; src.hp = Math.min(src.maxHp, src.hp + drain);   // jezelf genezen (tot je HP-max)
+    const healed = Math.round(src.hp - before);
+    this._abFx(src, '#a45bff');
+    if (healed > 0) this.addFloatText(src.x, src.y - 28, '+' + healed + ' HP', '#8aff9a', false);
+    // doelwit: bot (vsBot) of de online-tegenstander, of — als de bot dit inzet — de speler
+    const opp = who === 'me' ? (this.vsBot ? this.bot : (this.vs ? this.vs.remote : null)) : this.player;
+    if (!opp || opp.dead || opp.alive === false) return;
+    const kdir = (opp.x >= src.x) ? 1 : -1;
+    this.spawnSoulTether(src, opp);                    // paarse ziel-sliert die van de tegenstander naar jou stroomt
+    if (who === 'me' && !this.vsBot) {                 // online: stuur de treffer, de tegenstander verwerkt de 20 schade
+      if (window.Net) Net.versusSend('hit', { dir: kdir, power: 5, vy: -2, dmg: drain });
+      return;
+    }
+    if (who === 'me') this.applyHitToBot(kdir, 5, -2, drain);                          // speler vs bot
+    else this.onVersusHit({ dir: kdir, power: 5, vy: -2, dmg: drain, pvp: 1 });        // bot vs speler
+  },
+  // paarse ziel-stroom van de tegenstander (opp) naar de skeletridder (src)
+  spawnSoulTether(src, opp) {
+    const x1 = src.x, y1 = src.y - 14, x2 = (opp.x || x1), y2 = (opp.y || y1) - 14;
+    const n = 14;
+    for (let i = 0; i <= n; i++) {
+      const tt = i / n, x = x2 + (x1 - x2) * tt, y = y2 + (y1 - y2) * tt - Math.sin(tt * Math.PI) * 12;
+      const vx = (x1 - x2) * 0.010, vy = -0.4 - Math.random() * 0.5;
+      this.particles.push(new Particle(x, y, vx, vy, i % 2 ? '#c89bff' : '#8a4bff', 460, 2));
+    }
+    this.spawnAbilityFx(x2, y2, '#a45bff');            // paarse flits op de tegenstander
+    if (window.Sfx) Sfx.play('fireball');
   },
   // uitdijende blauwe schokring op (x,y) — visuele feedback van de stun-pulse
   spawnStunPulseFx(x, y) {
@@ -4591,6 +4624,7 @@ const Game = {
       case 'traps': this.placeTraps(b, 'bot'); this._abFx(b, '#caa84a'); break;
       case 'stunstrike': b._stunStrikeUntil = now + 5000; this._abFx(b, '#8fd0ff'); break;
       case 'stunpulse': this.stunPulse(b, 'bot'); break;
+      case 'souldrain': this.soulDrain(b, 'bot'); break;
       case 'invisible': b._invisUntil = now + 6000; this._abFx(b, '#b06bff'); break;
       default: break;
     }
@@ -5082,6 +5116,7 @@ const Game = {
       else if (b.ability === 'earthquake') want = aDx < 200;                         // vlakbij: schudden
       else if (b.ability === 'heal') want = b.hp < b.maxHp * 0.55;                   // pas helen als het nodig is
       else if (b.ability === 'fireaura10' || b.ability === 'knife') want = aDx < 90; // in de buurt om te raken
+      else if (b.ability === 'souldrain') want = b.hp < b.maxHp * 0.9 || aDx < 300;  // steelt HP: inzetten als 'ie wat schade heeft of de speler in de buurt is
       else want = true;                                                              // buffs (rage/jumps): meteen
       if (want && Math.random() < 0.05) { this.botUseAbility(); return inp; }
     }

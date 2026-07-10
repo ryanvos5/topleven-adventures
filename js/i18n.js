@@ -196,6 +196,7 @@ I18N.CONTENT = {
       jenze: { desc: 'Big & tough: +40 HP, +30% melee, a bit slower.' },
       ricky: { desc: 'Every 15s, 3s of RAGE (2× damage). 85 HP.' },
       yarno: { desc: 'Balanced, a bit faster. Starts with a dagger.' },
+      skeleton: { name: 'Skeleton Knight', desc: 'Skeleton knight (250 rubies). Soul Drain: steals 20 HP from your opponent — 20 damage and you gain +20 HP.' },
       bonzo: { desc: 'Chimp: fast & agile, extra jump. Journey only.' },
       koba: { desc: 'Brute: big & strong (+25% melee). Journey only.' },
       kong: { name: 'Gorilla King', desc: 'Gorilla king: enormous power. Ability King’s Wrath (3× damage), but long charge time.' },
@@ -221,6 +222,7 @@ I18N.CONTENT = {
       stunstrike: { name: 'Stun Strike', desc: 'For 5s: your next hit stuns your opponent.' },
       stunpulse: { name: 'Stun Pulse', desc: 'Wave of energy: stuns everyone nearby for 1.6s.' },
       invisible: { name: 'Invisible', desc: '6s invisible — your opponent can’t see you.' },
+      souldrain: { name: 'Soul Drain', desc: 'Steals 20 HP from your opponent: 20 damage and you gain +20 HP.' },
     },
     powerups: {
       heal: { name: 'Medipack', desc: 'Instantly restores 40 HP.' },

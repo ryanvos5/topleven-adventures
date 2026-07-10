@@ -253,6 +253,18 @@ const CHARACTERS = {
     },
     desc: 'Gebalanceerd, iets sneller. Start met een dagger.'
   },
+  skeleton: {
+    id: 'skeleton', name: 'Skeleton Knight', costRubies: 250,
+    maxHp: 95, speedMul: 1.0, meleeMul: 1.05, build: 'normal', hair: 'bald', ability: 'souldrain',
+    palette: {
+      hair: '#dfe3dc', hairDark: '#aeb2ab',
+      skin: '#e8ece4', skinDark: '#b0b6ac',      // botwit
+      eye: '#9a3aff',                             // gloeiend paarse ziel-ogen
+      shirt: '#39414c', shirtDark: '#222831',     // donker staal-harnas
+      pants: '#232830', shoe: '#12141a',
+    },
+    desc: 'Skeletridder (250 robijnen). Soul Drain: steelt 20 HP van de tegenstander — 20 schade én jij +20 HP.'
+  },
   // ---- Journey-only mensapen (alleen vrij te spelen in Journey, niet te koop) ----
   bonzo: {
     id: 'bonzo', name: 'Bonzo', cost: 0, journeyOnly: true,
@@ -341,7 +353,7 @@ const CHARACTERS = {
     palette: { hair: '#5a4030', hairDark: '#3a281c', skin: '#9a6a3a', skinDark: '#6e4824', eye: '#c83838', shirt: '#7a3a2a', shirtDark: '#4a1f14', pants: '#33240f', shoe: '#160d06' },
   },
 };
-const CHARACTER_ORDER = ['ryan', 'jenze', 'tygo', 'vince', 'timo', 'just', 'ricky', 'yarno', 'bonzo', 'koba', 'kong', 'guardian', 'monnik', 'ninja'];
+const CHARACTER_ORDER = ['ryan', 'jenze', 'tygo', 'vince', 'timo', 'just', 'ricky', 'yarno', 'skeleton', 'bonzo', 'koba', 'kong', 'guardian', 'monnik', 'ninja'];
 
 // ---- CHARACTER-ABILITIES (oplaadbaar in een match: vlam-knop boven de melee-knop) ----
 const ABILITIES = {
@@ -361,6 +373,7 @@ const ABILITIES = {
   stunstrike: { name: 'Stun-slag',   desc: '5s lang: je volgende klap verdooft je tegenstander.' },
   stunpulse:  { name: 'Stun-pulse',  desc: 'Golf van energie: verdooft iedereen dichtbij 1,6s.' },
   invisible:  { name: 'Onzichtbaar', desc: '6s onzichtbaar — je tegenstander ziet je niet.' },
+  souldrain:  { name: 'Soul Drain',  desc: 'Steelt 20 HP van de tegenstander: 20 schade én jij +20 HP.' },
 };
 const STUN_PULSE_MS = 1600;      // Monnik-ability: verdovingsduur
 const STUN_PULSE_RANGE = 96;     // bereik van de stun-pulse (px)

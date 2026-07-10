@@ -2874,6 +2874,13 @@ const UI = {
         card.classList.add('locked'); btn.classList.add('cant'); btn.innerHTML = this._ic('lock') + ' Journey';
       } else if (myLvl < (c.lvl || 0)) {
         card.classList.add('locked'); btn.classList.add('cant'); btn.innerHTML = this._ic('lock') + ' Level ' + c.lvl;
+      } else if (c.costRubies) {                                   // met robijnen te koop (◆)
+        if (Storage.rubies() >= c.costRubies) {
+          btn.classList.add('buy'); btn.textContent = t('buy') + ` — ${c.costRubies} ◆`;
+          btn.onclick = () => { if (Storage.buyCharacter(cid)) { Storage.equipCharacter(cid); if (window.Sfx) Sfx.play('pickup'); this.renderShop(); } };
+        } else {
+          btn.classList.add('cant'); btn.textContent = `${c.costRubies} ◆ ${t('too_few')}`;
+        }
       } else if (Storage.data.coins >= c.cost) {
         btn.classList.add('buy'); btn.textContent = t('buy') + ` — ${c.cost} ●`;
         btn.onclick = () => { if (Storage.buyCharacter(cid)) { Storage.equipCharacter(cid); this.renderShop(); } };

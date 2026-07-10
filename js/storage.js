@@ -228,7 +228,8 @@ const Storage = {
     if (!c || this.ownsCharacter(id)) return false;
     if (c.journeyOnly) return false;                                   // alleen via Journey vrij te spelen
     if (playerLevel(this.data.xp || 0) < (c.lvl || 0)) return false;   // nog niet vrijgespeeld
-    if (!this.spendCoins(c.cost)) return false;
+    if (c.costRubies) { if (!this.spendRubies(c.costRubies)) return false; }   // sommige characters kosten robijnen i.p.v. munten
+    else if (!this.spendCoins(c.cost || 0)) return false;
     this.data.ownedCharacters.push(id);
     this.save();
     return true;
