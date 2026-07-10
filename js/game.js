@@ -6893,6 +6893,8 @@ const Game = {
     this.lastTs = ts;
     if (!dt || dt > 100) dt = 16.6667; // bij tab-wissel niet wegspringen
 
+    if (typeof Input !== 'undefined' && Input.pollGamepad) Input.pollGamepad();   // game controller (Backbone e.d.) uitlezen
+
     if (this.state === 'playing') this.update(dt);
     if (['playing', 'paused'].includes(this.state)) this.render();
     if (this.state === 'versus') { if (!this.vsPaused) this.updateVersus(dt); this.renderVersus(); }
