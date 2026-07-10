@@ -95,13 +95,15 @@ const UI = {
     // ---- instellingen (overlay met account / update / nieuw spel) ----
     $('btn-settings').onclick = () => document.getElementById('settings-screen').classList.remove('hidden');
     $('btn-settings-close').onclick = () => document.getElementById('settings-screen').classList.add('hidden');
-    // geluid aan/uit
-    const sb = $('btn-sound');
-    if (sb) {
-      this._updSoundBtn = () => { sb.textContent = t(window.Sfx && Sfx.enabled ? 'sound_on' : 'sound_off'); };
-      this._updSoundBtn();
-      sb.onclick = () => { if (window.Sfx) Sfx.setEnabled(!Sfx.enabled); this._updSoundBtn(); };
-    }
+    // muziek + geluidseffecten los aan/uit
+    const mb = $('btn-music'), fb = $('btn-sfx');
+    this._updSoundBtn = () => {
+      if (mb) mb.textContent = t(window.Sfx && Sfx.musicOn ? 'music_on' : 'music_off');
+      if (fb) fb.textContent = t(window.Sfx && Sfx.sfxOn ? 'sfx_on' : 'sfx_off');
+    };
+    this._updSoundBtn();
+    if (mb) mb.onclick = () => { if (window.Sfx) Sfx.setMusic(!Sfx.musicOn); this._updSoundBtn(); };
+    if (fb) fb.onclick = () => { if (window.Sfx) Sfx.setSfx(!Sfx.sfxOn); this._updSoundBtn(); };
     // taal (Engels/Nederlands)
     if (window.I18N) {
       I18N.applyContent();   // config-content naar de gekozen taal (standaard Engels)
@@ -1724,7 +1726,7 @@ const UI = {
       grid.appendChild(b);
     });
     // --- melee-wapens ---
-    divider('MELEE WAPENS');
+    divider(t('melee_weapons'));
     const melee = (typeof TRAINING_MELEE_ORDER !== 'undefined') ? TRAINING_MELEE_ORDER : [];
     melee.forEach((wid) => {
       const w = WEAPONS[wid]; if (!w) return;
@@ -2562,7 +2564,7 @@ const UI = {
     bar.querySelectorAll('.chest-slot').forEach((slot, i) => {
       const c = chests[i];
       slot.innerHTML = '';
-      if (!c) { slot.className = 'chest-slot empty'; slot.disabled = true; slot.style.borderColor = ''; slot.innerHTML = '<span class="chest-lbl">Leeg</span>'; return; }
+      if (!c) { slot.className = 'chest-slot empty'; slot.disabled = true; slot.style.borderColor = ''; slot.innerHTML = '<span class="chest-lbl">' + I18N.t('empty') + '</span>'; return; }
       const t = CHEST_TYPES[c.r], ready = Storage.chestReady(i);
       slot.className = 'chest-slot' + (ready ? ' ready' : '') + (c.u <= 0 ? ' idle' : ''); slot.disabled = false;
       slot.style.borderColor = t.col;

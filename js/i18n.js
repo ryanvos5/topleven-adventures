@@ -19,6 +19,7 @@ const I18N = {
       settings: 'Settings', account: 'Account', login_account: 'Log in / account',
       change_name: 'Change name', logout: 'Log out', delete_account: 'Delete account',
       sound: 'Sound', sound_on: 'Sound: On', sound_off: 'Sound: Off',
+      music_on: 'Music: On', music_off: 'Music: Off', sfx_on: 'Sounds: On', sfx_off: 'Sounds: Off', melee_weapons: 'MELEE WEAPONS', empty: 'Empty',
       language: 'Language', update_fresh: 'Update (fresh version)', new_game: 'New game (wipe progress)',
       // ---- account / auth ----
       auth_login: 'LOG IN', auth_register: 'Register', auth_sub: 'Optional — keeps your progress on every device.',
@@ -82,6 +83,7 @@ const I18N = {
       settings: 'Instellingen', account: 'Account', login_account: 'Inloggen / account',
       change_name: 'Naam wijzigen', logout: 'Uitloggen', delete_account: 'Account verwijderen',
       sound: 'Geluid', sound_on: 'Geluid: Aan', sound_off: 'Geluid: Uit',
+      music_on: 'Muziek: Aan', music_off: 'Muziek: Uit', sfx_on: 'Geluid: Aan', sfx_off: 'Geluid: Uit', melee_weapons: 'MELEE-WAPENS', empty: 'Leeg',
       language: 'Taal', update_fresh: 'Update (verse versie)', new_game: 'Nieuw spel (wis voortgang)',
       auth_login: 'INLOGGEN', auth_register: 'Registreren', auth_sub: 'Optioneel — zo blijft je voortgang op elk toestel bewaard.',
       auth_no_account: 'Nog geen account? Registreren', auth_have_account: 'Al een account? Inloggen',

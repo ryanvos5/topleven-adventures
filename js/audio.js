@@ -5,11 +5,16 @@
    ============================================================ */
 const Sfx = {
   ctx: null, master: null, musicGain: null, sfxGain: null,
-  enabled: true,
+  enabled: true,      // legacy alias (= sfxOn); voor oude aanroepen
+  musicOn: true, sfxOn: true,
   _curTheme: null, _step: 0, _timer: null, _theme: null, _intensity: 0,
 
   init() {
-    try { this.enabled = localStorage.getItem('tps_sound') !== '0'; } catch (e) { this.enabled = true; }
+    try { this.sfxOn = localStorage.getItem('tps_sfx') !== '0'; } catch (e) { this.sfxOn = true; }
+    try { this.musicOn = localStorage.getItem('tps_music') !== '0'; } catch (e) { this.musicOn = true; }
+    // migratie: oude gecombineerde 'tps_sound'-uit -> beide uit
+    try { if (localStorage.getItem('tps_sound') === '0') { this.sfxOn = false; this.musicOn = false; } } catch (e) {}
+    this.enabled = this.sfxOn;
     // audio mag pas starten na een gebruikersgebaar (browserregel)
     const kick = () => { this.resume(); window.removeEventListener('pointerdown', kick); window.removeEventListener('keydown', kick); window.removeEventListener('touchstart', kick); };
     window.addEventListener('pointerdown', kick);
@@ -22,26 +27,35 @@ const Sfx = {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     this.ctx = new AC();
-    this.master = this.ctx.createGain(); this.master.gain.value = this.enabled ? 0.9 : 0; this.master.connect(this.ctx.destination);
-    this.musicGain = this.ctx.createGain(); this.musicGain.gain.value = 0.13; this.musicGain.connect(this.master);
-    this.sfxGain = this.ctx.createGain(); this.sfxGain.gain.value = 0.32; this.sfxGain.connect(this.master);
+    this.master = this.ctx.createGain(); this.master.gain.value = 0.9; this.master.connect(this.ctx.destination);
+    this.musicGain = this.ctx.createGain(); this.musicGain.gain.value = this.musicOn ? 0.13 : 0; this.musicGain.connect(this.master);
+    this.sfxGain = this.ctx.createGain(); this.sfxGain.gain.value = this.sfxOn ? 0.32 : 0; this.sfxGain.connect(this.master);
   },
   resume() {
     this._ensure();
     if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
-    if (this._curTheme && !this._timer) this._startLoop();   // muziek (her)starten
+    if (this._curTheme && !this._timer && this.musicOn) this._startLoop();   // muziek (her)starten
   },
-  setEnabled(on) {
-    this.enabled = !!on;
-    try { localStorage.setItem('tps_sound', on ? '1' : '0'); } catch (e) {}
+  // muziek en geluidseffecten los aan/uit
+  setMusic(on) {
+    this.musicOn = !!on;
+    try { localStorage.setItem('tps_music', on ? '1' : '0'); } catch (e) {}
     this._ensure();
-    if (this.master) this.master.gain.value = on ? 0.9 : 0;
+    if (this.musicGain) this.musicGain.gain.value = on ? 0.13 : 0;
+    if (on) { this.resume(); if (this._curTheme && !this._timer) this._startLoop(); } else this._stopLoop();
+  },
+  setSfx(on) {
+    this.sfxOn = !!on; this.enabled = !!on;
+    try { localStorage.setItem('tps_sfx', on ? '1' : '0'); } catch (e) {}
+    this._ensure();
+    if (this.sfxGain) this.sfxGain.gain.value = on ? 0.32 : 0;
     if (on) this.resume();
   },
+  setEnabled(on) { this.setSfx(on); this.setMusic(on); },   // legacy: zet allebei
 
   // ---------- effecten ----------
   _tone(freq, dur, type, vol, slideTo) {
-    if (!this.enabled || !this.ctx) return;
+    if (!this.sfxOn || !this.ctx) return;
     const t = this.ctx.currentTime, o = this.ctx.createOscillator(), g = this.ctx.createGain();
     o.type = type || 'square'; o.frequency.setValueAtTime(freq, t);
     if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(40, slideTo), t + dur);
@@ -51,7 +65,7 @@ const Sfx = {
     o.connect(g); g.connect(this.sfxGain); o.start(t); o.stop(t + dur + 0.02);
   },
   _noise(dur, vol, filtFreq, slideTo) {
-    if (!this.enabled || !this.ctx) return;
+    if (!this.sfxOn || !this.ctx) return;
     const t = this.ctx.currentTime, n = Math.floor(this.ctx.sampleRate * dur);
     const buf = this.ctx.createBuffer(1, n, this.ctx.sampleRate), d = buf.getChannelData(0);
     for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
@@ -63,7 +77,7 @@ const Sfx = {
   },
 
   play(name) {
-    if (!this.enabled) return;
+    if (!this.sfxOn) return;
     this._ensure(); if (!this.ctx) return;
     switch (name) {
       case 'jump': this._tone(320, 0.13, 'square', 0.22, 640); break;
@@ -185,14 +199,14 @@ const Sfx = {
   stopMusic() { this._curTheme = null; this._theme = null; this._intensity = 0; this._stopLoop(); },
   _stopLoop() { if (this._timer) { clearInterval(this._timer); this._timer = null; } },
   _startLoop() {
-    if (!this._theme || this._timer || !this.ctx) return;
+    if (!this._theme || this._timer || !this.ctx || !this.musicOn) return;
     const mul = 1 + 0.16 * (this._intensity || 0);   // 1.0 / 1.16 / 1.32 -> sneller bij hogere intensiteit
     const stepMs = 60000 / (this._theme.bpm * mul) / 4;   // 16e noten (strakker, energieker)
     this._timer = setInterval(() => this._tick(), stepMs);
   },
   _f(root, semi) { return root * Math.pow(2, semi / 12); },
   _tick() {
-    if (!this.enabled || !this.ctx || this.ctx.state !== 'running' || !this._theme) return;
+    if (!this.musicOn || !this.ctx || this.ctx.state !== 'running' || !this._theme) return;
     const th = this._theme, step = this._step;
     const prog = th.prog || this._prog, scale = th.scale || this._minor;
     const kick = th.kick || this._kickP, snare = th.snare || this._snareP, riff = th.riff || this._riff;
