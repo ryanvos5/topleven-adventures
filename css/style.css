@@ -477,6 +477,45 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
 .tile-rank .tr-rp { font-size: clamp(8px, 1.1vw, 10px); color: #eadfce; text-shadow: 1px 1px 0 #000; line-height: 1; }
 @media (max-height: 480px) { .tile-rank .tr-rp { display: none; } }   /* heel lage schermen: alleen naam + balk */
 
+/* ---- rank-banner: aparte klikbare knop die de 1v1-tegel onderaan overlapt ---- */
+.tile-wrap { position: relative; display: flex; align-items: stretch; }
+.tile-wrap > .stone-tile { width: 100%; }
+.rank-banner {
+  position: absolute; left: 50%; bottom: 0; transform: translate(-50%, 66%);
+  z-index: 6; width: min(90%, 240px); padding: 5px 20px 8px;
+  display: flex; flex-direction: column; align-items: center;
+  background: linear-gradient(180deg, #e0902f 0%, #b86a22 55%, #8a4d18 100%);
+  border: 2px solid #613710; border-top: 2px solid #f0b24a;
+  border-radius: 0 0 9px 9px; clip-path: polygon(0 0, 100% 0, 86% 100%, 14% 100%);
+  box-shadow: 0 5px 12px rgba(0,0,0,.5); cursor: pointer; pointer-events: auto;
+}
+.rank-banner:active { transform: translate(-50%, 66%) scale(.94); }
+.rank-banner .tile-rank { margin-top: 0; pointer-events: none; gap: 3px; }
+.rank-banner .tile-rank .tr-badge { font-size: clamp(11px, 1.7vw, 14px); color: #fff !important; }
+.rank-banner .tile-rank .tr-rp { display: none; }   /* volledige RP-info staat in het rank-scherm */
+
+/* ---- rank-scherm ---- */
+.rank-box { max-width: 460px; width: 92%; }
+.rank-head { display: flex; align-items: center; gap: 10px; margin: 6px 0 12px; text-align: left; }
+.rank-head .rk-hd-shield { width: 40px; height: 50px; flex: 0 0 auto; display: inline-flex; }
+.rank-head .rk-hd-txt { flex: 1 1 auto; min-width: 0; }
+.rank-head .rk-hd-name { font-family: var(--pixel-font); font-weight: 900; font-size: clamp(14px,3vw,19px); text-shadow: 1px 1px 0 #000; }
+.rank-head .rk-hd-rp { font-size: clamp(11px,1.8vw,13px); color: #eadfce; margin: 2px 0 4px; }
+.rank-head .rk-hd-bar { height: 7px; border-radius: 4px; background: rgba(0,0,0,.5); border: 1px solid rgba(0,0,0,.5); overflow: hidden; }
+.rank-head .rk-hd-bar > span { display: block; height: 100%; }
+.rank-list { display: flex; flex-direction: column; gap: 5px; max-height: 46vh; overflow-y: auto; padding-right: 4px; }
+.rk-row { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 8px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); }
+.rk-row.reached { background: rgba(255,210,120,.10); }
+.rk-row.current { background: rgba(255,210,120,.22); border-color: #f0b24a; box-shadow: 0 0 0 1px #f0b24a inset; }
+.rk-row.locked { opacity: .55; }
+.rk-row .rk-shield { width: 24px; height: 30px; flex: 0 0 auto; display: inline-flex; }
+.rk-row .rk-name { font-family: var(--pixel-font); font-weight: 900; font-size: clamp(12px,2vw,15px); text-shadow: 1px 1px 0 #000; flex: 1 1 auto; min-width: 0; }
+.rk-row .rk-title { display: block; font-size: 9px; font-weight: bold; color: #cdb68e; letter-spacing: .3px; }
+.rk-row .rk-rp { font-size: clamp(10px,1.6vw,12px); color: #ffe27a; font-weight: bold; white-space: nowrap; }
+.rk-row .rk-reward { font-size: 10px; color: #bcd0e8; white-space: nowrap; }
+.rk-row .rk-you { font-size: 9px; font-weight: 900; color: #0d0f13; background: #ffd24a; border-radius: 5px; padding: 2px 5px; }
+.rank-foot { margin-top: 10px; font-size: clamp(10px,1.6vw,12px); color: #cdb68e; line-height: 1.5; text-align: center; }
+
 /* drie tegels in het midden — gecentreerd, niet beeldvullend (zoals de mockup) */
 .menu-tiles {
   flex: 1 1 auto; display: grid; grid-template-columns: 1fr 1fr 1fr;

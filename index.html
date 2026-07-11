@@ -11,9 +11,9 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#0d0f14" />
   <title>Rymr Heroes</title>
-  <link rel="icon" type="image/png" href="icon.png?v=menu215" />
-  <link rel="apple-touch-icon" href="icon.png?v=menu215" />
-  <link rel="stylesheet" href="css/style.css?v=menu215" />
+  <link rel="icon" type="image/png" href="icon.png?v=menu216" />
+  <link rel="apple-touch-icon" href="icon.png?v=menu216" />
+  <link rel="stylesheet" href="css/style.css?v=menu216" />
 </head>
 <body>
   <div id="game-root">
@@ -69,7 +69,7 @@
     </div>
 
     <!-- ===== Splash bij opstarten (logo, fadet vanzelf weg) ===== -->
-    <div id="splash"><img src="logo.png?v=menu215" alt="Rymr Heroes" /></div>
+    <div id="splash"><img src="logo.png?v=menu216" alt="Rymr Heroes" /></div>
 
     <!-- ===== Canvas (de spelwereld) ===== -->
     <canvas id="game-canvas"></canvas>
@@ -141,7 +141,7 @@
               <span id="menu-ruby-count">0</span>
             </span>
           </div>
-          <img class="menu-logo-img" src="logo.png?v=menu215" alt="Rymr Heroes" />
+          <img class="menu-logo-img" src="logo.png?v=menu216" alt="Rymr Heroes" />
           <div class="menu-hud">
             <span id="menu-userline" class="menu-userline">Gast | Lvl 1</span>
             <button id="btn-settings" class="stone-icon" data-i18n-title="settings_word" data-i18n-aria="settings_word" title="Settings" aria-label="Settings">
@@ -154,10 +154,14 @@
           <button id="btn-journey" class="stone-tile">
             <span class="tile-play" data-i18n="tile_journey">Journey</span>
           </button>
-          <button id="btn-versus" class="stone-tile">
-            <span class="tile-play" data-i18n="tile_smash">Fight</span>
-            <span class="tile-rank" id="tile-rank"></span>
-          </button>
+          <div class="tile-wrap">
+            <button id="btn-versus" class="stone-tile">
+              <span class="tile-play" data-i18n="tile_smash">Fight</span>
+            </button>
+            <button id="btn-rank" class="rank-banner" type="button" aria-label="Rank">
+              <span class="tile-rank" id="tile-rank"></span>
+            </button>
+          </div>
           <button class="stone-tile soon" disabled>
             <span class="soon-name" data-i18n="coming_soon">Coming Soon!</span>
           </button>
@@ -600,6 +604,17 @@
       <button class="loadout-slot" data-slot="2"></button>
     </div>
 
+    <!-- ===== Rank-scherm (via de rank-banner op het hoofdmenu) ===== -->
+    <div id="rank-screen" class="overlay hidden">
+      <div class="overlay-box rank-box">
+        <button class="corner-back" id="btn-rank-back" data-i18n-aria="back" aria-label="Back"><svg class="ic"><use href="#ic-undo"/></svg></button>
+        <h2 class="screen-title">RANK</h2>
+        <div id="rank-head" class="rank-head"></div>
+        <div id="rank-list" class="rank-list"></div>
+        <div id="rank-foot" class="rank-foot"></div>
+      </div>
+    </div>
+
     <!-- ===== Pauze-menu ===== -->
     <div id="pause-screen" class="overlay hidden">
       <div class="overlay-box">
@@ -631,18 +646,18 @@
     </div>
   </div>
 
-  <script src="vendor/supabase.min.js?v=menu215"></script>
-  <script src="js/i18n.js?v=menu215"></script>
-  <script src="js/config.js?v=menu215"></script>
-  <script src="js/storage.js?v=menu215"></script>
-  <script src="js/audio.js?v=menu215"></script>
-  <script src="js/net.js?v=menu215"></script>
-  <script src="js/input.js?v=menu215"></script>
-  <script src="js/sprites.js?v=menu215"></script>
-  <script src="js/menubg.js?v=menu215"></script>
-  <script src="js/entities.js?v=menu215"></script>
-  <script src="js/ui.js?v=menu215"></script>
-  <script src="js/game.js?v=menu215"></script>
-  <script src="js/main.js?v=menu215"></script>
+  <script src="vendor/supabase.min.js?v=menu216"></script>
+  <script src="js/i18n.js?v=menu216"></script>
+  <script src="js/config.js?v=menu216"></script>
+  <script src="js/storage.js?v=menu216"></script>
+  <script src="js/audio.js?v=menu216"></script>
+  <script src="js/net.js?v=menu216"></script>
+  <script src="js/input.js?v=menu216"></script>
+  <script src="js/sprites.js?v=menu216"></script>
+  <script src="js/menubg.js?v=menu216"></script>
+  <script src="js/entities.js?v=menu216"></script>
+  <script src="js/ui.js?v=menu216"></script>
+  <script src="js/game.js?v=menu216"></script>
+  <script src="js/main.js?v=menu216"></script>
 </body>
 </html>

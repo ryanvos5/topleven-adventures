@@ -170,6 +170,8 @@ const UI = {
 
     // ---- 1 vs 1 online ----
     $('btn-versus').onclick = () => this.startMatchmaking();
+    $('btn-rank').onclick = () => this.openRankScreen();
+    $('btn-rank-back').onclick = () => document.getElementById('rank-screen').classList.add('hidden');
     $('btn-mm-cancel').onclick = () => this.cancelMatchmaking();
     try { this._testBotMap = localStorage.getItem('tps_testmap') || ''; } catch (e) { this._testBotMap = ''; }
     const testSel = document.getElementById('mm-test-map');
@@ -1230,6 +1232,48 @@ const UI = {
       '<span class="tr-badge" style="color:' + rk.col + '"><span class="tr-shield">' + rankShieldSVG(pr.idx) + '</span>' + rk.name + '</span>' +
       '<span class="tr-bar"><span style="width:' + Math.round(pr.pct * 100) + '%;background:' + rk.col + '"></span></span>' +
       '<span class="tr-rp">' + pr.rp + ' RP' + (pr.next ? (' · ' + pr.toNext + ' → ' + pr.next.name) : ' · MAX') + '</span>';
+  },
+  // rank-scherm openen (via de rank-banner): waar je nu bent, alle ranks + RP-drempels/beloningen
+  openRankScreen() {
+    const sc = document.getElementById('rank-screen'); if (!sc) return;
+    sc.classList.remove('hidden');
+    this.renderRankScreen();
+  },
+  renderRankScreen() {
+    const pr = Storage.rankProgress(), myIdx = pr.idx;
+    const head = document.getElementById('rank-head');
+    if (head) {
+      head.innerHTML =
+        '<span class="rk-hd-shield">' + rankShieldSVG(myIdx, 44) + '</span>' +
+        '<div class="rk-hd-txt">' +
+          '<div class="rk-hd-name" style="color:' + pr.rank.col + '">' + this._esc(pr.rank.name) + (pr.rank.title ? ' <span style="color:#cdb68e">— ' + this._esc(pr.rank.title) + '</span>' : '') + '</div>' +
+          '<div class="rk-hd-rp">' + pr.rp + ' RP' + (pr.next ? (' · ' + pr.toNext + ' ' + tl('naar') + ' ' + this._esc(pr.next.name)) : ' · MAX RANK') + '</div>' +
+          '<div class="rk-hd-bar"><span style="width:' + Math.round(pr.pct * 100) + '%;background:' + pr.rank.col + '"></span></div>' +
+        '</div>';
+    }
+    const list = document.getElementById('rank-list');
+    if (list) {
+      let html = '';
+      for (let i = RANKS.length - 1; i >= 0; i--) {   // hoogste rank bovenaan
+        const r = RANKS[i], reached = myIdx >= i, isCur = myIdx === i;
+        const rew = [];
+        if (r.coins) rew.push(r.coins + ' <span class="coin-dot">●</span>');
+        if (r.chest) rew.push(tl('kist'));
+        html += '<div class="rk-row ' + (isCur ? 'current' : (reached ? 'reached' : 'locked')) + '">' +
+          '<span class="rk-shield">' + rankShieldSVG(i, 30) + '</span>' +
+          '<span class="rk-name" style="color:' + r.col + '">' + this._esc(r.name) + (r.title ? '<span class="rk-title">' + this._esc(r.title) + '</span>' : '') + '</span>' +
+          '<span class="rk-rp">' + r.rp + ' RP</span>' +
+          (rew.length ? '<span class="rk-reward">' + rew.join(' · ') + '</span>' : '') +
+          (isCur ? '<span class="rk-you">' + tl('JIJ') + '</span>' : '') +
+          '</div>';
+      }
+      list.innerHTML = html;
+    }
+    const foot = document.getElementById('rank-foot');
+    if (foot && typeof RANK_RP !== 'undefined') {
+      foot.innerHTML = tl('Winst') + ' +' + RANK_RP.win + ' RP · ' + tl('Verlies') + ' ' + RANK_RP.loss + ' RP · ' +
+        tl('Winreeks') + ' +' + RANK_RP.streakBonus + ' · ' + tl('Hogere rank') + ' +' + RANK_RP.higherRankBonus;
+    }
   },
   _esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; },
   // eigen pixel-icoon (vervangt standaard emoji) — als HTML-string voor innerHTML
