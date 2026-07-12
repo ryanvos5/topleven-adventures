@@ -658,21 +658,21 @@ body.pad-connected #touch-controls .tbtn[data-key] { display: none !important; }
   0%, 100% { filter: drop-shadow(0 0 3px rgba(200,225,255,.3)); }
   50%      { filter: drop-shadow(0 0 9px rgba(220,240,255,.65)); }
 }
-/* GOUD-tekst met gloed — Journey/Singleplayer + Heroes/1vs1 (stijl zoals voorheen, iets kleiner) */
+/* warme cremige tekst met gloed — Journey/Singleplayer + Heroes/1vs1 (kleiner, zachtere kleur) */
 .tile-play, .tile-sub {
   font-weight: 900; line-height: 1.05; text-align: center;
-  color: #ffd24a; -webkit-text-fill-color: #ffd24a;
-  text-shadow: 0 -1px 0 rgba(255,244,196,.45), 0 1px 1px rgba(78,34,4,.85), 0 2px 4px rgba(0,0,0,.5);
-  filter: drop-shadow(0 0 5px rgba(255,168,52,.5));
+  color: #ecd9a8; -webkit-text-fill-color: #ecd9a8;
+  text-shadow: 0 -1px 0 rgba(255,248,220,.4), 0 1px 1px rgba(60,32,6,.85), 0 2px 3px rgba(0,0,0,.5);
+  filter: drop-shadow(0 0 4px rgba(240,180,80,.45));
   animation: tileGoldGlow 2.6s ease-in-out infinite;
 }
-.tile-sub { color: #ffe7b0; -webkit-text-fill-color: #ffe7b0; }   /* subtitel iets lichter/cremig */
+.tile-sub { color: #f2e6c6; -webkit-text-fill-color: #f2e6c6; }   /* subtitel iets lichter/cremig */
 @keyframes tileGoldGlow {
-  0%, 100% { filter: drop-shadow(0 0 4px rgba(255,165,50,.4)); }
-  50%      { filter: drop-shadow(0 0 10px rgba(255,205,90,.75)); }
+  0%, 100% { filter: drop-shadow(0 0 3px rgba(235,175,75,.4)); }
+  50%      { filter: drop-shadow(0 0 8px rgba(250,205,110,.7)); }
 }
-.tile-play { font-size: clamp(18px, 4.3vw, 34px); letter-spacing: 1px; }
-.tile-sub  { font-size: clamp(9px, 1.6vw, 12px); letter-spacing: .3px; margin-top: 1px; max-width: 92%; }
+.tile-play { font-size: clamp(14px, 3.3vw, 26px); letter-spacing: .5px; }   /* kleiner -> 1vs1/Singleplayer schuiven omhoog, boven de banner */
+.tile-sub  { font-size: clamp(8px, 1.4vw, 11px); letter-spacing: .3px; margin-top: 1px; max-width: 92%; }
 .soon-name { font-size: clamp(15px, 2.8vw, 24px); letter-spacing: .5px; }
 .tile-name { font-size: clamp(10px, 1.7vw, 15px); }
 .stone-tile.soon { opacity: .85; cursor: default; }
