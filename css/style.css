@@ -481,7 +481,7 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
 .tile-wrap { position: relative; display: flex; align-items: stretch; }
 .tile-wrap > .stone-tile { width: 100%; }
 .rank-banner {
-  position: absolute; left: 50%; bottom: 0; transform: translate(-50%, 42%);   /* overlapt de onderkant van de Heroes-tegel (meer overlap) en hangt maar iets naar beneden -> raakt de chest-slots niet */
+  position: absolute; left: 50%; bottom: 0; transform: translate(-50%, 56%);   /* overlapt de onderkant van de Heroes-tegel (meer overlap) en hangt maar iets naar beneden -> raakt de chest-slots niet */
   z-index: 6; width: min(74%, 190px); padding: 3px 12px 5px;
   display: flex; flex-direction: column; align-items: center;
   background: linear-gradient(180deg, #ffdc7a 0%, #f0a838 40%, #c87418 78%, #9a5510 100%);   /* helderder, glanzender goud */
@@ -491,7 +491,7 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
   filter: drop-shadow(0 3px 4px rgba(0,0,0,.5));
   animation: rankGlow 2.4s ease-in-out infinite;
 }
-.rank-banner:active { transform: translate(-50%, 42%) scale(.94); }
+.rank-banner:active { transform: translate(-50%, 56%) scale(.94); }
 @keyframes rankGlow {
   0%, 100% { filter: drop-shadow(0 3px 4px rgba(0,0,0,.5)) drop-shadow(0 0 3px rgba(255,190,90,.45)); }
   50%      { filter: drop-shadow(0 3px 5px rgba(0,0,0,.5)) drop-shadow(0 0 10px rgba(255,215,120,.85)); }
@@ -561,7 +561,7 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
 body.pad-connected #touch-controls .tbtn[data-key] { display: none !important; }
 
 /* ===== Kisten op het hoofdmenu ===== */
-.chest-bar { display: flex; justify-content: center; gap: clamp(8px, 2vw, 20px); margin: 2px 0 4px; flex: 0 0 auto; }
+.chest-bar { display: flex; justify-content: center; gap: clamp(8px, 2vw, 20px); margin: clamp(12px, 3.4vh, 30px) 0 4px; flex: 0 0 auto; }
 .chest-slot {
   position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
   cursor: pointer; width: clamp(74px, 15vw, 112px); height: clamp(56px, 10.5vh, 76px); padding: 3px;
