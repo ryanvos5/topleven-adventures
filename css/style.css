@@ -646,6 +646,7 @@ body.pad-connected #touch-controls .tbtn[data-key] { display: none !important; }
   padding: clamp(4px, 1.6vh, 11px) 6px 4px; height: clamp(60px, 15.5vh, 100px);   /* inhoud bovenaan: subtitel hoger + ruimte onderin voor de rank-banner */
 }
 .stone-tile.soon { justify-content: center; padding: 4px 6px; }
+#btn-versus { padding-top: clamp(1px, 0.4vh, 3px); }   /* Heroes/1vs1 iets hoger in de knop (boven de rank-banner) */
 /* WITTE shiny tekst — Coming Soon + rank-banner */
 .soon-name, .rank-banner .tr-badge {
   font-weight: 900; line-height: 1.05; text-align: center;
