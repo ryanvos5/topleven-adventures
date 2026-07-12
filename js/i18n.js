@@ -27,7 +27,7 @@ const I18N = {
       ph_nick: 'Nickname', ph_email: 'E-mail', ph_pass: 'Password (min. 6 characters)',
       // ---- shop / inventaris ----
       shop_title: 'SHOP', inv_title: 'INVENTORY',
-      tab_characters: 'Characters', tab_hats: 'Hats', tab_powerups: 'Power-ups',
+      tab_characters: 'Heroes', tab_hats: 'Hats', tab_powerups: 'Power-ups',
       tab_armor: 'Armour', tab_materials: 'Materials',
       coins: 'Coins', rubies: 'Rubies',
       buy: 'BUY', equip: 'EQUIP', equipped: 'EQUIPPED', in_loadout: 'IN LOADOUT', choose: 'CHOOSE',
@@ -89,7 +89,7 @@ const I18N = {
       auth_no_account: 'Nog geen account? Registreren', auth_have_account: 'Al een account? Inloggen',
       ph_nick: 'Nickname', ph_email: 'E-mail', ph_pass: 'Wachtwoord (min. 6 tekens)',
       shop_title: 'SHOP', inv_title: 'INVENTARIS',
-      tab_characters: 'Characters', tab_hats: 'Hoeden', tab_powerups: 'Power-ups',
+      tab_characters: 'Heroes', tab_hats: 'Hoeden', tab_powerups: 'Power-ups',
       tab_armor: 'Harnas', tab_materials: 'Materiaal',
       coins: 'Munten', rubies: 'Robijnen',
       buy: 'KOOP', equip: 'UITRUSTEN', equipped: 'UITGERUST', in_loadout: 'IN LOADOUT', choose: 'KIES',
