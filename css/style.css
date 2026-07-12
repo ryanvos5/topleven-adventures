@@ -639,22 +639,17 @@ body.pad-connected #touch-controls .tbtn[data-key] { display: none !important; }
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
   padding: 5px; height: clamp(58px, 15vh, 96px);
 }
-/* shiny witte tekst in de gamemode-knoppen (Heroes / Journey / Coming Soon) + rank-banner — glans-sweep zoals het voorbeeld */
+/* echt WITTE shiny tekst in de gamemode-knoppen (Heroes / Journey / Coming Soon) + rank-banner */
 .tile-play, .tile-sub, .soon-name, .rank-banner .tr-badge {
-  font-weight: 900; line-height: 1.05; text-align: center; color: #fff;
-  background-image:
-    linear-gradient(100deg, rgba(255,255,255,0) 40%, rgba(255,255,255,.95) 50%, rgba(255,255,255,0) 60%),
-    linear-gradient(180deg, #ffffff 0%, #ffffff 58%, #e3eaf4 100%);   /* voller wit met alleen onderaan een subtiele glans */
-  background-size: 250% 100%, 100% 100%; background-position: 140% 0, 0 0; background-repeat: no-repeat;
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent;
-  -webkit-text-stroke: 1px rgba(16,24,38,.5);
-  filter: drop-shadow(0 2px 1px rgba(0,0,0,.55)) drop-shadow(0 0 5px rgba(150,195,255,.4));
-  animation: tileShine 3.6s ease-in-out infinite;
+  font-weight: 900; line-height: 1.05; text-align: center;
+  color: #ffffff; -webkit-text-fill-color: #ffffff;   /* solide wit — geen fragiele background-clip die op iOS grijs werd */
+  text-shadow: 0 -1px 0 rgba(255,255,255,.5), 0 1px 1px rgba(0,0,0,.6), 0 2px 4px rgba(0,0,0,.45);   /* glans-highlight boven + diepte onder */
+  filter: drop-shadow(0 0 4px rgba(200,225,255,.4));
+  animation: tileGlow 2.6s ease-in-out infinite;
 }
-@keyframes tileShine {
-  0%        { background-position: 140% 0, 0 0; }
-  60%, 100% { background-position: -40% 0, 0 0; }
+@keyframes tileGlow {
+  0%, 100% { filter: drop-shadow(0 0 3px rgba(200,225,255,.3)); }
+  50%      { filter: drop-shadow(0 0 9px rgba(220,240,255,.65)); }
 }
 .tile-play { font-size: clamp(20px, 4.8vw, 38px); letter-spacing: 1px; }
 .tile-sub  { font-size: clamp(9px, 1.7vw, 13px); letter-spacing: .3px; margin-top: 1px; max-width: 92%; }
