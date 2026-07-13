@@ -4733,13 +4733,17 @@ const Game = {
   applyDrop(pl, d) {
     if (window.Sfx && pl === this.player) Sfx.play('pickup');
     for (let i = 0; i < 8; i++) this.particles.push(new Particle(d.x, d.y, (Math.random() - 0.5) * 2, -Math.random() * 2, '#ffe27a', 340, 2));
-    // een ander vuurwapen pakken vervangt het vorige geweer (AK47/Deagle/Kruisboog)
-    if (['fireball', 'rocket', 'cannon', 'giant', 'ninjastar', 'deagle', 'crossbow'].includes(d.kind)) { pl.gunAmmo = 0; if (pl.rangedId === 'ak47' || pl.rangedId === 'deagle' || pl.rangedId === 'crossbow') pl.rangedId = null; }
+    // een ander vuurwapen/projectiel oppakken vervangt het vorige — je houdt er maar ÉÉN tegelijk vast
+    // (geen fireball + raketwerper samen); de specifieke tak hieronder zet daarna de nieuwe
+    if (['fireball', 'rocket', 'cannon', 'ninjastar', 'ak47', 'deagle', 'crossbow'].includes(d.kind)) {
+      pl.fireballs = 0; pl.smashRockets = 0; pl.stars = 0; pl.cannon = 0; pl.gunAmmo = 0; pl.rangedId = null;
+      if (['rocketlauncher', 'ninjastar', 'ak47', 'deagle', 'crossbow'].includes(pl.weaponId)) pl.weaponId = pl.meleeId || 'bat';
+    }
     if (d.kind === 'weapon') { pl.meleeId = d.wid; pl.weaponId = pl.rangedId || d.wid; pl._weaponUntil = this.time + SMASH_WEAPON_TIME; }
     else if (d.kind === 'giant') {                                    // REUS: gigantisch, 300 HP, 8s, kan niet aanvallen (wel schade krijgen)
       pl._baseMaxHp = pl._baseMaxHp || pl.maxHp;
       pl.giant = true; pl.maxHp = GIANT_HP; pl.hp = GIANT_HP; pl._giantUntil = this.time + GIANT_MS;
-      pl.fireballs = 0; pl.smashRockets = 0; pl.cannon = 0; pl.gunAmmo = 0; pl.rangedId = null;
+      pl.fireballs = 0; pl.smashRockets = 0; pl.stars = 0; pl.cannon = 0; pl.gunAmmo = 0; pl.rangedId = null;
       for (let i = 0; i < 14; i++) this.particles.push(new Particle(pl.x, pl.y - 14, (Math.random() - 0.5) * 3, -Math.random() * 3, '#7affa0', 420, 3));
     }
     else if (d.kind === 'ak47') { pl.rangedId = 'ak47'; pl.gunAmmo = SMASH_AK_AMMO; pl.weaponId = 'ak47'; }   // AK47 met 30 kogels
@@ -4783,7 +4787,7 @@ const Game = {
     else if (d.kind === 'heli') {                                                  // gevechtsheli: instappen
       pl.heli = true; pl.heliMinigun = HELI_MINIGUN; pl.heliRockets = HELI_ROCKETS;
       pl._heliFireCd = 0; pl._heliRocketCd = 0;
-      pl.fireballs = 0; pl.smashRockets = 0; pl.cannon = 0; pl.gunAmmo = 0; pl.rangedId = null;
+      pl.fireballs = 0; pl.smashRockets = 0; pl.stars = 0; pl.cannon = 0; pl.gunAmmo = 0; pl.rangedId = null;
       pl.vy = 0; pl.onGround = false; pl.y -= 18;                                  // even opstijgen
       for (let i = 0; i < 14; i++) this.particles.push(new Particle(pl.x, pl.y + 6, (Math.random() - 0.5) * 3, Math.random() * 2, '#cfd6df', 360, 2));
     }
