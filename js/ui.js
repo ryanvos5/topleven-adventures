@@ -2551,6 +2551,9 @@ const UI = {
       const card = this._spriteCard(c.palette, { weapon: c.startMelee || c.forcedMelee || 'bat', build: c.build, hair: c.hair, hat: Storage.data.equippedHat, outfit: c.outfit }, '<div class="w-name">' + c.name + '</div>', true);
       const spr = card.querySelector('canvas');          // op het plaatje tikken -> stats-venster van de hero
       if (spr) { spr.style.cursor = 'pointer'; this._tap(spr, () => this.openHeroStats(cid), { immediate: true }); }
+      const iBadge = document.createElement('span'); iBadge.className = 'hero-info-i'; iBadge.textContent = 'i';   // info-icoon -> stats
+      this._tap(iBadge, () => this.openHeroStats(cid), { immediate: true });
+      card.appendChild(iBadge);
       card.appendChild(this._charLevelBlock(cid));      // level + XP-balk + upgrade + stats
       const btn = document.createElement('button'); btn.className = 'shop-buy';
       if (equipped) { btn.classList.add('equipped'); btn.textContent = t('equipped'); }

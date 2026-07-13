@@ -524,8 +524,13 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
 .rk-row .rk-you { font-size: 9px; font-weight: 900; color: #0d0f13; background: #ffd24a; border-radius: 5px; padding: 2px 5px; }
 .rank-foot { margin-top: 10px; font-size: clamp(10px,1.6vw,12px); color: #cdb68e; line-height: 1.5; text-align: center; }
 
+/* info-icoon rechtsboven op de hero-kaart (klik -> stats) */
+.hero-info-i { position: absolute; top: 6px; right: 6px; z-index: 4; width: 21px; height: 21px; border-radius: 50%; background: rgba(24,34,50,.9); border: 1.5px solid #7fb4ff; color: #cfe6ff; font-family: var(--pixel-font); font-weight: 900; font-size: 13px; line-height: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.55); }
+.hero-info-i:active { transform: scale(.9); }
+
 /* ---- hero-stats venster (klik op het plaatje in de inventory) ---- */
-.hero-stats-box { max-width: 380px; width: 90%; }
+#hero-stats { touch-action: none; overscroll-behavior: contain; }   /* niet kunnen scrollen (ook niet horizontaal op iOS) */
+.hero-stats-box { max-width: 380px; width: 90%; overflow: hidden; }
 .hs-sprite { display: flex; justify-content: center; margin: 4px 0 10px; }
 .hs-sprite canvas { width: 150px; height: 115px; image-rendering: pixelated; }
 .hs-stats { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
@@ -1541,6 +1546,7 @@ body.pad-connected #touch-controls .tbtn[data-key] { display: none !important; }
 }
 
 .shop-card {
+  position: relative;
   background: #0d1018;
   border: 3px solid #3a4456;
   border-radius: 10px;
