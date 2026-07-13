@@ -2281,6 +2281,7 @@ const UI = {
     const tab = this._invTab || 'powerups';
     document.querySelectorAll('#inv-tabs .shop-tab').forEach((b) => b.classList.toggle('active', b.dataset.invtab === tab));
     const grid = document.getElementById('inv-grid'); grid.innerHTML = '';
+    const _lc = grid.parentNode && grid.parentNode.querySelector('.loadout-count'); if (_lc) _lc.remove();   // teller alleen bij power-ups-tab
     this._charAnims = [];
     const hint = document.getElementById('inv-hint');
     if (tab === 'powerups') {
