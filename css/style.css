@@ -531,7 +531,8 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
 /* ---- hero-stats venster (klik op het plaatje in de inventory) ---- */
 #hero-stats { touch-action: none; overscroll-behavior: contain; }
 /* niet scrollen (ook niet horizontaal op iOS) — hogere specificiteit dan .overlay-box zodat overflow:hidden wint */
-#hero-stats .hero-stats-box { max-width: 400px; width: 92%; overflow: hidden; touch-action: none; padding: clamp(8px,2vh,16px) clamp(12px,3vw,20px); }
+#hero-stats .hero-stats-box { position: relative; max-width: 400px; width: 92%; overflow: hidden; touch-action: none; padding: clamp(8px,2vh,16px) clamp(12px,3vw,20px); }
+#hero-stats .corner-back { top: 8px; left: 8px; }   /* terug-pijltje in de hoek van het venster */
 #hero-stats .screen-title { margin: 0 0 4px; font-size: clamp(16px,3vw,22px); }
 .hs-sprite { display: flex; justify-content: center; margin: 0 0 4px; }
 .hs-sprite canvas { height: clamp(58px, 15vh, 100px); width: auto; image-rendering: pixelated; }
