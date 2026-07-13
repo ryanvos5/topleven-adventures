@@ -529,20 +529,22 @@ body.in-game #bg-layer { display: none; }     /* tijdens het spelen niet nodig (
 .hero-info-i:active { transform: scale(.9); }
 
 /* ---- hero-stats venster (klik op het plaatje in de inventory) ---- */
-#hero-stats { touch-action: none; overscroll-behavior: contain; }   /* niet kunnen scrollen (ook niet horizontaal op iOS) */
-.hero-stats-box { max-width: 380px; width: 90%; overflow: hidden; }
-.hs-sprite { display: flex; justify-content: center; margin: 4px 0 10px; }
-.hs-sprite canvas { width: 150px; height: 115px; image-rendering: pixelated; }
-.hs-stats { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
-.hs-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 12px; border-radius: 9px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); font-family: var(--pixel-font); font-weight: bold; }
+#hero-stats { touch-action: none; overscroll-behavior: contain; }
+/* niet scrollen (ook niet horizontaal op iOS) — hogere specificiteit dan .overlay-box zodat overflow:hidden wint */
+#hero-stats .hero-stats-box { max-width: 400px; width: 92%; overflow: hidden; touch-action: none; padding: clamp(8px,2vh,16px) clamp(12px,3vw,20px); }
+#hero-stats .screen-title { margin: 0 0 4px; font-size: clamp(16px,3vw,22px); }
+.hs-sprite { display: flex; justify-content: center; margin: 0 0 4px; }
+.hs-sprite canvas { height: clamp(58px, 15vh, 100px); width: auto; image-rendering: pixelated; }
+.hs-stats { display: flex; flex-direction: column; gap: 4px; margin-bottom: 7px; }
+.hs-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 12px; border-radius: 8px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); font-family: var(--pixel-font); font-weight: bold; }
 .hs-row > span { display: inline-flex; align-items: center; gap: 6px; color: #e8dcc4; font-size: clamp(12px,2vw,15px); }
-.hs-row .ic { width: 16px; height: 16px; }
-.hs-row b { color: #ffe27a; font-size: clamp(15px,2.6vw,20px); }
-.hs-ability { text-align: left; border-top: 1px solid rgba(255,255,255,.12); padding-top: 10px; }
-.hs-ab-title { font-family: var(--pixel-font); font-weight: bold; font-size: clamp(12px,2vw,15px); color: #ffcaa0; margin-bottom: 5px; display: flex; align-items: center; gap: 6px; }
-.hs-ab-title .ic { width: 16px; height: 16px; flex: 0 0 auto; }
+.hs-row .ic { width: 15px; height: 15px; }
+.hs-row b { color: #ffe27a; font-size: clamp(14px,2.4vw,19px); }
+.hs-ability { text-align: left; border-top: 1px solid rgba(255,255,255,.12); padding-top: 7px; }
+.hs-ab-title { font-family: var(--pixel-font); font-weight: bold; font-size: clamp(12px,2vw,15px); color: #ffcaa0; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+.hs-ab-title .ic { width: 15px; height: 15px; flex: 0 0 auto; }
 .hs-ab-title b { color: #fff; }
-.hs-ab-desc { font-size: clamp(11px,1.8vw,13px); color: #cdd6e2; line-height: 1.5; }
+.hs-ab-desc { font-size: clamp(11px,1.8vw,13px); color: #cdd6e2; line-height: 1.4; }
 
 /* drie tegels in het midden — gecentreerd, niet beeldvullend (zoals de mockup) */
 .menu-tiles {
