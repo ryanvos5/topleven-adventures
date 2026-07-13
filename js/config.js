@@ -222,7 +222,7 @@ const CHARACTERS = {
   },
   jenze: {
     id: 'jenze', name: 'Jenze', cost: 500, lvl: 5,
-    maxHp: 120, speedMul: 0.95, meleeMul: 1.05, build: 'bulky', hair: 'curly', ability: 'heal',
+    maxHp: 115, speedMul: 0.927, meleeMul: 1.05, build: 'bulky', hair: 'curly', ability: 'heal',   // speedMul x1.1-bump -> ~1.02 -> Speed 102 in de stats
     palette: {
       hair: '#6b4426', hairDark: '#4a2e18',  // bruine krullen
       skin: '#dcab7e', skinDark: '#bb8a5e',
