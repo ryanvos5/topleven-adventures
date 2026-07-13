@@ -282,7 +282,7 @@ const CHARACTERS = {
   },
   koba: {
     id: 'koba', name: 'Koba', cost: 0, journeyOnly: true,
-    maxHp: 110, speedMul: 1.0, meleeMul: 1.05, build: 'bulky', hair: 'bald', ability: 'rage8',
+    maxHp: 110, speedMul: 0.836, meleeMul: 1.05, build: 'bulky', hair: 'bald', ability: 'rage8',   // speedMul x1.1-bump -> ~0.92 -> Speed 92 in de stats
     palette: {
       hair: '#7a3a1e', hairDark: '#54260f',
       skin: '#a85e34', skinDark: '#7a421f',     // orang-oetan-rood
