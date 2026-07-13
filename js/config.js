@@ -305,7 +305,7 @@ const CHARACTERS = {
   // ---- TEMPLE-WERELD BOSSES (unlockbaar door ze te verslaan in Journey) ----
   guardian: {
     id: 'guardian', name: 'Tempelbewaker', cost: 0, journeyOnly: true,
-    maxHp: 100, speedMul: 1.0, meleeMul: 1.0, build: 'stocky', hair: 'bald', ability: 'traps', forcedMelee: 'katana',
+    maxHp: 100, speedMul: 1.0, meleeMul: 1.0, build: 'stocky', hair: 'bald', ability: 'traps',
     palette: {
       hair: '#c9a84a', hairDark: '#8a6f28',
       skin: '#caa06a', skinDark: '#9a734a',
