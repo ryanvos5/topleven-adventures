@@ -2922,7 +2922,7 @@ const UI = {
       (ab ? '<div class="hs-row"><span>' + this._ic('fire') + ' ' + tl('Oplaadtijd') + '</span><b>' + chargeS + 's</b></div>' : '');
     document.getElementById('hs-ability').innerHTML = ab
       ? '<div class="hs-ab-title">' + this._ic('fire') + ' ' + tl('Speciale ability') + ': <b>' + this._esc(ab.name) + '</b></div>' +
-        '<div class="hs-ab-desc">' + this._esc(ab.desc) + ' <span class="hs-ab-charge">(' + tl('Oplaadtijd') + ': ' + chargeS + 's)</span></div>'
+        '<div class="hs-ab-desc">' + this._esc(ab.desc) + '</div>'
       : '';
     document.getElementById('btn-hero-stats-back').onclick = () => sc.classList.add('hidden');
     sc.onclick = (e) => { if (e.target === sc) sc.classList.add('hidden'); };
