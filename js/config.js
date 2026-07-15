@@ -174,7 +174,7 @@ const CHARACTERS = {
   },
   tygo: {
     id: 'tygo', name: 'Tygo', cost: 1200, lvl: 8, rank: 1,   // vrij te spelen bij Bronze II
-    maxHp: 100, speedMul: 1.0, meleeMul: 1.0, build: 'tall', hair: 'natural', ability: 'highjump', abChargeMul: 3,
+    maxHp: 100, speedMul: 1.0, meleeMul: 1.0, build: 'tall', hair: 'natural', ability: 'longreach', abChargeMul: 2,
     palette: {
       hair: '#a8824a', hairDark: '#7a5e30',  // blond-bruin
       skin: '#dcb088', skinDark: '#b88f64',
@@ -198,7 +198,7 @@ const CHARACTERS = {
   },
   timo: {
     id: 'timo', name: 'Timo', cost: 4000, lvl: 16, rank: 4,   // Silver II
-    maxHp: 90, speedMul: 1.1, meleeMul: 1.0, build: 'small', hair: 'natural', ability: 'triplejump', abChargeMul: 3,
+    maxHp: 90, speedMul: 1.1, meleeMul: 1.0, build: 'small', hair: 'natural', ability: 'acrobat', abChargeMul: 2,
     palette: {
       hair: '#a8824a', hairDark: '#7a5e30',     // blond-bruin, natural
       skin: '#d8a878', skinDark: '#b8895e',
@@ -365,8 +365,10 @@ const ABILITIES = {
   zapdash:    { name: 'Zap Dash',    desc: 'Dash naar je tegenstander: schade + knockback.' },
   heal:       { name: 'HP Herstel',  desc: 'Herstelt in één keer al je HP.' },
   highjump:   { name: 'Hoge Sprong', desc: 'Springt hoger — de rest van de match.' },
+  longreach:  { name: 'Lang Bereik', desc: 'Tygo strekt zijn armen en maakt een enorme zwaai: 6s lang 40% meer bereik en iets meer knockback. Geen extra schade, wel meer controle.' },
   fireaura10: { name: 'Vuuraura',    desc: 'Vuuraura 6s: wie je aanraakt brandt.' },
   triplejump: { name: 'Dubbel Sprong', desc: 'Een extra dubbel-jump — de rest van de match.' },
+  acrobat:    { name: 'Acrobaat',    desc: 'Salto: springt over aanvallen heen (kort onkwetsbaar) en landt met een kleine shockwave. Weinig schade, veel mobiliteit.' },
   earthquake: { name: 'Aardbeving',  desc: 'De map trilt 5s; je tegenstander wordt weggeschud.' },
   rage10:     { name: 'Rage',        desc: 'Rage 10s (2× schade).' },
   rage8:      { name: 'Rage',        desc: 'Rage 8s (2× schade).' },
@@ -381,6 +383,16 @@ const ABILITIES = {
   souldrain:  { name: 'Soul Drain',  desc: 'Steelt 20 HP van de tegenstander: 20 schade én jij +20 HP.' },
 };
 const STUN_PULSE_MS = 1600;      // Monnik-ability: verdovingsduur
+// Timo-ability "Acrobaat": salto met korte onkwetsbaarheid + kleine landings-shockwave
+const ACRO_JUMP_MUL = 1.4;       // spronghoogte t.o.v. normaal
+const ACRO_INVULN_MS = 620;      // onkwetsbaar tijdens de salto (springt over aanvallen heen)
+const ACRO_SHOCK_DMG = 12;       // kleine schade bij de landing
+const ACRO_SHOCK_KNOCK = 20;     // knockback van de shockwave
+const ACRO_SHOCK_RANGE = 72;     // horizontaal bereik van de shockwave
+// Tygo-ability "Lang Bereik": tijdelijk meer melee-bereik + knockback (geen extra schade)
+const LONGREACH_MS = 6000;       // duur van de buff
+const LONGREACH_REACH_MUL = 1.4; // 40% meer bereik
+const LONGREACH_KB_MUL = 1.3;    // iets meer knockback
 const STUN_PULSE_RANGE = 96;     // bereik van de stun-pulse (px)
 const ABILITY_CHARGE_MS = 42000;   // basis-oplaadtijd van de ability (combos versnellen dit)
 // Journey-enemy-stats blijven ongewijzigd (online zijn koba/kong aangepast)

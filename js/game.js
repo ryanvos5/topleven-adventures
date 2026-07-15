@@ -2973,6 +2973,7 @@ const Game = {
         if (this.vsMode === 'smash') this.smashFire(dt);   // fireball/rocket op de vuurknop (vóór update)
         this.player.update(dt, this);                   // eigen speler: volledige besturing/fysica
       }
+      this._updateAcro(this.player);                    // Acrobaat-salto: spoor + shockwave bij landing
       this.player.x = Math.max(8, Math.min(this.vsMapW - 8, this.player.x));   // binnen de map
       this.carryOnPlatform();                          // meebewegen met bewegend platform
       if (this.vsMode === 'smash') this.updateSmash(dt);  // drops spawnen/oppakken + wapen-timer
@@ -4501,8 +4502,10 @@ const Game = {
       case 'zapdash': this.zapDash(); break;
       case 'heal': p.hp = p.maxHp; this._abFx(p, '#5aff7a'); this.spawnHealFx(p); break;
       case 'highjump': p.jumpMul = 1.4; this._abFx(p, '#8fd0ff'); break;
+      case 'longreach': this.longReach(p); break;
       case 'fireaura10': p.fireAura = true; p.auraUntil = now + 6000 * dm; this._abFx(p, '#ff8a2a'); break;
       case 'triplejump': p.maxJumps = Math.max(p.maxJumps, 2) + 1; p.jumps = p.maxJumps; this._abFx(p, '#8fd0ff'); break;
+      case 'acrobat': this.acrobat(p); break;
       case 'rage10': p.buffs.rage = now + 10000 * dm; this._abFx(p, '#ff5a3a'); break;
       case 'rage8': p.buffs.rage = now + 8000 * dm; this._abFx(p, '#ff5a3a'); break;
       case 'ultrarage': p.buffs.rage = now + 5000 * dm; p._ultraUntil = now + 5000 * dm; this._abFx(p, '#ff2a2a'); break;
@@ -4524,6 +4527,74 @@ const Game = {
     if (window.UI && UI.renderAbilityBtn) UI.renderAbilityBtn();
     return true;
   },
+  // ===== Timo-ability "Acrobaat": salto (onkwetsbaar) + kleine landings-shockwave =====
+  acrobat(actor) {
+    if (!actor) return;
+    actor.vy = CONFIG.JUMP_VELOCITY * ACRO_JUMP_MUL;   // krachtige salto omhoog
+    actor.onGround = false; actor.jumping = false;
+    actor.jumps = actor.maxJumps;                       // sprongen resetten -> veel mobiliteit
+    actor.knockVx += actor.dir * 2.2;                   // klein vooruitzetje in de kijkrichting
+    actor.respawnInvuln = Math.max(actor.respawnInvuln || 0, ACRO_INVULN_MS);   // springt over aanvallen heen
+    actor._acroShock = true; actor._acroAir = false;
+    actor._flipUntil = this.time + ACRO_INVULN_MS;      // salto-spoor + shockwave staat "in de wacht" tot de landing
+    this._abFx(actor, '#8fe0ff');
+    for (let i = 0; i < 10; i++) this.particles.push(new Particle(actor.x + (Math.random() - 0.5) * 12, actor.y - 12 + (Math.random() - 0.5) * 16, (Math.random() - 0.5) * 3, -Math.random() * 2, i % 2 ? '#8fe0ff' : '#e8faff', 300 + Math.random() * 160, 2));
+    this.shake = Math.max(this.shake, 4);
+    if (window.Sfx) Sfx.play('jump');
+  },
+  // per frame: salto-spoor tekenen en de shockwave afvuren zodra de acrobaat landt
+  _updateAcro(actor) {
+    if (!actor || !actor._acroShock) return;
+    if (this.time < (actor._flipUntil || 0)) {          // in de salto: draaiend vonken-spoor
+      const a = (this.time / 40) % 6.283;
+      this.particles.push(new Particle(actor.x + Math.cos(a) * 11, actor.y - 12 + Math.sin(a) * 11, 0, 0, '#bfeeff', 170, 2));
+    }
+    if (!actor.onGround) { actor._acroAir = true; return; }   // nog in de lucht
+    if (actor._acroAir) { actor._acroShock = false; actor._acroAir = false; this._acroShockwave(actor); }   // net geland
+  },
+  _acroShockwave(actor) {
+    this.shake = Math.max(this.shake, 8);
+    this.spawnAbilityFx(actor.x, actor.y, '#8fe0ff');   // uitdijende ring
+    for (let i = 0; i < 14; i++) { const ang = (i / 14) * 6.283; this.particles.push(new Particle(actor.x, actor.y - 2, Math.cos(ang) * 3.4, -Math.abs(Math.sin(ang)) * 1.4 - 0.6, i % 2 ? '#dfeff9' : '#9fd8ff', 300 + Math.random() * 140, 2)); }
+    if (window.Sfx) Sfx.play('stomp');
+    const isMe = (actor === this.player);
+    const opp = isMe ? (this.vsBot ? this.bot : (this.vs ? this.vs.remote : null)) : this.player;
+    if (!opp || opp.dead) return;
+    const dx = (opp.x || 0) - actor.x;
+    if (Math.abs(dx) >= ACRO_SHOCK_RANGE || Math.abs((opp.y || actor.y) - actor.y) >= 46) return;   // te ver -> geen shockwave-treffer
+    const dir = dx >= 0 ? 1 : -1;
+    if (isMe) {
+      if (this.vsBot) this.applyHitToBot(dir, ACRO_SHOCK_KNOCK, -6, ACRO_SHOCK_DMG);
+      else if (window.Net) Net.versusSend('hit', { dir, power: ACRO_SHOCK_KNOCK, vy: -6, dmg: ACRO_SHOCK_DMG });
+    } else if (!this.player.dead && this.player.respawnInvuln <= 0) {
+      this.onVersusHit({ dir, power: ACRO_SHOCK_KNOCK, vy: -6, dmg: ACRO_SHOCK_DMG });   // bot-Timo raakt de speler
+    }
+  },
+
+  // ===== Tygo-ability "Lang Bereik": 6s meer melee-bereik + knockback, met een enorme zwaai =====
+  longReach(actor) {
+    if (!actor) return;
+    const dm = actor.abilityDurMul || 1;
+    actor._reachUntil = this.time + LONGREACH_MS * dm;   // buff: reach + knockback (in checkVersusHit / bot-melee)
+    // meteen een grote zwaai maken (visueel + de eerste klap gebruikt al het extra bereik)
+    actor.swingWeapon = actor.weaponId || actor.meleeId || 'bat';
+    actor.swingUntil = this.time + 240; actor.attackAnimUntil = this.time + 240;
+    this._abFx(actor, '#5fe0b0');
+    this._reachSweepFx(actor);
+    if (window.Sfx) Sfx.play('swing');
+  },
+  // brede boog-veeg vóór de acteur die het vergrote bereik toont
+  _reachSweepFx(actor) {
+    const dir = actor.dir || 1, R = 40 * LONGREACH_REACH_MUL + 26;
+    for (let i = 0; i <= 16; i++) {
+      const t = i / 16, ang = -0.85 + t * 1.7;           // veeg van boven naar onder
+      const rr = R * (0.45 + 0.55 * Math.sin(t * Math.PI));
+      const x = actor.x + dir * Math.cos(ang) * rr, y = actor.y - 16 - Math.sin(ang) * rr * 0.55;
+      this.particles.push(new Particle(x, y, dir * 1.4, -0.4, i % 2 ? '#7fe6c6' : '#e6fff6', 240 + Math.random() * 120, 2));
+    }
+    this.shake = Math.max(this.shake, 5);
+  },
+
   // character-level-bonussen op de lokale speler zetten (+HP, +speed, langere abilities)
   _applyCharLevel(p) {
     if (!p || !p.charId || !Storage.charStats) return;
@@ -4552,7 +4623,7 @@ const Game = {
     return this.useAbility();
   },
   _abilityColor(ab) {
-    return ({ heal: '#5aff7a', highjump: '#8fd0ff', triplejump: '#8fd0ff', fireaura10: '#ff8a2a',
+    return ({ heal: '#5aff7a', highjump: '#8fd0ff', triplejump: '#8fd0ff', acrobat: '#8fe0ff', longreach: '#5fe0b0', fireaura10: '#ff8a2a',
       rage10: '#ff5a3a', rage8: '#ff5a3a', ultrarage: '#ff2a2a', rage3: '#ff3a2a', zapdash: '#ffe27a',
       earthquake: '#c8a060', knife: '#bfe6ff', katanacombo: '#e8edf2', stunstrike: '#8fd0ff', stunpulse: '#8fd0ff', souldrain: '#a45bff', invisible: '#b06bff' })[ab] || '#c9a6ff';
   },
@@ -4773,8 +4844,10 @@ const Game = {
       case 'zapdash': this.botZapDash(); break;
       case 'heal': b.hp = b.maxHp; this._abFx(b, '#5aff7a'); this.spawnHealFx(b); break;
       case 'highjump': b.jumpMul = 1.4; this._abFx(b, '#8fd0ff'); break;
+      case 'longreach': this.longReach(b); break;
       case 'fireaura10': b.fireAura = true; b.auraUntil = now + 6000; this._abFx(b, '#ff8a2a'); break;
       case 'triplejump': b.maxJumps = Math.max(b.maxJumps, 2) + 1; b.jumps = b.maxJumps; this._abFx(b, '#8fd0ff'); break;
+      case 'acrobat': this.acrobat(b); break;
       case 'rage10': b.buffs.rage = now + 10000; this._abFx(b, '#ff5a3a'); break;
       case 'rage8': b.buffs.rage = now + 8000; this._abFx(b, '#ff5a3a'); break;
       case 'ultrarage': b.buffs.rage = now + 5000; b._ultraUntil = now + 5000; this._abFx(b, '#ff2a2a'); break;
@@ -4999,7 +5072,8 @@ const Game = {
     const sw = p.swingUntil || 0;
     if (sw && sw !== this.vs.lastSwing && this.time < sw) {
       this.vs.lastSwing = sw;
-      const reach = Math.max(40, (WEAPONS[p.meleeId] && WEAPONS[p.meleeId].range) || 40);   // lang wapen (speer/hellebaard) reikt verder
+      const reachBuff = (p._reachUntil && this.time < p._reachUntil) ? LONGREACH_REACH_MUL : 1;   // Tygo "Lang Bereik"
+      const reach = Math.max(40, (WEAPONS[p.meleeId] && WEAPONS[p.meleeId].range) || 40) * reachBuff;   // lang wapen (speer/hellebaard) reikt verder
       const dx = (r.x - p.x) * p.dir;
       const close = Math.abs(r.x - p.x) < 24;        // bijna in elkaar -> altijd raak (ook als je net de andere kant op kijkt)
       if ((close || (dx > -16 && dx < reach)) && Math.abs(r.y - p.y) < 34) {
@@ -5009,7 +5083,8 @@ const Game = {
         p.comboUntil = this.time + COMBO_WINDOW;
         const wd = (WEAPONS[p.meleeId] ? WEAPONS[p.meleeId].damage : 34) * (p.meleeMul || 1) * p.rageMul(this.time) * comboMul(p.combo);
         const dmg = Math.round(wd * 0.45);                            // versus-melee-schade
-        const kp = 15 + Math.max(0, p.combo - 1) * 8;                 // vanaf x2 fors meer knockback (x1=15 .. x5=47)
+        const kbBuff = (p._reachUntil && this.time < p._reachUntil) ? LONGREACH_KB_MUL : 1;   // "Lang Bereik": iets meer knockback
+        const kp = Math.round((15 + Math.max(0, p.combo - 1) * 8) * kbBuff);                  // vanaf x2 fors meer knockback (x1=15 .. x5=47)
         const kvy = -5.5 - Math.max(0, p.combo - 1) * 0.7;            // en iets meer omhoog
         const sst = (p._stunStrikeUntil && this.time < p._stunStrikeUntil) ? 1000 : 0;   // stun-slag: verdoof de tegenstander
         if (sst) p._stunStrikeUntil = 0;                                                  // eenmalig
@@ -5046,6 +5121,7 @@ const Game = {
       ? { left: false, right: false, jump: false, duck: false, attack: false, melee: false, jumpPressed: false }
       : this.botThink();
     b.update(dt, this, inp);
+    this._updateAcro(b);                                                  // Acrobaat-salto (bot): shockwave bij landing
     if (this.tutorial1v1) {
       b.hp = b.maxHp;                                                     // pop blijft altijd heel
       if (b.y > 620 || b.x < -240 || b.x > this.vsMapW + 240) {           // weggeknald -> terug naar spawn
@@ -5144,12 +5220,13 @@ const Game = {
       v.botLastSwing = bsw;
       const dxp = (this.player.x - b.x) * b.dir;
       const bClose = Math.abs(this.player.x - b.x) < 24;     // bijna in elkaar -> altijd raak
-      if ((bClose || (dxp > -16 && dxp < 40)) && Math.abs(this.player.y - b.y) < 34 && this.player.respawnInvuln <= 0 && !this.player.dead && b.respawnInvuln <= 0) {
+      const bReach = 40 * ((b._reachUntil && this.time < b._reachUntil) ? LONGREACH_REACH_MUL : 1);   // bot-Tygo "Lang Bereik"
+      if ((bClose || (dxp > -16 && dxp < bReach)) && Math.abs(this.player.y - b.y) < 34 && this.player.respawnInvuln <= 0 && !this.player.dead && b.respawnInvuln <= 0) {
         const kd = this.player.x >= b.x ? 1 : -1;
         b.combo = (this.time < (b.comboUntil || 0)) ? Math.min(COMBO_MAX, (b.combo || 0) + 1) : 1;
         b.comboUntil = this.time + COMBO_WINDOW;
         const wd = (WEAPONS[b.meleeId] ? WEAPONS[b.meleeId].damage : 34) * (b.meleeMul || 1) * (b.hasBuff('rage', this.time) ? 1.6 : 1) * comboMul(b.combo);
-        const kp = 15 + Math.max(0, b.combo - 1) * 8;                 // bot: vanaf x2 ook fors meer knockback
+        const kp = Math.round((15 + Math.max(0, b.combo - 1) * 8) * ((b._reachUntil && this.time < b._reachUntil) ? LONGREACH_KB_MUL : 1));   // bot: vanaf x2 ook fors meer knockback (+ "Lang Bereik")
         const bsst = (b._stunStrikeUntil && this.time < b._stunStrikeUntil) ? 1000 : 0; if (bsst) b._stunStrikeUntil = 0;   // Monnik-boss: stun-slag
         this.onVersusHit({ dir: kd, power: kp, vy: -5.5 - Math.max(0, b.combo - 1) * 0.7, dmg: Math.round(wd * 0.45), melee: 1, stun: bsst, pvp: 1 });
         if (b.ability) b.abCharge = Math.min(1, b.abCharge + (0.05 + 0.03 * Math.max(0, b.combo - 1)) / (b.abChargeMul || 1));   // combo's laden de bot-ability sneller
@@ -5260,6 +5337,8 @@ const Game = {
       else if (b.ability === 'heal') want = b.hp < b.maxHp * 0.55;                   // pas helen als het nodig is
       else if (b.ability === 'fireaura10' || b.ability === 'knife') want = aDx < 90; // in de buurt om te raken
       else if (b.ability === 'souldrain') want = b.hp < b.maxHp * 0.9 || aDx < 300;  // steelt HP: inzetten als 'ie wat schade heeft of de speler in de buurt is
+      else if (b.ability === 'acrobat') want = aDx < 80;                             // vlakbij: salto over de aanval + shockwave
+      else if (b.ability === 'longreach') want = aDx < 120;                           // net binnen bereik: langer bereik + knockback
       else want = true;                                                              // buffs (rage/jumps): meteen
       if (want && Math.random() < 0.05) { this.botUseAbility(); return inp; }
     }
