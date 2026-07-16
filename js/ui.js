@@ -904,6 +904,7 @@ const UI = {
   closeAuth() {
     document.getElementById('auth-screen').classList.add('hidden');
     this._authOnboarding = false;
+    this.maybeShowBeta();
   },
 
   // privacybeleid tonen (in-app, laadt de gebundelde privacy.html in een iframe; springt naar de juiste taal)
@@ -1025,7 +1026,7 @@ const UI = {
         const res = await Net.register(email, nick, pass);
         if (res.confirmed) {
           msg.style.color = '#7ad06a'; msg.textContent = tl('Account aangemaakt!');
-          setTimeout(() => { document.getElementById('auth-screen').classList.add('hidden'); this.syncCoins(); }, 800);
+          setTimeout(() => { document.getElementById('auth-screen').classList.add('hidden'); this.syncCoins(); this.maybeShowBeta(); }, 800);
         } else {
           msg.style.color = '#7ad06a';
           msg.textContent = tl('Bevestig je e-mail via de link die we stuurden, en log daarna in.');
@@ -1033,7 +1034,7 @@ const UI = {
       } else {
         await Net.login(email, pass);
         msg.style.color = '#7ad06a'; msg.textContent = tl('Ingelogd!');
-        setTimeout(() => { document.getElementById('auth-screen').classList.add('hidden'); this.syncCoins(); }, 700);
+        setTimeout(() => { document.getElementById('auth-screen').classList.add('hidden'); this.syncCoins(); this.maybeShowBeta(); }, 700);
       }
     } catch (e) {
       msg.style.color = '#ff6a6a';
@@ -1065,6 +1066,57 @@ const UI = {
 
   // vrije-tekst DM-chat aan/uit (v1: uit i.v.m. App Store 1.2 — zie CHAT_ENABLED in config.js)
   _chatOn() { return (typeof CHAT_ENABLED === 'undefined') || CHAT_ENABLED; },
+
+  // externe link openen (App Store, mailto) — via de Capacitor Browser-plugin op iOS, anders het systeem
+  _openExternal(url) {
+    if (!url) return;
+    try {
+      const P = window.Capacitor && window.Capacitor.Plugins;
+      if (P && P.Browser && P.Browser.open && url.slice(0, 4) === 'http') { P.Browser.open({ url }); return; }
+    } catch (e) {}
+    try { window.open(url, '_system'); } catch (e) { window.location.href = url; }
+  },
+
+  // BETA-welkomstpopup: elke keer bij opstarten (na het inlogscherm), weg te klikken
+  maybeShowBeta() {
+    if (this._betaShown) return;
+    try { if (!localStorage.getItem('zombiedash_onboarded')) return; } catch (e) {}   // pas ná de eerste-keer tutorial/login
+    const auth = document.getElementById('auth-screen');
+    if (auth && !auth.classList.contains('hidden')) return;                            // niet over het inlogscherm heen
+    if (document.body.classList.contains('in-game')) return;                           // niet tijdens een match
+    this._betaShown = true;
+    this.showBetaPopup();
+  },
+
+  showBetaPopup() {
+    let sc = document.getElementById('beta-popup');
+    if (!sc) {
+      sc = document.createElement('div'); sc.id = 'beta-popup'; sc.className = 'overlay hidden';
+      sc.innerHTML = '<div class="overlay-box beta-box">' +
+        '<button class="corner-back" id="btn-beta-close" aria-label="Close"><svg class="ic"><use href="#ic-x"/></svg></button>' +
+        '<h2 class="screen-title beta-title">' + tl('Welkom bij Rymr Heroes BETA') + '</h2>' +
+        '<p class="beta-text">' + tl('We zijn net gestart! De komende maanden richten we ons op méér online spelers — en jij kunt ons daar enorm mee helpen:') + '</p>' +
+        '<div class="beta-btns">' +
+          '<button class="stone-btn beta-review" id="btn-beta-review">⭐ ' + tl('Schrijf een review') + '</button>' +
+          '<button class="stone-btn beta-ideas" id="btn-beta-ideas">💡 ' + tl('Deel je idee') + '</button>' +
+        '</div>' +
+        '<p class="beta-foot">' + tl('Bedankt dat je erbij bent!') + ' 🎮</p>' +
+      '</div>';
+      document.body.appendChild(sc);
+      document.getElementById('btn-beta-close').onclick = () => sc.classList.add('hidden');
+      sc.onclick = (e) => { if (e.target === sc) sc.classList.add('hidden'); };
+      this._tap(document.getElementById('btn-beta-review'), () => {
+        this._openExternal(typeof BETA_REVIEW_URL !== 'undefined' ? BETA_REVIEW_URL : '');
+        sc.classList.add('hidden');
+      });
+      this._tap(document.getElementById('btn-beta-ideas'), () => {
+        const em = (typeof BETA_IDEAS_EMAIL !== 'undefined') ? BETA_IDEAS_EMAIL : '';
+        this._openExternal('mailto:' + em + '?subject=' + encodeURIComponent('Rymr Heroes — idee'));
+        sc.classList.add('hidden');
+      });
+    }
+    sc.classList.remove('hidden');
+  },
 
   // DM-inbox (realtime): binnenkomende berichten -> live in het gesprek of anders een badge
   startDMInbox() {
@@ -2341,7 +2393,7 @@ const UI = {
     // munten- en robijntellers bijwerken
     this.el.menuCoins.textContent = Storage.data.coins;
     if (this.el.menuRubies) this.el.menuRubies.textContent = Storage.rubies();
-    if (name === 'menu') { this.updateArenaButton(); this.refreshAuthUI(); this.ensurePresence(); if (window.Sfx) Sfx.music('menu'); }
+    if (name === 'menu') { this.updateArenaButton(); this.refreshAuthUI(); this.ensurePresence(); if (window.Sfx) Sfx.music('menu'); this.maybeShowBeta(); }
     else if (name === 'game') { this.leavePresence(); }   // tijdens het spelen niet online in de lobby
   },
 

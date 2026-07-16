@@ -399,6 +399,10 @@ const ABILITY_CHARGE_MS = 42000;   // basis-oplaadtijd van de ability (combos ve
 // user-generated content ook block/report/moderatie. Vrienden + uitdagen blijven wel.
 // Later weer aanzetten zodra block/report is ingebouwd.
 const CHAT_ENABLED = false;
+
+// BETA-welkomstpopup (bij opstarten). Vul de echte waarden in:
+const BETA_REVIEW_URL = 'https://apps.apple.com/app/id0000000000?action=write-review';   // <- vervang 0000000000 door je App Store-ID zodra Apple die toewijst
+const BETA_IDEAS_EMAIL = 'info@thebrandingfive.nl';                                        // <- e-mailadres waar ideeën/feedback heen gaan
 // Journey-enemy-stats blijven ongewijzigd (online zijn koba/kong aangepast)
 const JOURNEY_ENEMY_OVERRIDE = {
   koba: { maxHp: 135, speedMul: 0.94, meleeMul: 1.25 },
