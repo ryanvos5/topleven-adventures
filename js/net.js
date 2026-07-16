@@ -28,6 +28,10 @@ const Net = {
       this.sb = window.supabase.createClient(SUPA_URL, SUPA_KEY, {
         // PKCE + in de app zelf de callback afhandelen (geen automatische URL-detectie in de WebView)
         auth: { persistSession: true, autoRefreshToken: true, flowType: 'pkce', detectSessionInUrl: !this.isNative },
+        // Realtime: de game verstuurt de speler-state op ~30 Hz (elke 33ms). Zonder deze regel
+        // throttelt de Supabase-client naar de default van 10/sec -> haperende online sync.
+        // 40 geeft ruimte voor de 30 state-updates + losse hit/ability-events per seconde.
+        realtime: { params: { eventsPerSecond: 40 } },
       });
     } catch (e) { console.warn('[Net] init faalde', e); return; }
     this.ready = true;
