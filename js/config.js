@@ -395,6 +395,10 @@ const LONGREACH_REACH_MUL = 1.4; // 40% meer bereik
 const LONGREACH_KB_MUL = 1.3;    // iets meer knockback
 const STUN_PULSE_RANGE = 96;     // bereik van de stun-pulse (px)
 const ABILITY_CHARGE_MS = 42000;   // basis-oplaadtijd van de ability (combos versnellen dit)
+// Vrije-tekst DM-chat tussen spelers. UIT voor v1: App Store-richtlijn 1.2 eist bij
+// user-generated content ook block/report/moderatie. Vrienden + uitdagen blijven wel.
+// Later weer aanzetten zodra block/report is ingebouwd.
+const CHAT_ENABLED = false;
 // Journey-enemy-stats blijven ongewijzigd (online zijn koba/kong aangepast)
 const JOURNEY_ENEMY_OVERRIDE = {
   koba: { maxHp: 135, speedMul: 0.94, meleeMul: 1.25 },

@@ -1063,8 +1063,12 @@ const UI = {
 
   leavePresence() { if (window.Net) { Net.lobbyLeave(); Net.unsubscribeDMs(); } this._peers = []; this.refreshChatBadge(); },
 
+  // vrije-tekst DM-chat aan/uit (v1: uit i.v.m. App Store 1.2 — zie CHAT_ENABLED in config.js)
+  _chatOn() { return (typeof CHAT_ENABLED === 'undefined') || CHAT_ENABLED; },
+
   // DM-inbox (realtime): binnenkomende berichten -> live in het gesprek of anders een badge
   startDMInbox() {
+    if (!this._chatOn()) return;                                      // chat uit (v1)
     if (!window.Net || !Net.isLoggedIn() || Net._dmChannel) return;   // niet dubbel abonneren
     Net.subscribeDMs((m) => {
       if (this._convo && this._convo.id === m.sender) { this.addConvoLine(m.body, false); }
@@ -1175,7 +1179,7 @@ const UI = {
     };
     if (kind === 'friend') {
       actions.appendChild(mk('challenge', 'swords', online ? 'Uitdagen' : 'Offline', () => this.inviteFromChat(r.other_id, r.nickname), !online));
-      actions.appendChild(mk('', 'chat', 'Chatten', () => this.openConvo(r.other_id, r.nickname)));
+      if (this._chatOn()) actions.appendChild(mk('', 'chat', 'Chatten', () => this.openConvo(r.other_id, r.nickname)));
       actions.appendChild(mk('danger', 'x', 'Vriend verwijderen', () => this.removeFriend(r.other_id, r.nickname)));
     } else if (kind === 'incoming') {
       actions.appendChild(mk('accept', 'check', 'Accepteren', () => this.acceptReq(r.other_id)));
@@ -1219,6 +1223,7 @@ const UI = {
 
   // ---- DM-gesprek met 1 vriend (blijft opgeslagen) ----
   async openConvo(id, nick) {
+    if (!this._chatOn()) return;                   // chat uit (v1)
     this._convo = { id: id, nick: nick };
     document.getElementById('friends-main').classList.add('hidden');
     document.getElementById('friends-convo').classList.remove('hidden');
@@ -1246,7 +1251,7 @@ const UI = {
   },
 
   async sendConvo() {
-    if (!this._convo) return;
+    if (!this._chatOn() || !this._convo) return;   // chat uit (v1)
     const inp = document.getElementById('convo-input');
     const text = (inp.value || '').trim();
     if (!text) return;
