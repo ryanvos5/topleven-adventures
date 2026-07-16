@@ -1651,8 +1651,8 @@ body.pad-connected #touch-controls .tbtn[data-key] { display: none !important; }
 .crate-odds-box { max-width: 420px; max-height: 82vh; overflow-y: auto; }
 .co-row .co-left { display: inline-flex; align-items: center; gap: 8px; }
 .co-ico { width: 28px; height: 28px; image-rendering: pixelated; }
-.beta-box { max-width: 400px; text-align: center; }
-#beta-popup .corner-back { left: auto; right: 8px; }
+.beta-box { max-width: 400px; text-align: center; position: relative; }
+#beta-popup .corner-back { left: auto; right: 10px; top: 10px; }
 .beta-title { color: var(--gold); margin: 2px 0 8px; }
 .beta-text { color: var(--text); font-size: 14px; line-height: 1.5; margin: 4px 6px 16px; }
 .beta-btns { display: flex; flex-direction: column; gap: 10px; }
