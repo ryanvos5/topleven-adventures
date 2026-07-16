@@ -2396,10 +2396,7 @@ const UI = {
     if (sub) {
       let txt = '';
       if (tab === 'crates') txt = tl('Gekochte crates gaan meteen open — je buit wordt direct bijgeschreven.');
-      else if (tab === 'rubies' && !(window.IAP && IAP.available)) {
-        txt = tl('In-app aankopen worden binnenkort geactiveerd.');
-        if (window.IAP && IAP.diagText) txt += '  ·  ' + IAP.diagText();   // tijdelijke diagnose op het scherm
-      }
+      else if (tab === 'rubies' && !(window.IAP && IAP.available)) txt = tl('In-app aankopen worden binnenkort geactiveerd.');
       sub.textContent = txt; sub.classList.toggle('hidden', !txt);
     }
     this.el.shopGrid.innerHTML = '';
@@ -2470,13 +2467,13 @@ const UI = {
       const cv = document.createElement('canvas'); cv.width = 96; cv.height = 96; cv.className = 'pu-ico';
       this._drawRubyIcon(cv, p.rubies);
       const info = document.createElement('div');
-      info.innerHTML = '<div class="w-name">' + p.rubies + ' ◆ ' + tl('Robijnen') + (p.best ? ' <span class="ruby-best">' + tl('Beste deal') + '</span>' : '') + '</div><div class="w-stats">' + tl('Koop met Apple Pay') + '</div>';
+      info.innerHTML = '<div class="w-name">' + p.rubies + ' ◆ ' + tl('Robijnen') + (p.best ? ' <span class="ruby-best">' + tl('Beste deal') + '</span>' : '') + '</div><div class="w-stats">' + tl('Koop via de App Store') + '</div>';
       card.appendChild(cv); card.appendChild(info);
       const btn = document.createElement('button');
       btn.className = 'shop-buy buy';
       // toon de echte App Store-prijs zodra StoreKit die geleverd heeft; anders de richtprijs
       const price = (window.IAP && IAP.priceFor && IAP.priceFor(p.product)) || p.price;
-      btn.innerHTML = '<svg class="apay-ic" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M6.6 8.9c-.4.5-1 .4-1.6.2.1-.6.4-1.2.7-1.6.4-.5 1-.8 1.5-.9.1.7-.2 1.3-.6 2.3zm.6.9c-.8 0-1.5.5-1.9.5-.4 0-1-.5-1.6-.5-.8 0-1.6.5-2 1.2-.9 1.5-.2 3.7.6 4.9.4.6.9 1.2 1.5 1.2.6 0 .8-.4 1.6-.4.7 0 .9.4 1.6.4.6 0 1-.6 1.4-1.1.4-.6.6-1.2.6-1.2 0 0-1.2-.5-1.2-1.9 0-1.2 1-1.7 1-1.8-.6-.8-1.4-.9-1.7-.9zM15.7 6.4v9.9h1.5v-3.4h2.1c1.9 0 3.3-1.3 3.3-3.2s-1.3-3.3-3.2-3.3h-3.7zm1.5 1.3h1.8c1.3 0 2 .7 2 2s-.7 2-2 2h-1.8v-4z"/></svg>' + price;
+      btn.textContent = price;
       card.appendChild(btn);
       this._tap(btn, () => this.buyRubies(p));
       grid.appendChild(card);
