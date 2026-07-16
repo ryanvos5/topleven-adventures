@@ -2466,25 +2466,34 @@ const UI = {
     if (!sc) {
       sc = document.createElement('div'); sc.id = 'crate-odds'; sc.className = 'overlay hidden';
       sc.innerHTML = '<div class="overlay-box crate-odds-box">' +
-        '<button class="corner-back" id="btn-crate-odds-back" aria-label="Back"><svg class="ic"><use href="#ic-undo"/></svg></button>' +
+        '<button class="corner-back" id="btn-crate-odds-back" aria-label="Back"><svg class="ic"><use href="#ic-arrow-l"/></svg></button>' +
         '<h2 class="screen-title" id="co-title"></h2>' +
         '<div id="co-body" class="hs-stats"></div>' +
       '</div>';
       document.body.appendChild(sc);
     }
     const tot = pool.reduce((s, p) => s + p[1], 0) || 1;
-    const rows = pool.slice().sort((a, b) => b[1] - a[1]).map((p) => {
+    document.getElementById('co-title').textContent = tl(type.name || '') + ' ' + tl('Crate') + ' — ' + tl('Kansen');
+    const body = document.getElementById('co-body');
+    body.innerHTML = '';
+    const note = (txt) => { const p = document.createElement('p'); p.className = 'screen-sub'; p.textContent = txt; body.appendChild(p); };
+    note(tl('Elke crate geeft') + ' ' + draws[0] + '–' + draws[1] + ' ' + tl('power-ups — kans per power-up:'));
+    pool.slice().sort((a, b) => b[1] - a[1]).forEach((p) => {
       const sp = (typeof SHOP_POWERUPS !== 'undefined' && SHOP_POWERUPS[p[0]]) || {};
       const pct = p[1] / tot * 100;
       const pctStr = (pct >= 10 ? pct.toFixed(0) : pct.toFixed(1)) + '%';
-      return '<div class="hs-row"><span>' + (sp.icon || '') + ' ' + this._esc(sp.name || p[0]) + '</span><b>' + pctStr + '</b></div>';
-    }).join('');
+      const row = document.createElement('div'); row.className = 'hs-row co-row';
+      const left = document.createElement('span'); left.className = 'co-left';
+      const cv = document.createElement('canvas'); cv.width = 30; cv.height = 30; cv.className = 'co-ico';
+      this._puIcon(cv, sp.kind || p[0]);                 // eigen game-icoon i.p.v. emoji
+      const nm = document.createElement('span'); nm.textContent = sp.name || p[0];
+      left.appendChild(cv); left.appendChild(nm);
+      const b = document.createElement('b'); b.textContent = pctStr;
+      row.appendChild(left); row.appendChild(b);
+      body.appendChild(row);
+    });
     const rubyLine = rarity === 'epic' ? ' ' + tl('en 2–10 robijnen') : (rarity === 'legendary' ? ' ' + tl('en 5–20 robijnen') : '');
-    document.getElementById('co-title').textContent = tl(type.name || '') + ' ' + tl('Crate') + ' — ' + tl('Kansen');
-    document.getElementById('co-body').innerHTML =
-      '<p class="screen-sub">' + tl('Elke crate geeft') + ' ' + draws[0] + '–' + draws[1] + ' ' + tl('power-ups — kans per power-up:') + '</p>' +
-      rows +
-      '<p class="screen-sub">' + tl('Altijd erbij: munten, XP en smeed-materialen') + rubyLine + '.</p>';
+    note(tl('Altijd erbij: munten, XP en smeed-materialen') + rubyLine + '.');
     sc.classList.remove('hidden');
     document.getElementById('btn-crate-odds-back').onclick = () => sc.classList.add('hidden');
     sc.onclick = (e) => { if (e.target === sc) sc.classList.add('hidden'); };

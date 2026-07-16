@@ -1649,6 +1649,8 @@ body.pad-connected #touch-controls .tbtn[data-key] { display: none !important; }
 .crate-odds-link { display: block; margin: 6px auto 0; padding: 2px 6px; background: none; border: none; color: #cf9dff; font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; opacity: .85; }
 .crate-odds-link:hover { opacity: 1; }
 .crate-odds-box { max-width: 420px; max-height: 82vh; overflow-y: auto; }
+.co-row .co-left { display: inline-flex; align-items: center; gap: 8px; }
+.co-ico { width: 28px; height: 28px; image-rendering: pixelated; }
 .ruby-best { display: inline-block; margin-left: 4px; padding: 1px 5px; border-radius: 5px; font-size: 9px; font-weight: bold; color: #14100a; background: linear-gradient(180deg, #ffe27a, #f2c94c); vertical-align: middle; }
 .apay-ic { vertical-align: -3px; margin-right: 3px; }
 .w-unlock { margin-top: 3px; font-size: 10px; color: var(--text-dim); line-height: 1.3; }
