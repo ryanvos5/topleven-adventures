@@ -47,10 +47,10 @@ const Input = {
       if (action) { this._kb[action] = false; this._apply(); }
     });
 
-    // ---- touch/pointer knoppen (virtuele gamepad) ----
-    // Elke vinger wordt los gevolgd en hit-getest tegen de knoppen, zodat je
-    // soepel van knop naar knop kunt VEGEN (bv. links -> rechts) en multitouch werkt.
-    const buttons = Array.prototype.slice.call(document.querySelectorAll('.tbtn'));
+    // ---- touch-knoppen (virtuele gamepad) ----
+    // Alleen knoppen MET data-key (bewegen/springen/bukken/slaan/schieten). De ability-knop
+    // (geen data-key) wordt apart in ui.js afgehandeld.
+    const buttons = Array.prototype.slice.call(document.querySelectorAll('.tbtn')).filter((b) => b.dataset.key);
 
     const keyAt = (x, y) => {
       for (const b of buttons) {
@@ -60,56 +60,67 @@ const Input = {
       }
       return null;
     };
-    const recompute = () => {
+    // status opbouwen uit een lijst vingers (touch-objecten met clientX/clientY)
+    const applyFrom = (list) => {
       const held = {};
-      for (const id in this._pointerKey) { const k = this._pointerKey[id]; if (k) held[k] = true; }
+      for (let i = 0; i < list.length; i++) { const k = keyAt(list[i].clientX, list[i].clientY); if (k) held[k] = true; }
       for (const k of this.ACTKEYS) this._touch[k] = !!held[k];
       this._apply();
-      // 'pressed'-klasse voor visuele feedback
-      for (const b of buttons) b.classList.toggle('pressed', held[b.dataset.key]);
+      for (const b of buttons) b.classList.toggle('pressed', !!held[b.dataset.key]);
     };
-
-    // alle vingers vrijgeven (vangnet tegen 'blijvende' knoppen)
     const releaseAll = () => {
-      if (Object.keys(this._pointerKey).length === 0) return;
-      this._pointerKey = {};
-      recompute();
-    };
-
-    const onDown = (e) => {
-      const k = keyAt(e.clientX, e.clientY);
-      if (k == null) return;
-      e.preventDefault();
-      // impliciete pointer-capture loslaten -> window krijgt move/up betrouwbaar binnen
-      try { if (e.target.releasePointerCapture) e.target.releasePointerCapture(e.pointerId); } catch (err) {}
-      this._pointerKey[e.pointerId] = k;
-      recompute();
-    };
-    const onMove = (e) => {
-      if (!(e.pointerId in this._pointerKey)) return; // alleen vingers die op een knop begonnen
-      e.preventDefault();
-      const k = keyAt(e.clientX, e.clientY);
-      if (k !== this._pointerKey[e.pointerId]) { this._pointerKey[e.pointerId] = k; recompute(); }
-    };
-    const onUp = (e) => {
-      if (!(e.pointerId in this._pointerKey)) return;
-      delete this._pointerKey[e.pointerId];
-      recompute();
+      this._ctrl = {}; this._pointerKey = {};
+      for (const k of this.ACTKEYS) this._touch[k] = false;
+      this._apply();
+      for (const b of buttons) b.classList.remove('pressed');
     };
 
     const tc = document.getElementById('touch-controls');
-    tc.addEventListener('pointerdown', onDown);
-    window.addEventListener('pointermove', onMove, { passive: false });
-    window.addEventListener('pointerup', onUp);
-    window.addEventListener('pointercancel', onUp);
     tc.addEventListener('contextmenu', (e) => e.preventDefault());
 
-    // VANGNET 1: zodra er geen enkele vinger meer op het scherm is, alles vrijgeven.
-    const onTouchEnd = (e) => { if (!e.touches || e.touches.length === 0) releaseAll(); };
-    window.addEventListener('touchend', onTouchEnd, { passive: true });
-    window.addEventListener('touchcancel', onTouchEnd, { passive: true });
+    if (this.isTouch()) {
+      // TOUCH-apparaat: de ACTIEVE vingers (e.touches) zijn de bron van waarheid, dus een
+      // gemiste 'up' laat nooit meer een knop hangen. touchstart-preventDefault doodt óók het
+      // iOS-vergrootglas/lang-indrukken (ook op de ability-knop, die verder via ui.js werkt).
+      this._ctrl = {};   // touch.identifier -> true (alleen vingers die op een besturingsknop begonnen)
+      const ctrlList = (e) => { const out = []; const t = e.touches; for (let i = 0; i < t.length; i++) if (this._ctrl[t[i].identifier]) out.push(t[i]); return out; };
+      tc.addEventListener('touchstart', (e) => {
+        e.preventDefault();                                   // geen scroll/zoom/vergrootglas
+        const ct = e.changedTouches;
+        for (let i = 0; i < ct.length; i++) if (keyAt(ct[i].clientX, ct[i].clientY) != null) this._ctrl[ct[i].identifier] = true;
+        applyFrom(ctrlList(e));
+      }, { passive: false });
+      window.addEventListener('touchmove', (e) => {
+        const list = ctrlList(e);
+        if (list.length) { e.preventDefault(); applyFrom(list); }   // alleen bij besturingsvingers -> menu's blijven scrollen
+      }, { passive: false });
+      const endTouch = (e) => {
+        const ct = e.changedTouches;
+        for (let i = 0; i < ct.length; i++) delete this._ctrl[ct[i].identifier];
+        applyFrom(ctrlList(e));                               // herbouw uit de OVERGEBLEVEN vingers
+      };
+      window.addEventListener('touchend', endTouch, { passive: false });
+      window.addEventListener('touchcancel', endTouch, { passive: false });
+    } else {
+      // NIET-touch (muis/trackpad, bv. testen op desktop): pointer-afhandeling.
+      this._pointerKey = {};
+      const recompute = () => {
+        const held = {};
+        for (const id in this._pointerKey) { const k = this._pointerKey[id]; if (k) held[k] = true; }
+        for (const k of this.ACTKEYS) this._touch[k] = !!held[k];
+        this._apply();
+        for (const b of buttons) b.classList.toggle('pressed', !!held[b.dataset.key]);
+      };
+      const onDown = (e) => { const k = keyAt(e.clientX, e.clientY); if (k == null) return; e.preventDefault(); this._pointerKey[e.pointerId] = k; recompute(); };
+      const onMove = (e) => { if (!(e.pointerId in this._pointerKey)) return; const k = keyAt(e.clientX, e.clientY); if (k !== this._pointerKey[e.pointerId]) { this._pointerKey[e.pointerId] = k; recompute(); } };
+      const onUp = (e) => { if (!(e.pointerId in this._pointerKey)) return; delete this._pointerKey[e.pointerId]; recompute(); };
+      tc.addEventListener('pointerdown', onDown);
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
+    }
 
-    // VANGNET 2: app naar de achtergrond of venster verliest focus -> niets laten hangen.
+    // VANGNET: app naar achtergrond / focus kwijt -> niets laten hangen.
     document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); });
     window.addEventListener('blur', () => releaseAll());
 
