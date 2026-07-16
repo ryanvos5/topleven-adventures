@@ -163,9 +163,13 @@ const Net = {
 
   async logout() {
     if (!this.ready) return;
+    try { if (this.user) await this.pushCloudSave(); } catch (e) {}   // huidige voortgang eerst veilig in de cloud
     try { await this.sb.auth.signOut(); } catch (e) {}
     this.user = null;
+    // lokale voortgang wissen zodat die NIET naar een volgend account lekt (kopie-exploit)
+    try { if (window.Storage && Storage.reset) Storage.reset(); } catch (e) {}
     this._refreshUI();
+    if (window.UI && UI.afterLogout) UI.afterLogout();
   },
   // account definitief verwijderen (Apple-eis): server-side RPC wist alle data + het auth-account,
   // daarna hoe dan ook lokaal uitloggen. Een echte fout wordt doorgegeven zodat de UI het kan tonen.
@@ -176,7 +180,9 @@ const Net = {
     catch (e) { rpcError = e; }
     try { await this.sb.auth.signOut(); } catch (e) {}
     this.user = null;
+    try { if (window.Storage && Storage.reset) Storage.reset(); } catch (e) {}   // gewiste account-data ook lokaal weg
     this._refreshUI();
+    if (window.UI && UI.afterLogout) UI.afterLogout();
     if (rpcError) throw rpcError;
   },
 

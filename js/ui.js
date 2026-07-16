@@ -869,6 +869,14 @@ const UI = {
     }
   },
 
+  // na uitloggen (of account verwijderen): lokale voortgang is gereset -> UI naar de schone staat
+  afterLogout() {
+    const s = document.getElementById('settings-screen'); if (s) s.classList.add('hidden');
+    this.refreshAuthUI();
+    this.syncCoins();
+    this.show('menu');
+  },
+
   // XP-balk: voortgang binnen het huidige level
   renderXpBar() {
     const fill = document.getElementById('xp-bar-fill');
