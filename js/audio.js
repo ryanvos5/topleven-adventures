@@ -45,7 +45,8 @@ const Sfx = {
     // dan pakt de blijvende 'kick'-listener (eerste tik) het alsnog op.
     const attempt = (tries) => {
       if (!this.ctx) return;
-      if (this.ctx.state === 'suspended') { try { this.ctx.resume(); } catch (e) {} }
+      // alles wat niet 'running' is hervatten -> dekt óók iOS' 'interrupted'-staat (na lang op de achtergrond)
+      if (this.ctx.state !== 'running') { try { this.ctx.resume(); } catch (e) {} }
       if (this.ctx.state === 'running') {
         if (this.musicOn && this._curTheme) { this._stopLoop(); this._startLoop(); }   // schone herstart -> muziek komt terug
         return;
