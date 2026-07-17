@@ -35,29 +35,18 @@ const Sfx = {
     } catch (e) {}
   },
 
-  // Context terughalen, wat er ook mee gebeurd is:
-  //  - 'closed'      -> iOS heeft 'm na lang op de achtergrond opgeruimd: volledig opnieuw opbouwen
-  //  - 'interrupted' -> niet-standaard WebKit-staat (lange achtergrond, telefoontje, andere app
-  //                     pakt de audio). Werd voorheen niet herkend -> blijvende stilte tot herstart.
-  //  - 'suspended'   -> gewoon hervatten
-  // Daarom: alles wat niet 'running' is proberen te hervatten.
-  _revive() {
-    if (this.ctx && this.ctx.state === 'closed') {   // opnieuw opbouwen (gain-nodes horen bij de oude context)
-      this.ctx = null; this.master = null; this.musicGain = null; this.sfxGain = null;
-    }
-    this._ensure();
-    if (this.ctx && this.ctx.state !== 'running') { try { this.ctx.resume(); } catch (e) {} }
-  },
-
-  // terug uit de achtergrond: context terughalen én de muziek-loop VERS opstarten.
+  // terug uit de achtergrond: context hervatten én de muziek-loop VERS opstarten.
   // (alleen ctx.resume() is niet genoeg: de oude interval loopt uit de pas -> stilte)
   wake() {
+    this._ensure();
+    if (!this.ctx) return;
     clearTimeout(this._wakeTimer);
     // iOS hervat soms pas rond een gebaar -> blijf het ~2s proberen. Lukt het dan nog niet,
     // dan pakt de blijvende 'kick'-listener (eerste tik) het alsnog op.
     const attempt = (tries) => {
-      this._revive();
-      if (this.ctx && this.ctx.state === 'running') {
+      if (!this.ctx) return;
+      if (this.ctx.state === 'suspended') { try { this.ctx.resume(); } catch (e) {} }
+      if (this.ctx.state === 'running') {
         if (this.musicOn && this._curTheme) { this._stopLoop(); this._startLoop(); }   // schone herstart -> muziek komt terug
         return;
       }
@@ -76,7 +65,8 @@ const Sfx = {
     this.sfxGain = this.ctx.createGain(); this.sfxGain.gain.value = this.sfxOn ? 0.32 : 0; this.sfxGain.connect(this.master);
   },
   resume() {
-    this._revive();                                                          // ook 'interrupted'/'closed' opvangen
+    this._ensure();
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
     if (this._curTheme && !this._timer && this.musicOn) this._startLoop();   // muziek (her)starten
   },
   // muziek en geluidseffecten los aan/uit
