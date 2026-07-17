@@ -200,6 +200,7 @@ I18N.CONTENT = {
       jenze: { desc: 'Big & tough: +40 HP, +30% melee, a bit slower.' },
       ricky: { desc: 'Every 15s, 3s of RAGE (2× damage). 85 HP.' },
       yarno: { desc: 'Balanced, a bit faster. Starts with a dagger.' },
+      pirate: { name: 'Pirate Captain', desc: 'Captain with a loyal parrot. A bit tougher (+5 HP). His parrot pecks your opponent apart and interrupts their ability.' },
       skeleton: { name: 'Skeleton Knight', desc: 'Skeleton knight (250 rubies). Soul Drain: steals 20 HP from your opponent — 20 damage and you gain +20 HP.' },
       bonzo: { desc: 'Chimp: fast & agile, extra jump. Journey only.' },
       koba: { desc: 'Brute: big & strong (+25% melee). Journey only.' },
@@ -229,6 +230,7 @@ I18N.CONTENT = {
       stunpulse: { name: 'Stun Pulse', desc: 'Wave of energy: stuns everyone nearby for 1.6s.' },
       invisible: { name: 'Invisible', desc: '6s invisible — your opponent can’t see you.' },
       souldrain: { name: 'Soul Drain', desc: 'Steals 20 HP from your opponent: 20 damage and you gain +20 HP.' },
+      parrotdive: { name: 'Parrot Dive', desc: 'Your parrot flies across the screen for 8s and pecks the nearest enemy: small damage but many hits — and it interrupts their ability.' },
     },
     powerups: {
       heal: { name: 'Medipack', desc: 'Instantly restores 40 HP.' },
@@ -499,6 +501,7 @@ I18N.UI_EN = {
   'Schrijf een review': 'Write a review',
   'Deel je idee': 'Share your idea',
   'Bedankt dat je erbij bent!': 'Thanks for being here!',
+  'ONDERBROKEN': 'INTERRUPTED',
   'Hoi, ik ben Ryan! Welkom bij Rymr Heroes. Ik leer je in 20 seconden hoe je vecht.': 'Hi, I\'m Ryan! Welcome to Rymr Heroes. I\'ll teach you to fight in 20 seconds.',
   'LOPEN — gebruik de pijltjes ◀ ▶ links onderin om te bewegen.': 'MOVE — use the ◀ ▶ arrows at the bottom left to walk around.',
   'SPRINGEN — tik ▲ om te springen. Tik nóg eens in de lucht voor een dubbele sprong!': 'JUMP — tap ▲ to jump. Tap again in mid-air for a double jump!',

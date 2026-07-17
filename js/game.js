@@ -2713,6 +2713,7 @@ const Game = {
     this.portals = []; this._portalTimer = SMASH_PORTAL_EVERY;
     this._dragonUsed = false;                                        // max 1 draak per match
     this.dragons = [];
+    this.parrots = [];                                               // Pirate Captain-ability "Parrot Dive"
     // Cave: knoppen + muur + sfeer (bats/druppels)
     this.caveWall = null; this._caveArmAt = this.time + CAVE_ARM_MS; this.caveArmed = -1;
     this.caveButtons = (map.buttons || []).map((b) => ({ at: b.at, x: b.x, y: b.y }));
@@ -3608,6 +3609,8 @@ const Game = {
 
     // draken (drakenei-powerup)
     this.updateDragons(dt);
+    // papegaai (Pirate Captain-ability)
+    this.updateParrots(dt);
     // vallende stenen (steen-powerup, alleen Cave)
     this.updateRocks(dt);
   },
@@ -3663,6 +3666,88 @@ const Game = {
   },
 
   onVersusDragon() { this.spawnDragon('foe'); },
+
+  // ===== Pirate Captain-ability "Parrot Dive" =====
+  // Een papegaai vliegt 8s rond, duikt op de dichtstbijzijnde vijand en pikt hem lek:
+  // kleine schade maar veel hits, en elke pik onderbreekt zijn lopende ability.
+  // Online: de eigenaar stuurt de schade via 'hit'; bij de tegenstander vliegt een
+  // 'foe'-papegaai mee die daar lokaal het onderbreken + de effecten doet.
+  spawnParrot(owner) {
+    this.parrots = this.parrots || [];
+    this.parrots = this.parrots.filter((p) => p.owner !== owner);   // max 1 per eigenaar
+    const W = CONFIG.VIEW_W;
+    this.parrots.push({
+      owner, until: this.time + PARROT_DUR,
+      x: owner === 'me' ? -20 : W + 20, y: 30,
+      dir: owner === 'me' ? 1 : -1, nextPeck: this.time + 300, peckFx: 0,
+    });
+    if (window.Sfx) Sfx.play('pickup');
+  },
+
+  // wie pikt deze papegaai? ('foe' = de papegaai van de tegenstander -> die pikt MIJ)
+  _parrotTarget(owner) {
+    if (owner === 'me') return this.vsBot ? this.bot : (this.vs ? this.vs.remote : null);
+    return this.player;                                             // 'bot' en 'foe' richten zich op de speler
+  },
+
+  updateParrots(dt) {
+    if (!this.parrots || !this.parrots.length) return;
+    for (const p of this.parrots) {
+      const t = this._parrotTarget(p.owner);
+      if (t && !t.dead && (t.alive === undefined || t.alive)) {
+        const tx = t.x, ty = t.y - 24;                              // zweeft net boven het doelwit
+        const dx = tx - p.x, dy = ty - p.y;
+        const d = Math.hypot(dx, dy) || 1;
+        const sp = PARROT_SPEED * this.dtScale;
+        p.x += (dx / d) * sp; p.y += (dy / d) * sp;
+        if (Math.abs(dx) > 2) p.dir = dx > 0 ? 1 : -1;
+        if (this.time >= p.nextPeck && d < PARROT_RANGE) { p.nextPeck = this.time + PARROT_PECK_MS; this.parrotPeck(p, t); }
+      }
+      if (p.peckFx && this.time > p.peckFx) p.peckFx = 0;
+    }
+    this.parrots = this.parrots.filter((p) => this.time < p.until);
+  },
+
+  parrotPeck(p, t) {
+    const dmg = PARROT_DMG;
+    if (p.owner === 'me') {
+      if (this.vsBot) {
+        const b = this.bot; if (!b || b.dead) return;
+        this.applyHitToBot(b.x >= this.player.x ? 1 : -1, 4, -2, dmg);
+        this._interruptAbilities(b);
+      } else {
+        const r = this.vs && this.vs.remote; if (!r || !r.alive) return;
+        if (window.Net) Net.versusSend('hit', { dir: (r.x >= this.player.x ? 1 : -1), power: 4, vy: -2, dmg });
+      }
+    } else if (p.owner === 'bot') {
+      const pl = this.player;
+      if (pl.dead || pl.respawnInvuln > 0) return;
+      this.onVersusHit({ dir: (pl.x >= this.bot.x ? 1 : -1), power: 4, vy: -2, dmg });
+      this._interruptAbilities(pl);
+    } else {
+      // 'foe': de papegaai van de tegenstander -> hier alleen het onderbreken + effect
+      const pl = this.player;
+      if (pl.dead || pl.respawnInvuln > 0) return;
+      this._interruptAbilities(pl);
+    }
+    // pik-effect: veertjes + kleine schud
+    p.peckFx = this.time + 160;
+    for (let i = 0; i < 6; i++)
+      this.particles.push(new Particle(t.x + (Math.random() - 0.5) * 10, t.y - 16 + (Math.random() - 0.5) * 12,
+        (Math.random() - 0.5) * 1.6, -Math.random() * 1.2, i % 2 ? '#3ad06a' : '#ffd24a', 300, 2));
+    this.shake = Math.max(this.shake, 2);
+  },
+
+  // lopende ability-effecten van het doelwit afbreken (dát is de kracht van de papegaai)
+  _interruptAbilities(t) {
+    if (!t) return;
+    if (t.buffs) { t.buffs.rage = 0; t.buffs.speed = 0; }
+    t.fireAura = false; t.auraUntil = 0;
+    t._invisUntil = 0; t._reachUntil = 0; t._fastMeleeUntil = 0;
+    t._stunStrikeUntil = 0; t._ultraUntil = 0; t._rage3Until = 0;
+    t.abCharge = 0;                                     // ability-lading kwijt -> opnieuw opladen
+    this.addFloatText(t.x, t.y - 30, tl('ONDERBROKEN'), '#ffd24a', false);
+  },
 
   // ---- CAVE: sfeer (bats/druppels) + knoppen + muur ----
   updateCave(dt) {
@@ -4506,6 +4591,7 @@ const Game = {
       case 'fireaura10': p.fireAura = true; p.auraUntil = now + 6000 * dm; this._abFx(p, '#ff8a2a'); break;
       case 'triplejump': p.maxJumps = Math.max(p.maxJumps, 2) + 1; p.jumps = p.maxJumps; this._abFx(p, '#8fd0ff'); break;
       case 'acrobat': this.acrobat(p); break;
+      case 'parrotdive': this.spawnParrot('me'); break;
       case 'rage10': p.buffs.rage = now + 10000 * dm; this._abFx(p, '#ff5a3a'); break;
       case 'rage8': p.buffs.rage = now + 8000 * dm; this._abFx(p, '#ff5a3a'); break;
       case 'ultrarage': p.buffs.rage = now + 5000 * dm; p._ultraUntil = now + 5000 * dm; this._abFx(p, '#ff2a2a'); break;
@@ -4625,7 +4711,7 @@ const Game = {
   _abilityColor(ab) {
     return ({ heal: '#5aff7a', highjump: '#8fd0ff', triplejump: '#8fd0ff', acrobat: '#8fe0ff', longreach: '#5fe0b0', fireaura10: '#ff8a2a',
       rage10: '#ff5a3a', rage8: '#ff5a3a', ultrarage: '#ff2a2a', rage3: '#ff3a2a', zapdash: '#ffe27a',
-      earthquake: '#c8a060', knife: '#bfe6ff', katanacombo: '#e8edf2', stunstrike: '#8fd0ff', stunpulse: '#8fd0ff', souldrain: '#a45bff', invisible: '#b06bff' })[ab] || '#c9a6ff';
+      earthquake: '#c8a060', knife: '#bfe6ff', katanacombo: '#e8edf2', stunstrike: '#8fd0ff', stunpulse: '#8fd0ff', souldrain: '#a45bff', invisible: '#b06bff', parrotdive: '#3ad06a' })[ab] || '#c9a6ff';
   },
   // Monnik-ability: energiegolf die iedereen binnen bereik verdooft (werkt tegen bot én online)
   stunPulse(src, who) {
@@ -4713,6 +4799,7 @@ const Game = {
     this.spawnAbilityFx(r.x, r.y, this._abilityColor(payload && payload.ab));
     if (payload && payload.ab === 'heal') this.spawnHealFx(r);   // tegenstander (Jenze) heelt -> toon het groene HP-effect ook bij hem
     if (payload && payload.ab === 'longreach') { r._reachUntil = this.time + LONGREACH_MS; this._reachSweepFx(r); }   // tegenstander (Tygo) -> lange armen + zwaai-veeg, 6s
+    if (payload && payload.ab === 'parrotdive') this.spawnParrot('foe');   // tegenstander (Pirate Captain) -> zijn papegaai duikt op mij
   },
   _abFx(p, col) {
     for (let i = 0; i < 16; i++) this.particles.push(new Particle(p.x, p.y - 14, (Math.random() - 0.5) * 3, -Math.random() * 3, col, 420, 3));
@@ -4849,6 +4936,7 @@ const Game = {
       case 'fireaura10': b.fireAura = true; b.auraUntil = now + 6000; this._abFx(b, '#ff8a2a'); break;
       case 'triplejump': b.maxJumps = Math.max(b.maxJumps, 2) + 1; b.jumps = b.maxJumps; this._abFx(b, '#8fd0ff'); break;
       case 'acrobat': this.acrobat(b); break;
+      case 'parrotdive': this.spawnParrot('bot'); break;
       case 'rage10': b.buffs.rage = now + 10000; this._abFx(b, '#ff5a3a'); break;
       case 'rage8': b.buffs.rage = now + 8000; this._abFx(b, '#ff5a3a'); break;
       case 'ultrarage': b.buffs.rage = now + 5000; b._ultraUntil = now + 5000; this._abFx(b, '#ff2a2a'); break;
@@ -6047,6 +6135,8 @@ const Game = {
 
     // draken (drakenei-powerup) — scherm-ruimte, over de wereld heen
     this.renderDragons(ctx);
+    // papegaai (Pirate Captain-ability) — over de wereld heen
+    this.renderParrots(ctx);
     // bliksem (Cave/Sky) — scherm-ruimte
     this.renderLightning(ctx);
     // combo-teller
@@ -6205,6 +6295,16 @@ const Game = {
         this.drawFireBeam(ctx, dx + d.dir * 8, dy + 4, tx, ty);
       }
       Sprites.drawDragon(ctx, dx, dy, d.dir, this.time);
+    }
+  },
+
+  // papegaai (Parrot Dive) — vliegt in WERELD-coördinaten mee, dus omrekenen naar het scherm
+  renderParrots(ctx) {
+    if (!this.parrots || !this.parrots.length) return;
+    const camX = this.vsCamX, camY = this.vsCamY, z = this.vsCamZoom || 1;
+    for (const p of this.parrots) {
+      const sx = Math.round((p.x - camX) * z), sy = Math.round((p.y - camY) * z);
+      Sprites.drawParrot(ctx, sx, sy, p.dir, this.time, !!p.peckFx);
     }
   },
 

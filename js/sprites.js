@@ -74,6 +74,31 @@ const Sprites = {
     ctx.restore();
   },
 
+  // Papegaai van de Pirate Captain (ability "Parrot Dive"): klein, fel, klappende vleugel.
+  // pecking = true tijdens een pik -> kop schiet naar voren.
+  drawParrot(ctx, cx, cy, dir, t, pecking) {
+    ctx.save();
+    ctx.translate(Math.round(cx), Math.round(cy));
+    if (dir < 0) ctx.scale(-1, 1);                       // lokaal: kop naar rechts
+    const body = '#2ea84e', bodyLt = '#3ad06a', belly = '#f2d24a', wing = '#1f7a39', red = '#e0364f', beak = '#ffb02e';
+    const flap = Math.round(Math.sin(t / 70) * 3);       // snelle vleugelslag
+    const lunge = pecking ? 2 : 0;                        // kop naar voren tijdens het pikken
+    this.px(ctx, wing, -9, -1, 5, 2);                    // staart
+    this.px(ctx, red, -8, 0, 4, 1);                      // rode staartveer
+    this.px(ctx, body, -5, -4, 9, 7);                    // lijf
+    this.px(ctx, belly, -3, 1, 5, 2);                    // gele buik
+    this.px(ctx, wing, -2, -4 - flap, 6, 2);             // vleugel (klapt)
+    this.px(ctx, bodyLt, -1, -3 - flap, 5, Math.max(1, 2 + flap));
+    this.px(ctx, body, 2, -5, 3 + lunge, 4);             // nek (rekt mee tijdens het pikken -> kop blijft vast)
+    this.px(ctx, body, 3 + lunge, -6, 5, 5);             // kop
+    this.px(ctx, bodyLt, 4 + lunge, -6, 3, 1);           // kop-highlight
+    this.px(ctx, red, 3 + lunge, -7, 4, 1);              // rode kuif
+    this.px(ctx, '#1a1a1a', 6 + lunge, -5, 1, 1);        // oog
+    this.px(ctx, beak, 8 + lunge, -4, 3, 2);             // snavel
+    this.px(ctx, '#d98a1e', 8 + lunge, -3, 2, 1);        // snavel-schaduw
+    ctx.restore();
+  },
+
   /* ---------- POWER-UP-ICOON (shop / inventaris) ----------
      Vernieuwde 2.5D-iconen: elk figuur in code getekend met licht/schaduw-
      shading en daarna de inkt-outline eromheen (net als characters). ----- */

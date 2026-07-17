@@ -256,6 +256,18 @@ const CHARACTERS = {
     },
     desc: 'Gebalanceerd, iets sneller. Start met een dagger.'
   },
+  pirate: {
+    id: 'pirate', name: 'Pirate Captain', cost: 5000, lvl: 26, rank: 8,   // vrij te spelen bij Gold III
+    maxHp: 105, speedMul: 0.909, meleeMul: 1.0, build: 'normal', hair: 'back', ability: 'parrotdive', abChargeS: 52,   // speedMul x1.1-bump -> ~1.0 -> Speed 100
+    palette: {
+      hair: '#2a1a12', hairDark: '#170e08',      // donker haar naar achteren
+      skin: '#d8a878', skinDark: '#b8895e',
+      eye: '#2a1a0e',                             // donkere ogen
+      shirt: '#8a1f2a', shirtDark: '#5a1119',     // bordeauxrode kapiteinsjas
+      pants: '#2a2622', shoe: '#161210',          // donkere broek + laarzen
+    },
+    desc: 'Kapitein met een trouwe papegaai. Iets taaier (+5 HP). Zijn papegaai pikt je tegenstander lek en onderbreekt diens ability.'
+  },
   skeleton: {
     id: 'skeleton', name: 'Skeleton Knight', costRubies: 250,   // altijd te koop met robijnen (premium)
     maxHp: 95, speedMul: 1.0, meleeMul: 1.05, build: 'normal', hair: 'bald', ability: 'souldrain', abChargeS: 32, outfit: 'skeleton',
@@ -356,7 +368,7 @@ const CHARACTERS = {
     palette: { hair: '#5a4030', hairDark: '#3a281c', skin: '#9a6a3a', skinDark: '#6e4824', eye: '#c83838', shirt: '#7a3a2a', shirtDark: '#4a1f14', pants: '#33240f', shoe: '#160d06' },
   },
 };
-const CHARACTER_ORDER = ['ryan', 'jenze', 'tygo', 'vince', 'timo', 'just', 'ricky', 'yarno', 'skeleton', 'bonzo', 'koba', 'kong', 'guardian', 'monnik', 'ninja'];
+const CHARACTER_ORDER = ['ryan', 'jenze', 'tygo', 'vince', 'timo', 'just', 'ricky', 'yarno', 'pirate', 'skeleton', 'bonzo', 'koba', 'kong', 'guardian', 'monnik', 'ninja'];
 // Alle speelbare characters iets sneller lopen (t.o.v. hun eigen huidige snelheid; onderlinge verschillen blijven behouden).
 for (const _cid of CHARACTER_ORDER) { const _c = CHARACTERS[_cid]; if (_c && typeof _c.speedMul === 'number') _c.speedMul = +(_c.speedMul * 1.1).toFixed(3); }
 
@@ -366,6 +378,7 @@ const ABILITIES = {
   heal:       { name: 'HP Herstel',  desc: 'Herstelt in één keer al je HP.' },
   highjump:   { name: 'Hoge Sprong', desc: 'Springt hoger — de rest van de match.' },
   longreach:  { name: 'Lang Bereik', desc: 'Tygo strekt zijn armen en maakt een enorme zwaai: 6s lang 40% meer bereik en iets meer knockback. Geen extra schade, wel meer controle.' },
+  parrotdive: { name: 'Parrot Dive', desc: 'Je papegaai vliegt 8s over het scherm en pikt de dichtstbijzijnde vijand: kleine schade, maar veel hits — en het onderbreekt zijn ability.' },
   fireaura10: { name: 'Vuuraura',    desc: 'Vuuraura 6s: wie je aanraakt brandt.' },
   triplejump: { name: 'Dubbel Sprong', desc: 'Een extra dubbel-jump — de rest van de match.' },
   acrobat:    { name: 'Acrobaat',    desc: 'Salto: springt over aanvallen heen (kort onkwetsbaar) en landt met een kleine shockwave. Weinig schade, veel mobiliteit.' },
@@ -386,9 +399,15 @@ const STUN_PULSE_MS = 1600;      // Monnik-ability: verdovingsduur
 // Timo-ability "Acrobaat": salto met korte onkwetsbaarheid + kleine landings-shockwave
 const ACRO_JUMP_MUL = 1.4;       // spronghoogte t.o.v. normaal
 const ACRO_INVULN_MS = 620;      // onkwetsbaar tijdens de salto (springt over aanvallen heen)
-const ACRO_SHOCK_DMG = 12;       // kleine schade bij de landing
+const ACRO_SHOCK_DMG = 40;       // schade bij de landing
 const ACRO_SHOCK_KNOCK = 20;     // knockback van de shockwave
 const ACRO_SHOCK_RANGE = 72;     // horizontaal bereik van de shockwave
+// Pirate Captain-ability "Parrot Dive": papegaai vliegt 8s rond en pikt de dichtstbijzijnde vijand
+const PARROT_DUR = 8000;         // de papegaai blijft 8s in de lucht
+const PARROT_PECK_MS = 850;      // pikt ~elke 0,85s (veel kleine hits)
+const PARROT_DMG = 6;            // kleine schade per pik
+const PARROT_RANGE = 44;         // moet zo dichtbij zijn om te pikken
+const PARROT_SPEED = 2.6;        // vliegsnelheid richting het doelwit
 // Tygo-ability "Lang Bereik": tijdelijk meer melee-bereik + knockback (geen extra schade)
 const LONGREACH_MS = 6000;       // duur van de buff
 const LONGREACH_REACH_MUL = 1.4; // 40% meer bereik
