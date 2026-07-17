@@ -10,6 +10,7 @@ const Sfx = {
   _curTheme: null, _step: 0, _timer: null, _theme: null, _intensity: 0,
 
   init() {
+    this._native = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
     try { this.sfxOn = localStorage.getItem('tps_sfx') !== '0'; } catch (e) { this.sfxOn = true; }
     try { this.musicOn = localStorage.getItem('tps_music') !== '0'; } catch (e) { this.musicOn = true; }
     // migratie: oude gecombineerde 'tps_sound'-uit -> beide uit
@@ -41,6 +42,10 @@ const Sfx = {
   // terug uit de achtergrond: context hervatten én de muziek-loop VERS opstarten.
   // (alleen ctx.resume() is niet genoeg: de oude interval loopt uit de pas -> stilte)
   wake() {
+    // In de app (Capacitor) mag audio zonder gebaar hervatten -> bij een verouderde/dode context
+    // meteen een VERSE opbouwen, zodat het geluid terugkomt zonder dat je hoeft te tikken.
+    // Lukt dat niet (dan zet _rebuild _stale weer true), dan pakt je eerste tik het alsnog.
+    if (this._native && (this._stale || !this.ctx || this.ctx.state !== 'running')) { this._rebuild(); return; }
     this._ensure();
     if (!this.ctx) return;
     clearTimeout(this._wakeTimer);
@@ -82,12 +87,16 @@ const Sfx = {
     this._ensure();                                    // verse context + gain-nodes + onstatechange
     if (this.ctx) { try { this.ctx.resume(); } catch (e) {} }   // binnen het gebaar -> gaat naar 'running'
     this._stale = false;
-    const startIfReady = () => {
-      if (this.ctx && this.ctx.state === 'running' && this.musicOn && this._curTheme && !this._timer) this._startLoop();
+    const finish = () => {
+      if (this.ctx && this.ctx.state === 'running') {
+        if (this.musicOn && this._curTheme && !this._timer) this._startLoop();   // geluid terug
+      } else {
+        this._stale = true;   // nog niet 'running' (bv. web zonder gebaar) -> volgende tik probeert opnieuw
+      }
     };
-    startIfReady();
+    finish();
     clearTimeout(this._wakeTimer);
-    this._wakeTimer = setTimeout(startIfReady, 180);   // context wordt soms 1 tick later pas 'running'
+    this._wakeTimer = setTimeout(finish, 200);   // context wordt soms 1 tick later pas 'running'
   },
   resume() {
     this._ensure();
