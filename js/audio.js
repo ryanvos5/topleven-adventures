@@ -20,6 +20,31 @@ const Sfx = {
     window.addEventListener('pointerdown', kick);
     window.addEventListener('keydown', kick);
     window.addEventListener('touchstart', kick);
+    // iOS: als je de app weg-swipet raakt de AudioContext 'suspended' en loopt de muziek-timer
+    // uit de pas. Deze handlers blijven bestaan (de 'kick' hierboven verdwijnt na één tik) en
+    // hervatten geluid + muziek zodra de app weer actief is.
+    const wake = () => this.wake();   // focus/pageshow betekenen al "we zijn terug" -> niet op document.hidden wachten
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) this.wake(); });
+    window.addEventListener('focus', wake);
+    window.addEventListener('pageshow', wake);
+    try {   // Capacitor (iOS-app): expliciet signaal als de app weer op de voorgrond komt
+      const P = window.Capacitor && window.Capacitor.Plugins;
+      if (P && P.App && P.App.addListener) P.App.addListener('appStateChange', (s) => { if (s && s.isActive) this.wake(); });
+    } catch (e) {}
+  },
+
+  // terug uit de achtergrond: context hervatten én de muziek-loop VERS opstarten.
+  // (alleen ctx.resume() is niet genoeg: de oude interval loopt uit de pas -> stilte)
+  wake() {
+    this._ensure();
+    if (!this.ctx) return;
+    if (this.ctx.state === 'suspended') { try { this.ctx.resume(); } catch (e) {} }
+    clearTimeout(this._wakeTimer);
+    this._wakeTimer = setTimeout(() => {                     // even wachten tot de context echt draait
+      if (!this.ctx || this.ctx.state !== 'running') return;
+      if (!this.musicOn || !this._curTheme) return;
+      this._stopLoop(); this._startLoop();                   // schone herstart -> muziek komt terug
+    }, 300);
   },
 
   _ensure() {
