@@ -5403,8 +5403,12 @@ const Game = {
   // is een ander platform bereikbaar met een (dubbel-)sprong?
   reachablePlatform(cur, tgt) {
     if (!cur || !tgt) return false;
-    // wat de bot met een (dubbel)sprong echt haalt: niet te ver en niet te hoog -> niet de leegte in
-    return Math.abs(tgt.x - cur.x) < 140 && (cur.y - tgt.y) < 100;
+    /* Wat de bot met een DUBBELsprong echt haalt (b.maxJumps = 2 in versus).
+       Fysica: vy -11, zwaartekracht 0,6, loopsnelheid ~2,42 px/frame
+         -> hoogte ~202px, hangtijd ~63 frames, dus horizontaal ~151px.
+       De hoogte-grens stond op 100 = de EENKELE sprong; daardoor zag de bot op Jungle
+       geen enkele uitweg van zijn spawn-platform (110px omhoog) en bleef hij staan. */
+    return Math.abs(tgt.x - cur.x) < 150 && (cur.y - tgt.y) < 150;
   },
 
   // beste tussenstap-platform richting de speler (wisselende route: laag/midden/hoog)
@@ -5493,8 +5497,11 @@ const Game = {
       if (target) {
         if (target.x > b.x + 6) inp.right = true; else if (target.x < b.x - 6) inp.left = true; else face();
         if (b.vy < 0 && !b._fumble) inp.jump = true;
-        if (!b._fumble && b.jumps > 0 && now >= b._jumpCd && b.vy > 1 && (Math.abs(target.x - b.x) > 30 || b.y > target.y + 6)) {
-          inp.jump = true; inp.jumpPressed = true; b._jumpCd = now + 300;
+        // Eigen cooldown voor de dubbelsprong. Op _jumpCd gaan zou fataal zijn: een platform-hop
+        // zet die op 650ms terwijl een hele sprong ~610ms duurt -> de dubbelsprong ging nooit af
+        // en de bot kwam elke keer net te kort (Jungle: 101px gehaald, 110px nodig).
+        if (!b._fumble && b.jumps > 0 && now >= (b._dblCd || 0) && b.vy > 1 && (Math.abs(target.x - b.x) > 30 || b.y > target.y + 6)) {
+          inp.jump = true; inp.jumpPressed = true; b._dblCd = now + 300;
         }
       }
       if (canMelee()) doMelee();

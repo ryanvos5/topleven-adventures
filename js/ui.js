@@ -531,6 +531,7 @@ const UI = {
       else { Game.journey = null; this.openJourney(); }
     };
     const again = document.getElementById('btn-vs-again');
+    again.classList.remove('hidden');            // versus verbergt 'm; in Journey is dit "WORLD MAP"
     again.textContent = I18N.t('world_map');
     again.onclick = () => { document.getElementById('versus-result').classList.add('hidden'); Game.journey = null; if (window.Net) Net.leaveVersus(); this.openJourney(); };
     document.getElementById('btn-vs-menu').onclick = () => { document.getElementById('versus-result').classList.add('hidden'); Game.journey = null; this.show('menu'); };
@@ -2223,7 +2224,9 @@ const UI = {
 
     // knop-bindingen herstellen (Journey kan ze hebben overschreven)
     document.getElementById('btn-vs-rematch').onclick = () => this.doRematch();
-    const ag = document.getElementById('btn-vs-again'); ag.innerHTML = this._ic('home') + ' LOBBY'; ag.onclick = () => { document.getElementById('versus-result').classList.add('hidden'); this.openVersusLobby(); };
+    // LOBBY-knop hier niet tonen (Rematch + Menu volstaan). Het element blijft bestaan:
+    // Journey hergebruikt 'm als "WORLD MAP" en zet 'm daar weer zichtbaar.
+    const ag = document.getElementById('btn-vs-again'); ag.classList.add('hidden'); ag.onclick = null;
     document.getElementById('btn-vs-menu').onclick = () => { document.getElementById('versus-result').classList.add('hidden'); this.leaveLobby(); this.show('menu'); };
     const rb = document.getElementById('vs-round-banner'); if (rb) rb.classList.add('hidden');
     document.getElementById('versus-hud').classList.add('hidden');
