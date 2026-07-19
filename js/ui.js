@@ -513,7 +513,7 @@ const UI = {
     document.getElementById('versus-hud').classList.add('hidden');
     const t = document.getElementById('vs-result-title');
     if (won && idx >= total) t.innerHTML = (JOURNEY[world].name.toUpperCase()) + tl(' VERSLAGEN! ') + this._ic('trophy'); else t.textContent = won ? tl('LEVEL GEHAALD!') : tl('VERLOREN');
-    t.className = 'screen-title ' + (won ? 'win' : 'lose');
+    t.className = 'screen-title ' + (noContest ? '' : (won ? 'win' : 'lose'));
     document.getElementById('vs-result-score').textContent = (myScore || 0) + ' – ' + (oppScore || 0);
     const xpEl = document.getElementById('vs-result-xp');
     xpEl.classList.remove('hidden');
@@ -2191,7 +2191,7 @@ const UI = {
     clearTimeout(this._toastT); this._toastT = setTimeout(() => el.classList.remove('show'), 3000);
   },
 
-  showVersusResult(won, myScore, oppScore, xpGained, isBot, coinsEarned, peerLeft, chestDrop, mmBot, rankRes) {
+  showVersusResult(won, myScore, oppScore, xpGained, isBot, coinsEarned, peerLeft, chestDrop, mmBot, rankRes, noContest) {
     const vw = document.getElementById('vs-win'); if (vw) vw.classList.add('hidden');
     // winnaar-podium: de winnende held groot op een sunburst, met confetti als JIJ wint
     const heroBox = document.getElementById('vs-result-hero');
@@ -2235,12 +2235,15 @@ const UI = {
     document.body.classList.remove('in-game');
     this.el.touch.classList.add('hidden');
     const t = document.getElementById('vs-result-title');
-    if (won) t.innerHTML = tl('GEWONNEN! ') + this._ic('trophy'); else t.textContent = tl('VERLOREN');
-    t.className = 'screen-title ' + (won ? 'win' : 'lose');
+    if (noContest) t.textContent = tl('VERBINDING VERBROKEN');
+    else if (won) t.innerHTML = tl('GEWONNEN! ') + this._ic('trophy'); else t.textContent = tl('VERLOREN');
+    t.className = 'screen-title ' + (noContest ? '' : (won ? 'win' : 'lose'));
     document.getElementById('vs-result-score').textContent = myScore + ' – ' + oppScore;
     const xpEl = document.getElementById('vs-result-xp');
     xpEl.classList.remove('hidden');
-    if (!isBot) {                                // echte online tegenstander -> XP + RP + rank
+    if (noContest) {                             // verbinding weg: uitleggen dat er niets is verrekend
+      xpEl.innerHTML = tl('De verbinding met je tegenstander viel weg. Deze match telt niet mee — je rank en munten blijven ongewijzigd.');
+    } else if (!isBot) {                         // echte online tegenstander -> XP + RP + rank
       let html = '+' + (xpGained || 0) + ' XP  ·  +' + (coinsEarned || 0) + ' ● ' + tl('munten');
       if (rankRes) {
         const d = rankRes.delta, rk = RANKS[rankRes.newIdx];

@@ -757,6 +757,17 @@ const POWERUP_DROP_CHANCE = 0.025; // kans per kill
 const SMASH_ROUNDS = 8;
 const VERSUS_INTRO_MS = 2600;        // map-intro (zonder muziek, wat sfx) vóór het aftellen van de eerste ronde
 const AFK_KICK_MS = 15000;           // >15s geen input / uit de app -> uit de match gekickt (jij verliest, tegenstander wint)
+/* Verbinding met de tegenstander. Deze stonden vroeger op dezelfde AFK_KICK_MS, en
+   stilte werd toen als "tegenstander weg, JIJ wint" afgehandeld. Bij een storing die
+   beide kanten treft riepen dus BEIDE spelers zichzelf tot winnaar uit (en kregen
+   allebei RP). Stilte zegt niets over wie er wint -> alleen een expliciete 'bye' doet dat. */
+/* Zendtempo van de speler-state. Stond op 33ms (30/s); samen met de losse
+   gevechts-events (hit/ability/fell/burn) piekte dat boven de 40 events/s die de
+   client bij Supabase aanmeldt -> kans dat de verbinding wordt dichtgegooid.
+   40ms (25/s) laat ruimte voor die pieken; de interpolatie vangt het verschil op. */
+const NET_STATE_MS = 40;
+const NET_STALL_WARN_MS = 3500;      // zo lang niets gehoord -> "verbinding kwijt"-melding tonen
+const NET_STALL_END_MS = 22000;      // zo lang niets gehoord -> match staken (geen winnaar, geen RP)
 const MATCH_TIME_MS = 300000;        // matchmaking: 5 min tijdslimiet -> meeste rondes wint (gelijk = sudden death)
 const SMASH_DROP_EVERY = 5000;       // ms tussen drops (host bepaalt)
 const CLOUD_STAND_MS = 5000;         // Airplane: hoe lang je op een wolk-platform kunt staan

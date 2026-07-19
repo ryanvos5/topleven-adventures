@@ -426,9 +426,21 @@ const Net = {
     await new Promise((resolve, reject) => {
       let done = false;
       ch.subscribe((status) => {
-        if (status === 'SUBSCRIBED' && !done) { done = true; resolve(); }
+        if (status === 'SUBSCRIBED' && !done) { done = true; v.rejoins = 0; resolve(); }
         else if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && !done) {
           done = true; reject(new Error('Kon niet verbinden met de kamer.'));
+        } else if (done && (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED')) {
+          /* Valt het kanaal MIDDEN in een match weg, dan gebeurde er voorheen niets meer:
+             beide kanten werden stil en riepen zichzelf tot winnaar uit. Nu proberen we
+             opnieuw aan te haken (met oplopende wachttijd) zolang de match nog loopt. */
+          if (this.versus !== v || v.leaving) return;
+          v.rejoins = (v.rejoins || 0) + 1;
+          if (v.rejoins > 6) return;
+          clearTimeout(v.rejoinTimer);
+          v.rejoinTimer = setTimeout(() => {
+            if (this.versus !== v || v.leaving) return;
+            try { ch.subscribe(); } catch (e) {}
+          }, Math.min(4000, 400 * v.rejoins));
         }
       });
       setTimeout(() => { if (!done) { done = true; reject(new Error('Time-out bij verbinden.')); } }, 8000);
@@ -639,6 +651,8 @@ const Net = {
 
   leaveVersus() {
     if (this.versus) {
+      this.versus.leaving = true;                                   // lopende herverbind-pogingen staken
+      if (this.versus.rejoinTimer) clearTimeout(this.versus.rejoinTimer);
       if (this.versus.joinTimer) { clearInterval(this.versus.joinTimer); }
       if (this.versus.channel) {
         try { this.versus.channel.send({ type: 'broadcast', event: 'bye', payload: {} }); } catch (e) {}

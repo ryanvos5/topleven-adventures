@@ -2927,7 +2927,7 @@ const Game = {
       if (window.UI && UI.updateVersusHUD) UI.updateVersusHUD(v);
       // online: óók tijdens de freeze je stand blijven sturen — anders staat de verbinding stil
       // en loopt de tegenstander bij de ronde-start achter (dat gaf de lag aan het begin).
-      if (!this.vsBot) { v.netTimer += dt; if (v.netTimer >= 33) { v.netTimer = 0; this.sendVersusState(); } }
+      if (!this.vsBot) { v.netTimer += dt; if (v.netTimer >= NET_STATE_MS) { v.netTimer -= NET_STATE_MS; this.sendVersusState(); } }
       return;
     } else if (v.roundMsg) {                          // freeze net afgelopen -> nieuwe ronde
       v.roundMsg = '';
@@ -3039,7 +3039,7 @@ const Game = {
 
     // mijn stand uitzenden (~30x/sec) — vaker = minder achterstand op de tegenstander
     v.netTimer += dt;
-    if (v.netTimer >= 33) { v.netTimer = 0; this.sendVersusState(); }
+    if (v.netTimer >= NET_STATE_MS) { v.netTimer -= NET_STATE_MS; this.sendVersusState(); }   // rest meenemen -> echt 25/s i.p.v. frame-gekwantiseerd 20/s
 
     // tegenstander vloeiend interpoleren met horizontale extrapolatie (dead reckoning):
     // voorspel waar hij NU is o.b.v. de snelheid sinds de laatste update -> verbergt netwerk-latency bij lopen.
@@ -5855,8 +5855,11 @@ const Game = {
     });
   },
 
-  endVersus(won, peerLeft) {
+  // noContest = verbinding weggevallen: match staken zonder winnaar, RP, XP of stats
+  endVersus(won, peerLeft, noContest) {
     if (this.vs && this.vs.over) return;
+    { const nw = document.getElementById('vs-netwarn'); if (nw) nw.classList.add('hidden'); }
+    if (noContest) won = false;
     if (this.vs) this.vs.over = true;
     this.state = 'versusOver';
     const isBot = this.vsBot;
@@ -5899,7 +5902,7 @@ const Game = {
       return;
     }
     // betrouwbaar de uitslag naar de tegenstander sturen (paar keer tegen pakketverlies)
-    if (!isBot && window.Net && this.vs) {
+    if (!isBot && !noContest && window.Net && this.vs) {       // gestaakt: niemand krijgt een uitslag opgelegd
       const role = this.vs.role;
       const loserRole = won ? (role === 'host' ? 'guest' : 'host') : role;
       const send = () => Net.versusSend('over', { loserRole });
@@ -5908,7 +5911,7 @@ const Game = {
     // online: kanaal OPEN houden zodat een rematch mogelijk is (kanaal sluit pas bij menu/lobby)
     // tegen de bot: GEEN XP/wins. Echt duel: XP + wins (sync't naar de leaderboard).
     let gained = 0, coinsEarned = 0, chestDrop = null, rankRes = null;
-    const realStakes = !isBot;                                 // alleen een échte online tegenstander telt (bots niet meer)
+    const realStakes = !isBot && !noContest;                   // alleen een échte, uitgespeelde online match telt
     if (realStakes) {
       gained = (won ? 100 : XP_LOSS) + (this._comboXp || 0);   // winst 100 XP + verdiende combo-XP
       coinsEarned = won ? 75 : 20;                              // winnaar 75 munten, verliezer 20
@@ -5921,8 +5924,9 @@ const Game = {
       Storage.save();
       chestDrop = Storage.rollChestDrop(won);                  // soms nog een losse kist
       Storage.addCharXp(Storage.data.equippedCharacter, won ? 15 : 6);   // character-XP alleen bij echte potjes
-    } else {
+    } else if (!noContest) {
       // tegen een bot: GEEN XP/RP/wins/kisten — alleen een kleine munt-fooi
+      // (bij een gestaakte match ook dat niet: er is niets gespeeld om te belonen)
       coinsEarned = won ? 40 : 10;
       Storage.data.coins = (Storage.data.coins || 0) + coinsEarned;
       Storage.save();
@@ -5931,6 +5935,11 @@ const Game = {
     const myScore = this.vs ? this.vs.myScore : 0, oppScore = this.vs ? this.vs.oppScore : 0;
     if (peerLeft) { UI.showVersusResult(won, myScore, oppScore, gained, isBot, coinsEarned, peerLeft, chestDrop, this._mmBot, rankRes); return; }
     // korte win-celebratie met de naam van de winnaar, dan pas het uitslagscherm
+    // gestaakt: geen winnaars-celebratie, meteen het (neutrale) uitslagscherm
+    if (noContest) {
+      UI.showVersusResult(won, myScore, oppScore, gained, isBot, coinsEarned, peerLeft, chestDrop, this._mmBot, rankRes, true);
+      return;
+    }
     const winnerName = won
       ? ((window.Net && Net.isLoggedIn && Net.isLoggedIn()) ? Net.nickname() : 'Jij')
       : (isBot ? 'Bot' : 'Tegenstander');
@@ -5950,8 +5959,23 @@ const Game = {
     const anyInput = (typeof Input !== 'undefined') && Input.state && (Input.state.left || Input.state.right || Input.state.jump || Input.state.duck || Input.state.attack || Input.state.melee);
     if (anyInput) this._lastInputTime = now;
     const r = v.remote;
-    // 1) tegenstander stuurt niks meer (weg / uit de app / afk op de achtergrond) -> JIJ wint
-    if (r && r.lastSeen > 0 && now - r.lastSeen > AFK_KICK_MS) { this.endVersus(true, true); return; }   // peerLeft -> "tegenstander weg, jij wint"
+    /* 1) tegenstander stuurt niks meer. Dat kan net zo goed MIJN verbinding zijn, dus
+       hier geen winnaar aanwijzen: eerst melden dat de verbinding hapert (de
+       websocket probeert zichzelf te herstellen), en pas na NET_STALL_END_MS de match
+       staken zonder RP. Alleen een expliciete 'bye' levert nog een winst op. */
+    if (r && r.lastSeen > 0) {
+      const stil = now - r.lastSeen;
+      if (stil > NET_STALL_END_MS) { this.endVersus(false, false, true); return; }   // gestaakt: geen winnaar
+      const stalled = stil > NET_STALL_WARN_MS;
+      if (stalled !== v.netStalled) {                 // alleen bij een wissel het DOM aanraken
+        v.netStalled = stalled;
+        const el = document.getElementById('vs-netwarn');
+        if (el) {
+          el.textContent = tl('Verbinding hapert — opnieuw verbinden…');
+          el.classList.toggle('hidden', !stalled);
+        }
+      }
+    }
     // 2) jij bent zelf >15s AFK (of net terug na lang weg) -> JIJ verliest; tegenstander wint (via 'bye')
     if (now - this._lastInputTime > AFK_KICK_MS) { this._afkKicked = true; this.forfeitVersus(); return; }
   },
