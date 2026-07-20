@@ -28,10 +28,22 @@ const Net = {
       this.sb = window.supabase.createClient(SUPA_URL, SUPA_KEY, {
         // PKCE + in de app zelf de callback afhandelen (geen automatische URL-detectie in de WebView)
         auth: { persistSession: true, autoRefreshToken: true, flowType: 'pkce', detectSessionInUrl: !this.isNative },
-        // Realtime: de game verstuurt de speler-state op ~30 Hz (elke 33ms). Zonder deze regel
-        // throttelt de Supabase-client naar de default van 10/sec -> haperende online sync.
-        // 40 geeft ruimte voor de 30 state-updates + losse hit/ability-events per seconde.
-        realtime: { params: { eventsPerSecond: 40 } },
+        /* Realtime. eventsPerSecond: zonder deze regel throttelt de client naar 10/sec
+           -> haperende sync. 40 geeft ruimte voor de state-updates + losse events.
+
+           De twee regels daaronder zijn de kern van de "match bevriest 5-10s"-klacht:
+           - De standaard herverbind-backoff is [1s, 2s, 5s, 10s]. Valt de websocket
+             even weg (mobiel netwerk, WiFi<->4G, korte stilte), dan duurt het daardoor
+             5 tot 10 seconden voor je weer verbonden bent. Met deze reeks is dat ~0,2s
+             en merk je er niets van.
+           - De heartbeat stond op 30s. Phoenix sluit de socket ZELF zodra een antwoord
+             niet binnen is voor de volgende hartslag, dus één gemiste beat kostte je
+             een halve minuut voor 'ie het doorhad. Op 15s is dat veel sneller opgemerkt. */
+        realtime: {
+          params: { eventsPerSecond: 40 },
+          heartbeatIntervalMs: 15000,
+          reconnectAfterMs: (tries) => [200, 400, 800, 1500, 3000][tries - 1] || 5000,
+        },
       });
     } catch (e) { console.warn('[Net] init faalde', e); return; }
     this.ready = true;
