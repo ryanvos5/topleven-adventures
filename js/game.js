@@ -5098,6 +5098,15 @@ const Game = {
     }
     return any ? code : '';
   },
+  /* Zichtbare slijtage van het match-harnas (het grijze balkje):
+     0 = heel, 1 = gescheurd, 2 = zwaar gescheurd, 3 = kapot -> niet meer getekend.
+     Het balkje vult elke ronde weer, dus het harnas "herstelt" dan ook zichtbaar. */
+  _armorWear(p) {
+    if (!p || !p.armorMax || !p.armorRender) return 0;
+    if (p.armorHp <= 0) return 3;
+    const f = p.armorHp / p.armorMax;
+    return f <= 0.34 ? 2 : (f <= 0.67 ? 1 : 0);
+  },
   // code -> hetzelfde render-object dat _buildArmorRender oplevert (met cache: verandert zelden)
   _armorFromCode(code) {
     if (!code) return null;
@@ -6133,7 +6142,7 @@ const Game = {
     r.shieldHp = s.shp || 0;
     r.giant = s.gi === 1;
     r.heli = s.hl === 1;
-    r.alive = s.al !== 0; r.charId = s.ch || 'ryan'; r.skinId = s.sk || null; r.armorCode = s.am || '';
+    r.alive = s.al !== 0; r.charId = s.ch || 'ryan'; r.skinId = s.sk || null; r.armorCode = s.am || ''; r.armorDmg = s.ad | 0;
     r.ducking = s.dk === 1; r.iv = s.iv === 1;   // tegenstander onzichtbaar
     r._fireHold = s.fb === 1;                     // tegenstander houdt een vuurbal vast
     if (typeof s.h === 'number') r.hp = s.h;
@@ -6150,7 +6159,7 @@ const Game = {
       x: Math.round(p.x), y: Math.round(p.y), vy: +(p.vy || 0).toFixed(1), d: p.dir,
       g: p.onGround ? 1 : 0, a: this.time < p.attackAnimUntil ? 1 : 0,
       sw: (this.time < (p.swingUntil || 0)) ? (p.swingWeapon || 0) : 0,
-      wid: p.weaponId || 0, su: (p.stunUntil && this.time < p.stunUntil) ? 1 : 0, fl: (p.flatUntil && this.time < p.flatUntil) ? 1 : 0, ht: Storage.data.equippedHat || 'none', sk: Storage.skinFor(p.charId) || '', am: this._armorCode(),
+      wid: p.weaponId || 0, su: (p.stunUntil && this.time < p.stunUntil) ? 1 : 0, fl: (p.flatUntil && this.time < p.flatUntil) ? 1 : 0, ht: Storage.data.equippedHat || 'none', sk: Storage.skinFor(p.charId) || '', am: this._armorCode(), ad: this._armorWear(p),
       rg: p.hasBuff('rage', this.time) ? 1 : 0, bn: (p.burnUntil > this.time) ? 1 : 0, shp: Math.round(p.shieldHp || 0), gi: p.giant ? 1 : 0, hl: p.heli ? 1 : 0,
       wp: p.walkPhase || 0, al: p.dead ? 0 : 1, ch: Storage.data.equippedCharacter || 'ryan',
       h: Math.round(p.hp), mh: p.maxHp, dk: p.ducking ? 1 : 0,
@@ -6479,7 +6488,7 @@ const Game = {
         walkPhase: r.walkPhase, airborne: !r.onGround, attacking: r.attacking, ducking: r.ducking, swing: rSwing,
         weapon: r.giant ? null : (r.swingWeapon || r.heldWeapon || 'bat'), build: rc.build, hair: rc.hair, squash: r.flat,
         hat: r.hat || 'none', t: this.time, rage: r.rage, burning: r.burn, outfit: rc.outfit,
-        armor: r.giant ? null : this._armorFromCode(r.armorCode),
+        armor: (r.giant || (r.armorDmg | 0) >= 3) ? null : this._armorFromCode(r.armorCode), armorCrack: r.armorDmg | 0,
         longReach: !!(r._reachUntil && this.time < r._reachUntil),   // tegenstander/bot met "Lang Bereik": lange armen
       };
       Sprites.drawCharacter(ctx, 0, 0, r.dir, rc.palette, rOpts);
@@ -6512,7 +6521,7 @@ const Game = {
           attacking: this.time < p.attackAnimUntil, swing: pSwing,
           weapon: p.giant ? null : (swinging ? p.swingWeapon : p.weaponId), build: p.build, hair: p.hairStyle,
           squash: (p.flatUntil && this.time < p.flatUntil),
-          hat: Storage.data.equippedHat, t: this.time, armor: p.giant ? null : p.armorRender,
+          hat: Storage.data.equippedHat, t: this.time, armor: (p.giant || this._armorWear(p) >= 3) ? null : p.armorRender, armorCrack: this._armorWear(p),
           rage: p.hasBuff('rage', this.time), burning: p.burnUntil > this.time, outfit: p.outfit,
           longReach: !!(p._reachUntil && this.time < p._reachUntil),   // Tygo "Lang Bereik": lange armen
         };
@@ -7512,7 +7521,7 @@ const Game = {
     let pe = this.trainPeers[s.id]; if (!pe) pe = this.trainPeers[s.id] = { id: s.id };
     pe.nick = s.nick || 'Speler'; pe.x = s.x; pe.y = s.y; pe.dir = s.d || 1; pe.walkPhase = s.wp || 0;
     pe.attacking = s.a === 1; pe.swingWeapon = s.sw || null; pe.heldWeapon = s.hw || 'bat';
-    pe.hp = (s.hp != null) ? s.hp : 100; pe.maxHp = s.mh || 100; pe.charId = s.ch || 'ryan'; pe.hat = s.ht || 'none'; pe.skinId = s.sk || null; pe.armorCode = s.am || '';
+    pe.hp = (s.hp != null) ? s.hp : 100; pe.maxHp = s.mh || 100; pe.charId = s.ch || 'ryan'; pe.hat = s.ht || 'none'; pe.skinId = s.sk || null; pe.armorCode = s.am || ''; pe.armorDmg = s.ad | 0;
     pe.fireHold = s.fb === 1; pe.giant = s.gi === 1; pe.iv = s.iv === 1; pe.rage = s.rg === 1; pe.burn = s.bn === 1;
     pe.lastSeen = this.time;
   },
@@ -7545,7 +7554,7 @@ const Game = {
       x: Math.round(p.x), y: Math.round(p.y), d: p.dir, wp: +(p.walkPhase || 0).toFixed(2),
       a: this.time < p.attackAnimUntil ? 1 : 0, sw: (this.time < (p.swingUntil || 0)) ? (p.swingWeapon || 0) : 0,
       hw: p.weaponId || p.meleeId || 'bat', hp: Math.round(Math.max(0, p.hp)), mh: p.maxHp,
-      ch: p.charId || 'ryan', ht: Storage.data.equippedHat || 'none', sk: Storage.skinFor(p.charId) || '', am: this._armorCode(), fb: p.fireballs > 0 ? 1 : 0,
+      ch: p.charId || 'ryan', ht: Storage.data.equippedHat || 'none', sk: Storage.skinFor(p.charId) || '', am: this._armorCode(), ad: this._armorWear(p), fb: p.fireballs > 0 ? 1 : 0,
       gi: p.giant ? 1 : 0, iv: (p._invisUntil && this.time < p._invisUntil) ? 1 : 0,
       rg: p.hasBuff('rage', this.time) ? 1 : 0, bn: p.burnUntil > this.time ? 1 : 0,
     });
@@ -7702,7 +7711,7 @@ const Game = {
       walkPhase: pe.walkPhase, airborne: airborne, attacking: pe.attacking,
       weapon: pe.giant ? null : (pe.swingWeapon || pe.heldWeapon || 'bat'), build: rc.build, hair: rc.hair,
       hat: pe.hat, t: this.time, rage: pe.rage, burning: pe.burn, outfit: rc.outfit,
-      armor: this._armorFromCode(pe.armorCode),
+      armor: ((pe.armorDmg | 0) >= 3) ? null : this._armorFromCode(pe.armorCode), armorCrack: pe.armorDmg | 0,
     });
     ctx.restore();
     if (pe.fireHold) this.drawFireHand(ctx, pe.x, pe.y, pe.dir, this.time);

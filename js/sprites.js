@@ -637,6 +637,8 @@ const Sprites = {
     // --- harnas (blacksmith): ridder-plaatwerk — over lijf/hoofd, ONDER de cosmetische hoed ---
     if (pose.armor) {
       const A = pose.armor, sh = (c, a) => this._shade(c, a);
+      // slijtage: 1 = gescheurd, 2 = zwaar gescheurd (scheuren zijn extra donkere kerf-pixels)
+      const crack = pose.armorCrack | 0;
       // rode MANTEL achter het lijf (van de schouders omlaag), alleen bij sets met cape
       const cape = (A.chest && A.chest.cape) ? A.chest : null;
       if (cape) {
@@ -648,7 +650,8 @@ const Sprites = {
       // zilveren LAARZEN
       if (A.feet) { const f = A.feet; for (const off of [offB, offA]) { const x = Math.round(hipX + off) - (dir < 0 ? 1 : 0); this.px(ctx, f.col, x, footY - 3, legW + 1, 3); this.px(ctx, sh(f.col, 0.3), x, footY - 3, legW + 1, 1); this.px(ctx, f.colDk, x, footY - 1, legW + 1, 1); } }
       // been/heup-platen (faulds)
-      if (A.bottom) { const b = A.bottom, h = Math.min(legH + 1, 6); this.px(ctx, b.col, cx - bh, legTop - 1, bh * 2, h); this.px(ctx, sh(b.col, 0.3), cx - bh, legTop - 1, bh * 2, 1); this.px(ctx, b.colDk, cx - bh, legTop - 1, 1, h); this.px(ctx, sh(b.col, -0.25), cx - bh, legTop - 1 + h - 1, bh * 2, 1); if (b.trim) this.px(ctx, b.trim, cx - bh, legTop - 1, bh * 2, 1); }
+      if (A.bottom) { const b = A.bottom, h = Math.min(legH + 1, 6); this.px(ctx, b.col, cx - bh, legTop - 1, bh * 2, h); this.px(ctx, sh(b.col, 0.3), cx - bh, legTop - 1, bh * 2, 1); this.px(ctx, b.colDk, cx - bh, legTop - 1, 1, h); this.px(ctx, sh(b.col, -0.25), cx - bh, legTop - 1 + h - 1, bh * 2, 1); if (b.trim) this.px(ctx, b.trim, cx - bh, legTop - 1, bh * 2, 1);
+        if (crack >= 2) { const ck = sh(b.colDk, -0.4); this.px(ctx, ck, cx + 2, legTop, 1, 2); this.px(ctx, ck, cx + 3, legTop + 1, 1, 1); } }
       // BORSTPLAAT + schouderstukken + middenribbel + (gouden) randen
       if (A.chest) { const c2 = A.chest, y0 = torsoTop + 1, h0 = Math.max(3, torsoH - 2);
         this.px(ctx, c2.col, cx - bh, y0, bh * 2, h0);
@@ -659,6 +662,14 @@ const Sprites = {
         this.px(ctx, c2.col, cx - bh - 1, y0 - 1, 3, 3); this.px(ctx, c2.col, cx + bh - 2, y0 - 1, 3, 3);   // pauldrons (schouders)
         this.px(ctx, sh(c2.col, 0.3), cx - bh - 1, y0 - 1, 3, 1); this.px(ctx, sh(c2.col, 0.3), cx + bh - 2, y0 - 1, 3, 1);
         if (c2.trim) { this.px(ctx, c2.trim, cx - bh, y0, bh * 2, 1); this.px(ctx, c2.trim, cx - bh, y0 + h0 - 1, bh * 2, 1); }   // gouden randen (royal)
+        if (crack) {                                                                       // diagonale scheur vanaf de schouder
+          const ck = sh(c2.colDk, -0.4);
+          this.px(ctx, ck, cx - bh + 2, y0 + 1, 1, 2); this.px(ctx, ck, cx - bh + 3, y0 + 2, 1, 2);
+          if (crack >= 2) {                                                                // tweede scheur + afgebroken hoekje
+            this.px(ctx, ck, cx + bh - 3, y0 + 1, 1, 2); this.px(ctx, ck, cx + bh - 4, y0 + 2, 1, 2); this.px(ctx, ck, cx + bh - 3, y0 + 4, 1, 1);
+            this.px(ctx, pal.shirt, cx + bh - 2, y0 + h0 - 1, 2, 1);                       // stukje eraf -> onderlaag zichtbaar
+          }
+        }
       }
       // HELM (dekt het hoofd) + vizier-spleet + rode pluim
       if (A.hat) { const h2 = A.hat;
@@ -672,6 +683,11 @@ const Sprites = {
           this.px(ctx, '#6a1512', cx - 1, headTop - 5, 2, 5);
           this.px(ctx, h2.plume, cx - 1 + pw, headTop - 9, 3, 5);
           this.px(ctx, sh(h2.plume, 0.3), cx + pw, headTop - 9, 1, 4);
+        }
+        if (crack) {                                                                       // kerf in de helm
+          const ck = sh(h2.colDk, -0.4);
+          this.px(ctx, ck, cx + (dir > 0 ? -3 : 2), headTop - 1, 1, 2);
+          if (crack >= 2) { this.px(ctx, ck, cx + (dir > 0 ? -2 : 1), headTop + 1, 1, 2); this.px(ctx, ck, cx - hh, headTop + headH - 3, 2, 1); }
         }
       }
     }
